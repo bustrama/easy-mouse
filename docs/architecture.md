@@ -123,6 +123,7 @@ Core Audio and key actions.
 ```
 src/App/          WPF exe: window, tray, Kestrel host, Input, Media
 src/Core/         protocol, pairing, remote schema, action runner (no Win32)
+src/Remotes/      remote schema validator, catalog, approvals, action handler (no Win32)
 src/Broker/       SYSTEM service (phase 2)
 tests/Core.Tests/
 web/              Vite + Preact client

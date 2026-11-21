@@ -109,15 +109,18 @@ describe('connect handshake', () => {
   it('reports busy and sends takeover', () => {
     const sock = new FakeSocket();
     connectServer(sock, creds.secret);
-    const phases: string[] = [];
-    const s = new Session(sock, { creds, handlers: { onPhase: (p) => phases.push(p) } });
+    let denied = 0;
+    const s = new Session(sock, { creds, handlers: { onTakeoverDenied: () => denied++ } });
     sock.onopen?.({});
     sock.deliver(J({ t: 'busy' }));
     expect(s.phase).toBe('busy');
     expect(s.sendPlain(encMove(1, 1))).toBe(false);
     s.takeover();
     expect(JSON.parse(sock.sent.at(-1) as string)).toEqual({ t: 'takeover' });
-    sock.deliver(J({ t: 'granted' }));
+    sock.deliver(J({ t: 'takeover.denied' }));
+    expect(denied).toBe(1);
+    expect(s.phase).toBe('busy');
+    sock.deliver(J({ t: 'active' }));
     expect(s.phase).toBe('online');
   });
 
@@ -138,46 +141,42 @@ describe('connect handshake', () => {
     new Session(sock, { creds, handlers: { onClose: (i) => info.push(i) } });
     sock.onopen?.({});
     sock.onclose?.({ code: 4401 });
-    expect(info).toEqual([{ code: 4401, wasOnline: true }]);
+    expect(info).toEqual([{ code: 4401, wasOnline: true, paired: false }]);
   });
 });
 
 describe('pairing', () => {
-  it('pairs, shows the matching code, stores credentials, then connects on the same socket', () => {
+  it('pairs, shows the matching code, hands over credentials, then closes so the caller can connect', () => {
     const k = randomBytes(16);
     const S = randomBytes(32);
     const sock = new FakeSocket();
     const ns = randomBytes(16);
     let nc: Uint8Array;
-    let conn: ReturnType<typeof connectServer> | undefined;
     sock.onSend = (d) => {
-      if (typeof d === 'string') {
-        const m = JSON.parse(d);
-        if (m.t === 'pair.hello') {
-          nc = b64decode(m.nc);
-          expect(macEqual(b64decode(m.mac), pairHelloMac(k, nc, m.name))).toBe(true);
-          sock.deliver(J({ t: 'pair.pending', ns: b64encode(ns) }));
-          // the PC user clicks Allow
-          sock.deliver(J({ t: 'pair.ok', id: 'AAECAwQFBgc', wrap: b64encode(wrapSecret(k, nc, ns, S)) }));
-        } else if (m.t === 'hello' && !conn) {
-          conn = connectServer(sock, S);
-          sock.onSend(d);
-        }
-      }
+      const m = JSON.parse(d as string);
+      expect(m.t).toBe('pair.hello'); // nothing else is ever sent on the pairing socket
+      nc = b64decode(m.nc);
+      expect(macEqual(b64decode(m.mac), pairHelloMac(k, nc, m.name))).toBe(true);
+      sock.deliver(J({ t: 'pair.pending', ns: b64encode(ns) }));
+      // the PC user clicks Allow
+      sock.deliver(J({ t: 'pair.ok', id: 'AAECAwQFBgc', wrap: b64encode(wrapSecret(k, nc, ns, S)) }));
     };
     let code = '';
     let paired: Credentials | undefined;
+    let close: unknown;
     const phases: string[] = [];
     new Session(sock, {
       pair: { k, name: "Dana's iPhone" },
-      handlers: { onCode: (c) => (code = c), onPaired: (c) => (paired = c), onPhase: (p) => phases.push(p) },
+      handlers: { onCode: (c) => (code = c), onPaired: (c) => (paired = c), onPhase: (p) => phases.push(p), onClose: (i) => (close = i) },
     });
     sock.onopen?.({});
     expect(code).toBe(pairingCode(k, nc!, ns));
-    expect(code).toMatch(/^\d{4}$/);
+    expect(code).toMatch(/^[0-9]{4}$/);
     expect(paired?.id).toBe('AAECAwQFBgc');
     expect(paired?.secret).toEqual(S);
-    expect(phases).toEqual(['pairing', 'pending', 'auth', 'online']);
+    expect(phases).toEqual(['pairing', 'pending', 'closed']);
+    expect(close).toEqual({ code: 1000, wasOnline: false, paired: true });
+    expect(sock.closedWith).toBe(1000);
   });
 
   it('a denied pairing closes the session', () => {

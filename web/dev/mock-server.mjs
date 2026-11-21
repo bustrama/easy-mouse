@@ -62,6 +62,7 @@ const saveDevices = () => writeFileSync(DEVICES_FILE, JSON.stringify(Object.from
 let k = randomBytes(16);
 let kExpires = Date.now() + PAIR_WINDOW_MS;
 let failures = 0;
+let pairingPending = false;
 function newSecret(reason) {
   k = randomBytes(16);
   kExpires = Date.now() + PAIR_WINDOW_MS;
@@ -106,14 +107,12 @@ const ask = (question) =>
 
 // ---- fake PC state ----
 const pcState = {
-  pc: PC_NAME,
-  volume: 62,
-  muted: false,
-  media: { app: 'Plex', title: 'Dune: Part Two', artist: 'Denis Villeneuve', playing: true, pos: 4328, dur: 9960 },
-  bind: { 'smtc.title': 'Dune: Part Two', 'volume.app': 48 },
-  locked: false,
-  elevated: false,
+  media: { status: 'playing', title: 'Dune: Part Two', artist: 'Denis Villeneuve', positionMs: 4328000, durationMs: 9960000 },
+  volume: { level: 62, muted: false },
+  host: { locked: false, elevated: false },
 };
+const stateFrame = () => encState({ t: 'state', ...pcState });
+const remotesFrame = () => encJson({ t: 'remotes', remotes: Object.values(REMOTES) });
 const REMOTES = {
   stremio: {
     schema: 1,
@@ -129,7 +128,7 @@ const REMOTES = {
         { type: 'button', icon: 'skip', label: 'Skip intro', action: { do: 'key', keys: 'Right' } },
         { type: 'button', icon: 'back', label: 'Back', action: { do: 'key', keys: 'Escape' } },
         { type: 'label', bind: 'smtc.title' },
-        { type: 'slider', label: 'Volume', bind: 'volume.app' },
+        { type: 'slider', label: 'Volume', bind: 'volume' },
       ],
     },
   },
@@ -154,15 +153,17 @@ const sockets = new Set(); // authenticated controller sockets' contexts
 let controller = null;
 
 function broadcastState() {
-  if (pcState.media?.playing) pcState.media.pos = Math.min(pcState.media.dur, pcState.media.pos + 1);
-  if (controller?.send) controller.send(encState(pcState));
+  if (pcState.media?.status === 'playing') pcState.media.positionMs = Math.min(pcState.media.durationMs, pcState.media.positionMs + 1000);
+  if (controller?.send) controller.send(stateFrame());
 }
 setInterval(broadcastState, 1000);
 
 // ---- HTTP: static web app + /api/info ----
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
 const SECURITY_HEADERS = {
-  'Content-Security-Policy': "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'",
+  // same policy as the C# server (docs/protocol.md)
+  'Content-Security-Policy': "default-src 'self'; connect-src 'self' ws:; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  'Cross-Origin-Resource-Policy': 'same-origin',
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
@@ -210,7 +211,6 @@ function onConnection(ws, req) {
   let rx = null;
   let tx = null;
   let isController = false;
-  let paired = false;
 
   const sendJson = (o) => ws.send(JSON.stringify(o));
   const ctx = {
@@ -236,7 +236,7 @@ function onConnection(ws, req) {
         switch (m.t) {
           case 'pair.hello': {
             if (phase !== 'new') return fail(4400, 'unexpected pair.hello');
-            if (Date.now() > kExpires) return fail(4408, 'pairing window expired');
+            if (Date.now() > kExpires || pairingPending) return fail(4408, 'pairing window closed, expired or busy');
             const name = String(m.name ?? '');
             const nonce = b64decode(String(m.nc));
             if (nonce.length !== 16 || !name || new TextEncoder().encode(name).length > 64) return fail(4400, 'bad hello');
@@ -245,6 +245,8 @@ function onConnection(ws, req) {
               return fail(4401, 'bad mac');
             }
             const kUsed = k;
+            newSecret('spent by a valid pair.hello'); // single use, whatever the user decides
+            pairingPending = true;
             pairNc = nonce;
             pairNs = randomBytes(16);
             phase = 'pending';
@@ -252,6 +254,7 @@ function onConnection(ws, req) {
             sendJson({ t: 'pair.pending', ns: b64encode(pairNs) });
             log(tag, `pairing request from "${name}", code ${code}`);
             const ok = await ask(`Allow "${name}" (code ${code})?`);
+            pairingPending = false;
             if (ws.readyState !== 1) return;
             if (!ok) {
               sendJson({ t: 'pair.denied' });
@@ -261,18 +264,13 @@ function onConnection(ws, req) {
             const secret = randomBytes(32);
             devices.set(b64encode(id), { secret: bytesToHex(secret), name });
             saveDevices();
-            k = randomBytes(16); // single use
-            kExpires = Date.now() + PAIR_WINDOW_MS;
-            paired = true;
-            phase = 'new';
             sendJson({ t: 'pair.ok', id: b64encode(id), wrap: b64encode(wrapSecret(kUsed, pairNc, pairNs, secret)) });
             log(tag, `paired "${name}"`);
-            return;
+            return ws.close(1000, 'paired'); // the phone now connects on a new socket
           }
           case 'hello': {
             if (phase !== 'new') return fail(4400, 'unexpected hello');
-            device = devices.get(String(m.id));
-            if (!device) return fail(4401, 'unknown device');
+            device = devices.get(String(m.id)) ?? null; // unknown ids also get a challenge
             nc = b64decode(String(m.nc));
             if (nc.length !== 16) return fail(4400, 'bad nc');
             ns = randomBytes(16);
@@ -280,7 +278,8 @@ function onConnection(ws, req) {
             return sendJson({ t: 'challenge', ns: b64encode(ns) });
           }
           case 'auth': {
-            if (phase !== 'challenged' || !device) return fail(4400, 'unexpected auth');
+            if (phase !== 'challenged') return fail(4400, 'unexpected auth');
+            if (!device) return fail(4401, 'unknown device');
             const S = hexToBytes(device.secret);
             if (!macEqual(b64decode(String(m.mac)), authMac(S, nc, ns))) return fail(4401, 'bad auth mac');
             const keys = sessionKeys(S, nc, ns);
@@ -288,7 +287,7 @@ function onConnection(ws, req) {
             tx = new FrameSender(keys.s2c, DIR_S2C);
             phase = 'ready';
             sendJson({ t: 'ready', mac: b64encode(readyMac(S, nc, ns)) });
-            log(tag, `authenticated "${device.name}"${paired ? ' (just paired)' : ''}`);
+            log(tag, `authenticated "${device.name}"`);
             if (controller && controller !== ctx) {
               phase = 'busy';
               return sendJson({ t: 'busy' });
@@ -298,10 +297,11 @@ function onConnection(ws, req) {
           }
           case 'takeover': {
             if (phase !== 'busy') return;
-            const ok = await ask(`"${device.name}" wants to take control. Allow?`);
-            if (!ok || ws.readyState !== 1) return fail(4409, 'takeover denied');
+            const ok = !controller || (await ask(`"${device.name}" wants to take control. Allow?`));
+            if (ws.readyState !== 1) return;
+            if (!ok) return sendJson({ t: 'takeover.denied' });
             controller?.close?.();
-            sendJson({ t: 'granted' });
+            sendJson({ t: 'active' });
             becomeController();
             return;
           }
@@ -326,7 +326,8 @@ function onConnection(ws, req) {
     ctx.close = () => ws.close(4409, 'replaced');
     controller = ctx;
     sockets.add(ctx);
-    ctx.send(encState(pcState));
+    ctx.send(stateFrame());
+    ctx.send(remotesFrame()); // provisional: remotes are pushed, never requested
   }
 }
 
@@ -344,23 +345,26 @@ function handleOp(op, tag, ctx) {
       return log(tag, 'key', `0x${op.vk.toString(16)}`, ['', 'down', 'up', 'press'][op.flags] ?? op.flags);
     case 'media': {
       log(tag, 'media', Object.keys(MEDIA).find((n) => MEDIA[n] === op.cmd) ?? op.cmd);
-      if (op.cmd === MEDIA.playpause && pcState.media) pcState.media.playing = !pcState.media.playing;
-      if (op.cmd === MEDIA.volup) pcState.volume = Math.min(100, pcState.volume + 2);
-      if (op.cmd === MEDIA.voldown) pcState.volume = Math.max(0, pcState.volume - 2);
-      if (op.cmd === MEDIA.mute) pcState.muted = !pcState.muted;
-      return ctx.send(encState(pcState));
+      if (op.cmd === MEDIA.playpause && pcState.media) pcState.media.status = pcState.media.status === 'playing' ? 'paused' : 'playing';
+      if (op.cmd === MEDIA.volup) pcState.volume.level = Math.min(100, pcState.volume.level + 2);
+      if (op.cmd === MEDIA.voldown) pcState.volume.level = Math.max(0, pcState.volume.level - 2);
+      if (op.cmd === MEDIA.mute) pcState.volume.muted = !pcState.volume.muted;
+      return ctx.send(stateFrame());
     }
     case 'ping':
       return ctx.send(encPing());
     case 'json': {
       const m = op.value;
       log(tag, 'json', JSON.stringify(m));
-      if (m.t === 'volume') pcState.volume = Math.max(0, Math.min(100, Number(m.set) || 0));
-      if (m.t === 'seek' && pcState.media) pcState.media.pos = Math.max(0, Math.min(pcState.media.dur, pcState.media.pos + Number(m.by || 0)));
-      if (m.t === 'slider') pcState.bind[String(m.bind)] = Number(m.value);
-      if (m.t === 'remotes.list') ctx.send(encJson({ t: 'remotes', list: Object.values(REMOTES).map((r) => ({ id: r.id, name: r.name })) }));
-      if (m.t === 'remote.get' && REMOTES[m.id]) ctx.send(encJson({ t: 'remote', remote: REMOTES[m.id] }));
-      return ctx.send(encState(pcState));
+      if (m?.t !== 'invoke') throw new Error('only invoke is accepted'); // the core closes with 4400
+      // the phone names an item; the PC looks the action up itself
+      const remote = REMOTES[m.remote];
+      const item = remote?.layout.items.find((it, i) => (it.id ?? String(i)) === m.item);
+      if (!item) return ctx.send(encJson({ t: 'result', rid: m.rid, ok: false, err: 'unsupported' }));
+      if (item.icon === 'play' || item.icon === 'pause') pcState.media.status = pcState.media.status === 'playing' ? 'paused' : 'playing';
+      if (item.type === 'slider' && typeof m.value === 'number') pcState.volume.level = Math.round(m.value);
+      ctx.send(encJson({ t: 'result', rid: m.rid, ok: true }));
+      return ctx.send(stateFrame());
     }
     default:
       return log(tag, 'unhandled', op.op);

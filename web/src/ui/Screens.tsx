@@ -122,7 +122,7 @@ export function Busy() {
         </svg>
       </div>
       <h1>{t('busy.title', { pc })}</h1>
-      <p class="lead">{s.takeoverAsked ? t('busy.waiting') : t('busy.body')}</p>
+      <p class="lead">{s.takeoverAsked ? t('busy.waiting') : s.takeoverDenied ? t('busy.denied') : t('busy.body')}</p>
       <div class="grow" />
       <button class="btn primary" disabled={s.takeoverAsked} onClick={() => client.takeover()}>
         {t('busy.take')}

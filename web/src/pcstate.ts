@@ -1,60 +1,65 @@
-// Parsing of the server's `state` message (docs/protocol.md, provisional). Defensive: unknown or
+// Parsing of the server's `state` frame (docs/protocol.md, "0x11 state"). Defensive: unknown or
 // ill-typed fields are dropped, strings are length-limited, and everything is rendered as text.
 
+export type MediaStatus = 'none' | 'playing' | 'paused' | 'stopped';
+
 export interface MediaInfo {
-  app: string;
+  status: MediaStatus;
   title: string;
   artist: string;
-  playing: boolean;
-  pos: number;
-  dur: number;
+  positionMs: number;
+  durationMs: number;
 }
 
 export interface PcState {
-  pc?: string;
-  volume?: number;
-  muted: boolean;
   media: MediaInfo | null;
-  bind: Record<string, string | number>;
+  /** null when the volume is unknown */
+  volume: { level: number; muted: boolean } | null;
   locked: boolean;
+  elevated: boolean;
 }
 
-export const EMPTY_STATE: PcState = { muted: false, media: null, bind: {}, locked: false };
+export const EMPTY_STATE: PcState = { media: null, volume: null, locked: false, elevated: false };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-const num = (v: unknown, lo: number, hi: number): number | undefined =>
-  typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : undefined;
+const int = (v: unknown, lo: number, hi: number): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.trunc(v))) : 0);
 const text = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+const STATUSES: readonly string[] = ['none', 'playing', 'paused', 'stopped'];
 
 export function parseState(v: unknown): PcState {
-  if (!isObj(v)) return EMPTY_STATE;
+  if (!isObj(v) || v['t'] !== 'state') return EMPTY_STATE;
   let media: MediaInfo | null = null;
   const m = v['media'];
   if (isObj(m)) {
+    const status = typeof m['status'] === 'string' && STATUSES.includes(m['status']) ? (m['status'] as MediaStatus) : 'none';
     media = {
-      app: text(m['app'], 40),
+      status,
       title: text(m['title'], 200),
       artist: text(m['artist'], 200),
-      playing: m['playing'] === true,
-      pos: num(m['pos'], 0, 1e7) ?? 0,
-      dur: num(m['dur'], 0, 1e7) ?? 0,
+      positionMs: int(m['positionMs'], 0, 1e10),
+      durationMs: int(m['durationMs'], 0, 1e10),
     };
   }
-  const bind: Record<string, string | number> = {};
-  if (isObj(v['bind'])) {
-    for (const [k, val] of Object.entries(v['bind']).slice(0, 64)) {
-      if (typeof val === 'number' && Number.isFinite(val)) bind[k.slice(0, 64)] = val;
-      else if (typeof val === 'string') bind[k.slice(0, 64)] = val.slice(0, 200);
-    }
+  let volume: PcState['volume'] = null;
+  const vol = v['volume'];
+  if (isObj(vol)) volume = { level: int(vol['level'], 0, 100), muted: vol['muted'] === true };
+  const host = isObj(v['host']) ? v['host'] : {};
+  return { media, volume, locked: host['locked'] === true, elevated: host['elevated'] === true };
+}
+
+/** Values a remote's `bind` can show: now-playing text and the master volume. */
+export function bindValue(s: PcState, bind: string): string | number | undefined {
+  switch (bind) {
+    case 'smtc.title':
+      return s.media?.title || undefined;
+    case 'smtc.artist':
+      return s.media?.artist || undefined;
+    case 'volume':
+    case 'volume.master':
+      return s.volume?.level;
+    default:
+      return undefined;
   }
-  return {
-    pc: typeof v['pc'] === 'string' ? v['pc'].slice(0, 64) : undefined,
-    volume: num(v['volume'], 0, 100),
-    muted: v['muted'] === true,
-    media,
-    bind,
-    locked: v['locked'] === true,
-  };
 }
 
 export function formatTime(totalSeconds: number): string {

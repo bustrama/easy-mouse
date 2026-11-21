@@ -29,6 +29,8 @@ export interface CloseInfo {
   code: number;
   /** true when the connection had reached `online` */
   wasOnline: boolean;
+  /** true when this socket was a successful pairing (the caller now connects on a new socket) */
+  paired: boolean;
 }
 
 export interface Handlers {
@@ -37,6 +39,7 @@ export interface Handlers {
   onPaired?(creds: Credentials): void;
   onState?(state: unknown): void;
   onJson?(msg: unknown): void;
+  onTakeoverDenied?(): void;
   onClose?(info: CloseInfo): void;
 }
 
@@ -54,7 +57,7 @@ export interface WsLike {
 export interface SessionOptions {
   /** Pair with this one-time secret (from the QR fragment) instead of connecting. */
   pair?: { k: Uint8Array; name: string };
-  /** Existing device credentials. Also used right after pairing succeeds. */
+  /** Existing device credentials. */
   creds?: Credentials;
   handlers: Handlers;
   pingMs?: number;
@@ -82,6 +85,7 @@ export class Session {
   private lastTx = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private wasOnline = false;
+  private didPair = false;
   private closed = false;
 
   constructor(ws: WsLike, opts: SessionOptions) {
@@ -155,8 +159,10 @@ export class Session {
         const secret = unwrapSecret(this.k, this.nc, this.ns, b64decode(String(m['wrap'])));
         this.creds = { id: String(m['id']), secret };
         this.k = null; // spent
+        this.didPair = true;
         this.h.onPaired?.(this.creds);
-        this.sendHello();
+        // The server closes the pairing socket (1000); the caller connects on a fresh one.
+        this.abort(1000);
         return;
       }
       case 'pair.denied':
@@ -185,8 +191,11 @@ export class Session {
       case 'busy':
         if (this.phase === 'online' || this.phase === 'auth') this.setPhase('busy');
         return;
-      case 'granted':
+      case 'active':
         if (this.phase === 'busy') this.setPhase('online');
+        return;
+      case 'takeover.denied':
+        if (this.phase === 'busy') this.h.onTakeoverDenied?.();
         return;
       default:
         return; // ignore unknown control frames
@@ -251,6 +260,6 @@ export class Session {
     this.receiver = null;
     this.k = null;
     this.setPhase('closed');
-    this.h.onClose?.({ code, wasOnline: this.wasOnline });
+    this.h.onClose?.({ code, wasOnline: this.wasOnline, paired: this.didPair });
   }
 }

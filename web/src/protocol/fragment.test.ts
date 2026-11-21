@@ -17,6 +17,9 @@ describe('base64url', () => {
   it('rejects invalid input', () => {
     expect(() => b64decode('a+b/')).toThrow();
     expect(() => b64decode('a')).toThrow();
+    expect(() => b64decode('AAAA=')).toThrow(); // padding
+    expect(() => b64decode('AB')).toThrow(); // non-zero trailing bits
+    expect(b64decode('AA')).toEqual(Uint8Array.of(0));
   });
 });
 

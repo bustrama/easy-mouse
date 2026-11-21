@@ -13,6 +13,8 @@ export function b64decode(text: string): Uint8Array {
   const bin = atob(std);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  // reject non-canonical input (non-zero trailing bits), as the protocol requires
+  if (b64encode(out) !== text) throw new Error('non-canonical base64url');
   return out;
 }
 

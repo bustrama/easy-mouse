@@ -1,13 +1,14 @@
-// Declarative remotes (docs/architecture.md, "Remotes"). The PC sends JSON; the phone only renders it.
+// Declarative remotes (docs/architecture.md, "Remotes"). The PC sends the layouts; the phone only
+// renders them and names the item the user pressed (`invoke`). It never sends or runs an action.
 // Everything is validated and copied into a plain structure: labels become text nodes in the UI,
 // icons must come from the built-in set, nothing is ever evaluated or fetched.
 
 import { ICON_NAMES } from './ui/iconPaths.ts';
 
 export type RemoteItem =
-  | { type: 'button'; icon?: string; label?: string; action: unknown }
-  | { type: 'slider'; bind: string; label?: string }
-  | { type: 'label'; bind?: string; text?: string };
+  | { type: 'button'; id: string; icon?: string; label?: string }
+  | { type: 'slider'; id: string; bind?: string; label?: string }
+  | { type: 'label'; id: string; bind?: string; text?: string };
 
 export interface Remote {
   id: string;
@@ -16,23 +17,18 @@ export interface Remote {
   items: RemoteItem[];
 }
 
-export interface RemoteInfo {
-  id: string;
-  name: string;
-}
-
 const MAX_ITEMS = 64;
+const MAX_REMOTES = 32;
 const str = (v: unknown, max = 64): string | undefined => (typeof v === 'string' ? v.slice(0, max) : undefined);
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-export function sanitizeRemoteList(msg: unknown): RemoteInfo[] {
-  if (!isObj(msg) || !Array.isArray(msg['list'])) return [];
-  const out: RemoteInfo[] = [];
-  for (const r of msg['list'].slice(0, 32)) {
-    if (!isObj(r)) continue;
-    const id = str(r['id'], 64);
-    const name = str(r['name'], 40);
-    if (id && name) out.push({ id, name });
+/** `{ t:"remotes", remotes:[ <remote JSON, schema 1>, ... ] }` pushed by the PC. */
+export function sanitizeRemotes(msg: unknown): Remote[] {
+  if (!isObj(msg) || !Array.isArray(msg['remotes'])) return [];
+  const out: Remote[] = [];
+  for (const raw of msg['remotes'].slice(0, MAX_REMOTES)) {
+    const r = sanitizeRemote(raw);
+    if (r) out.push(r);
   }
   return out;
 }
@@ -46,30 +42,29 @@ export function sanitizeRemote(raw: unknown): Remote | null {
   const colsRaw = Number(layout['cols']);
   const cols = Number.isInteger(colsRaw) ? Math.max(1, Math.min(4, colsRaw)) : 2;
   const items: RemoteItem[] = [];
-  for (const it of layout['items'].slice(0, MAX_ITEMS)) {
-    if (!isObj(it)) continue;
+  layout['items'].slice(0, MAX_ITEMS).forEach((it: unknown, index) => {
+    if (!isObj(it)) return;
+    // The item id defaults to its zero-based position in `layout.items` (docs/protocol.md).
+    const itemId = str(it['id'], 64) ?? String(index);
     const label = str(it['label'], 40);
     switch (it['type']) {
       case 'button': {
         const icon = typeof it['icon'] === 'string' && ICON_NAMES.has(it['icon']) ? it['icon'] : undefined;
-        if (!icon && !label) continue;
-        items.push({ type: 'button', icon, label, action: it['action'] ?? null });
+        if (icon || label) items.push({ type: 'button', id: itemId, icon, label });
         break;
       }
-      case 'slider': {
-        const bind = str(it['bind'], 64);
-        if (bind) items.push({ type: 'slider', bind, label });
+      case 'slider':
+        items.push({ type: 'slider', id: itemId, bind: str(it['bind'], 64), label });
         break;
-      }
       case 'label': {
         const bind = str(it['bind'], 64);
         const text = str(it['text'], 80) ?? label;
-        if (bind || text) items.push({ type: 'label', bind, text });
+        if (bind || text) items.push({ type: 'label', id: itemId, bind, text });
         break;
       }
       default:
         break; // unknown item types are skipped
     }
-  }
+  });
   return { id, name, cols, items };
 }

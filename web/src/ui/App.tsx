@@ -41,6 +41,11 @@ function Shell() {
           <div class="tabtitle">{t(`tab.${s.tab}`)}</div>
         )}
       </header>
+      {s.pc.locked && (
+        <div class="notice" role="status">
+          {t('remotes.locked')}
+        </div>
+      )}
       <main class="main">
         {s.tab === 'mouse' && <Touchpad />}
         {s.tab === 'keyboard' && <Keyboard />}

@@ -5,13 +5,15 @@ import {
   encJson,
   encKey,
   encMedia,
+  KEYFLAG,
+  MEDIA,
   encMove,
   encText,
   encWheel,
 } from './protocol/ops.ts';
 import { type CloseInfo, Session, type Credentials, type WsLike } from './protocol/session.ts';
 import { EMPTY_STATE, type PcState, parseState } from './pcstate.ts';
-import { type Remote, type RemoteInfo, sanitizeRemote, sanitizeRemoteList } from './remotes.ts';
+import { type Remote, sanitizeRemotes } from './remotes.ts';
 import { clearCredentials, loadCredentials, saveCredentials, storageGet, storageSet } from './storage.ts';
 import { createStore } from './store.ts';
 
@@ -26,12 +28,13 @@ export interface AppState {
   connecting: boolean;
   replaced: boolean;
   takeoverAsked: boolean;
+  takeoverDenied: boolean;
+  /** short-lived message, e.g. an unsupported remote action */
+  toast: 'unsupported' | 'failed' | null;
   pcName: string | null;
   code: string;
   pc: PcState;
-  remotes: RemoteInfo[];
-  remotesLoaded: boolean;
-  layouts: Record<string, Remote>;
+  remotes: Remote[];
   tab: Tab;
   langPref: LangPref;
   lang: Lang;
@@ -81,12 +84,12 @@ class Client {
     connecting: true,
     replaced: false,
     takeoverAsked: false,
+    takeoverDenied: false,
+    toast: null,
     pcName: storageGet(PC_KEY),
     code: '',
     pc: EMPTY_STATE,
     remotes: [],
-    remotesLoaded: false,
-    layouts: {},
     tab: 'mouse',
     langPref: loadLangPref(),
     lang: resolveLang(loadLangPref()),
@@ -142,7 +145,6 @@ class Client {
   setTab(tab: Tab): void {
     this.releaseInputs();
     this.store.set({ tab });
-    if (tab === 'remotes') this.json({ t: 'remotes.list' });
   }
 
   // ---- pairing and connecting ----
@@ -200,9 +202,10 @@ class Client {
         onPhase: (phase) => current() && this.onPhase(phase),
         onState: (v) => {
           if (!current()) return;
-          const pc = parseState(v);
-          this.store.set({ pc, ...(pc.pc ? { pcName: pc.pc } : {}) });
+          this.assumedVolume = null; // a fresh snapshot replaces our estimate
+          this.store.set({ pc: parseState(v) });
         },
+        onTakeoverDenied: () => current() && this.store.set({ takeoverAsked: false, takeoverDenied: true }),
         onJson: (v) => current() && this.onJson(v),
         onClose: (info) => current() && this.onClose(info),
       },
@@ -221,8 +224,7 @@ class Client {
     if (phase === 'online') {
       this.attempts = 0;
       this.clearOfflineTimer();
-      this.store.set({ screen: 'online', connecting: false, replaced: false, takeoverAsked: false });
-      this.json({ t: 'remotes.list' });
+      this.store.set({ screen: 'online', connecting: false, replaced: false, takeoverAsked: false, takeoverDenied: false });
     } else if (phase === 'busy') {
       this.releaseInputs();
       this.store.set({ screen: 'busy', connecting: false });
@@ -233,16 +235,20 @@ class Client {
     if (typeof v !== 'object' || v === null) return;
     const m = v as Record<string, unknown>;
     if (m['t'] === 'remotes') {
-      this.store.set({ remotes: sanitizeRemoteList(m), remotesLoaded: true });
-    } else if (m['t'] === 'remote') {
-      const r = sanitizeRemote(m['remote']);
-      if (r) this.store.set({ layouts: { ...this.store.get().layouts, [r.id]: r } });
+      this.store.set({ remotes: sanitizeRemotes(m) });
+    } else if (m['t'] === 'result' && m['ok'] === false) {
+      this.showToast(m['err'] === 'unsupported' ? 'unsupported' : 'failed');
     }
   }
 
   private onClose(info: CloseInfo): void {
     this.session = null;
     this.releaseInputs();
+    if (info.paired) {
+      // pairing finished: the server closed that socket, connect with the new credentials
+      this.connect();
+      return;
+    }
     if (this.pairActive) {
       this.pairActive = false;
       const reason: ScanReason = info.code === 4002 ? 'denied' : info.code === 4408 ? 'expired' : 'failed';
@@ -286,7 +292,7 @@ class Client {
   }
 
   takeover(): void {
-    this.store.set({ takeoverAsked: true });
+    this.store.set({ takeoverAsked: true, takeoverDenied: false });
     this.session?.takeover();
   }
 
@@ -346,6 +352,38 @@ class Client {
   key = (vk: number, flags: number) => this.sendPlain(encKey(vk, flags));
   media = (cmd: number) => this.sendPlain(encMedia(cmd));
   json = (obj: unknown) => this.sendPlain(encJson(obj));
+
+  private rid = 0;
+  /** Press a remote's button or move its slider: the phone names the item, the PC owns the action. */
+  invoke(remote: string, item: string, value?: number): boolean {
+    return this.json({ t: 'invoke', rid: this.rid++, remote, item, ...(value === undefined ? {} : { value }) });
+  }
+
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private showToast(toast: 'unsupported' | 'failed'): void {
+    if (this.toastTimer) clearTimeout(this.toastTimer);
+    this.store.set({ toast });
+    this.toastTimer = setTimeout(() => this.store.set({ toast: null }), 2500);
+  }
+
+  private assumedVolume: number | null = null;
+  /**
+   * The protocol has volume steps (media op 4/5), not an absolute level. Each step is 2 %, so move
+   * toward the target by the number of steps needed; remember the estimate until the next snapshot.
+   */
+  setVolume(target: number): void {
+    const cur = this.assumedVolume ?? this.store.get().pc.volume?.level;
+    if (cur === undefined) return;
+    const steps = Math.max(-50, Math.min(50, Math.round((target - cur) / 2)));
+    if (steps === 0) return;
+    for (let i = 0; i < Math.abs(steps); i++) this.media(steps > 0 ? MEDIA.volup : MEDIA.voldown);
+    this.assumedVolume = Math.max(0, Math.min(100, cur + steps * 2));
+  }
+
+  /** Arrow keys are the near-universal seek keys of players (the focused player decides how far). */
+  seek(direction: -1 | 1): void {
+    this.key(direction < 0 ? 0x25 : 0x27, KEYFLAG.press);
+  }
   text(text: string): boolean {
     const frames = encText(text);
     return frames.length > 0 && frames.every((f) => this.sendPlain(f));

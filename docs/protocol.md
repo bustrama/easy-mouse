@@ -1,31 +1,42 @@
 # Easy Mouse - Wire protocol (draft v0)
 
-Status: draft. The Core implementation (`src/Core`) and the web client (`web/`)
-both follow this file. Change it in the same pull request that changes either
-side. Algorithms are fixed here so both sides agree; details marked TBD are for
-the implementer to settle and write back.
+Status: draft. The Core implementation (`src/Core`, `src/Server`) and the web client
+(`web/`) both follow this file. Change it in the same pull request that changes either
+side. Fixed test vectors are in `tests/vectors.json` (see the end of this file).
 
 ## Transport
 
 - `GET /` and static assets: the embedded web app.
 - `GET /api/info`: `{ "name": "Office PC", "version": "0.1.0", "proto": 0 }`.
-- `GET /ws` (WebSocket, binary and text frames): all control traffic.
-- Host header must be the PC's own IP or `<pcname>.local`. A WebSocket upgrade
-  with a foreign `Origin` is rejected. No CORS headers, no cookies.
+- `GET /ws` (WebSocket): all control traffic. Handshake messages are text frames (JSON);
+  everything after `ready` is a binary frame.
+- The Host header must be the PC's own IP or `<pcname>.local`, with the port we listen on
+  (the port may be omitted only when it is 80). Anything else gets `403`. IPv6 literals are
+  not accepted (IPv6 is off in v1).
+- A request with an `Origin` header must have exactly `http://<allowed host>[:port]`; any other
+  Origin (including `null` and `https://...`) gets `403`, on the WebSocket upgrade and on plain
+  requests alike. A request without `Origin` is not cross-origin (browsers omit it on same-origin
+  GET; non-browser clients never send it) and still needs the device secret.
+- No CORS headers, no cookies. Every response, including rejections, carries:
+  `Content-Security-Policy: default-src 'self'; connect-src 'self' ws://<validated Host>; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`
+  (the explicit `connect-src` covers browsers whose `'self'` does not include `ws:`),
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Resource-Policy: same-origin`. Inline script and inline `<style>` are therefore
+  not allowed in the web client; setting `element.style` from script is fine.
 
 ## Primitives
 
-- KDF: HKDF-SHA256. MAC: HMAC-SHA256. AEAD: ChaCha20-Poly1305 (12-byte nonce, 16-byte tag).
+- KDF: HKDF-SHA256 (RFC 5869). `HKDF(ikm, salt, info, L)`. In this protocol the salt is always
+  `nc | ns` (raw bytes, 32 bytes) and `info` is the ASCII label (`"code"`, `"wrap"`, `"c2s"`, `"s2c"`),
+  `L` is 32 bytes unless stated.
+- MAC: HMAC-SHA256, compared in constant time. Inputs are concatenated raw bytes. `"hello"`, `"c"`, `"s"`
+  are their ASCII bytes. `name` is its UTF-8 bytes exactly as sent.
+- AEAD: ChaCha20-Poly1305 (RFC 8439), 12-byte nonce, 16-byte tag, no associated data. Output is
+  `ciphertext | tag`.
 - Randomness: 128-bit nonces from a CSPRNG. Browser: `crypto.getRandomValues`
-  (available on plain HTTP; `crypto.subtle` is not, so the client uses the libraries).
-  Libraries: `@noble/ciphers`, `@noble/hashes`, pinned exactly.
-- All text frames are JSON, UTF-8. `b64` is base64url without padding.
-- `HKDF(ikm, salt, info)` is HKDF-SHA256 (RFC 5869) with that input key material,
-  salt and info, producing 32 bytes. `info` is the ASCII label.
-- `|` joins raw bytes (decoded from b64, not the b64 text). Labels (`"hello"`,
-  `"c"`, `"code"`, ...) are ASCII. `name` is UTF-8, 1 to 64 bytes.
-- `HMAC(key, msg)` is HMAC-SHA256, 32 bytes. MACs are compared in constant time.
-- AEAD calls use empty associated data everywhere.
+  (available on plain HTTP). Libraries: `@noble/ciphers`, `@noble/hashes`, pinned exactly.
+- All text frames are JSON, UTF-8. `b64` is base64url without padding. Decoders must reject padding,
+  the standard alphabet, a wrong length and non-zero trailing bits.
 
 ## Pairing (once per device, only while the QR window is open)
 
@@ -33,52 +44,56 @@ QR content: `http://<host>:<port>/#k=<b64 16 bytes>`. `k` is single-use, valid 2
 minutes. The page reads `k`, then removes it with `history.replaceState`.
 
 1. C->S `{ "t":"pair.hello", "name":"Dana's iPhone", "nc":"<b64 16B>", "mac":"<b64 HMAC(k, "hello"|nc|name)>" }`.
-   A bad MAC closes the socket with 4401; a spent, expired or closed window
-   closes it with 4408. Both count as a failed attempt.
-2. S->C `{ "t":"pair.pending", "ns":"<b64 16B>" }`. Both sides compute the
-   confirmation code: `D = HKDF(k, nc|ns, "code")`, `code = (u32 big-endian of
-   D[0..4]) mod 10000`, written as exactly 4 decimal digits with leading zeros.
-   It is shown on the phone and on the PC dialog. The user must see the same number.
-3. PC user clicks Allow. S->C `{ "t":"pair.ok", "id":"<b64 8B device id>", "wrap":"<b64 ciphertext|tag>" }`
-   where `wrap = AEAD(key = HKDF(k, nc|ns, "wrap"), nonce = 12 zero bytes, plaintext = S)`
-   and `S` is a fresh 256-bit device secret (so `wrap` decodes to 48 bytes). The
-   phone stores `id` and `S` in browser storage. Deny: `{ "t":"pair.denied" }`,
-   then the server closes the socket.
-4. `k` is now spent. Five failed `pair.hello` attempts regenerate `k`.
-5. After `pair.ok` the client continues on the same socket with step 1 of Connect
-   below (fresh `nc`), so pairing ends in a normal session. The server accepts
-   `hello` on a socket that has just paired.
+   `name` is 1-64 characters, no control characters and no bidirectional override/isolate characters,
+   not only whitespace.
+2. S->C `{ "t":"pair.pending", "ns":"<b64 16B>" }`. Both sides compute the confirmation code:
+   `code = u32be(HKDF(k, nc|ns, "code", 4)) mod 10000`, written as exactly 4 decimal digits (zero
+   padded). It is shown on the phone and in the PC dialog; the user must see the same number.
+3. The PC user clicks Allow (enabled one second after the dialog appears; Deny is always possible;
+   no answer within 60 seconds is a Deny). S->C
+   `{ "t":"pair.ok", "id":"<b64 8B device id>", "wrap":"<b64 AEAD(key=HKDF(k, nc|ns, "wrap"), nonce=12 zero bytes, plaintext=S)>" }`
+   where `S` is a fresh 256-bit device secret and `wrap` is 48 bytes (`ciphertext | tag`). The phone stores
+   `id` and `S` in browser storage. Deny: `{ "t":"pair.denied" }`. After either message the server closes
+   the socket with 1000; the phone then connects normally.
+4. `k` is spent by the first valid `pair.hello`, whatever the user decides, and replaced by a fresh
+   secret. Five `pair.hello` with a wrong MAC also replace it. Only one request may be pending.
+
+Failures close the socket: wrong MAC 4401, window closed or secret expired or another request
+pending 4408, malformed message or invalid name 4400.
 
 ## Connect (every session)
 
-1. C->S `{ "t":"hello", "id":"<b64>", "nc":"<b64 16B>" }`
-2. S->C `{ "t":"challenge", "ns":"<b64 16B>" }`
+1. C->S `{ "t":"hello", "id":"<b64 8B>", "nc":"<b64 16B>" }`
+2. S->C `{ "t":"challenge", "ns":"<b64 16B>" }`. An unknown, revoked or expired `id` also gets a
+   challenge, so the server does not reveal which ids exist; it fails at step 3.
 3. C->S `{ "t":"auth", "mac":"<b64 HMAC(S, "c"|nc|ns)>" }`
 4. S->C `{ "t":"ready", "mac":"<b64 HMAC(S, "s"|nc|ns)>" }`. The client verifies it.
-   Unknown, revoked or expired `id`, or a bad `auth` MAC: server closes the
-   socket with code 4401.
+   Unknown, revoked, expired `id` or a wrong MAC: the server closes the socket with code 4401 and sends
+   no `ready`. The whole handshake must complete within 10 seconds (4401).
 5. Both derive two keys: `Kc2s = HKDF(S, nc|ns, "c2s")`, `Ks2c = HKDF(S, nc|ns, "s2c")`.
 
-One controlling device at a time. If another device is already controlling, the
-server sends the text frame `{ "t":"busy" }` right after `ready` and ignores
-binary frames from this socket. The client may reply with the text frame
-`{ "t":"takeover" }`; if the PC user approves, the old socket is closed with
-4409 and the new one receives the text frame `{ "t":"granted" }`; if denied,
-the new socket is closed with 4409. A socket that gets no `busy` frame is the
-controller. After `ready`, text frames are only these control frames; all
-other traffic is binary.
+Devices unused for 90 days expire (configurable) and are refused like unknown ones.
+
+One controlling device at a time. After `ready`, a device that is the controller receives a state frame
+(op 0x11). If another device controls, the server sends the text message `{ "t":"busy" }` instead. A busy device may send `{ "t":"takeover" }`; the PC user approves (same Allow
+rules as pairing). Replies: `{ "t":"active" }` (it now controls; its old controller is closed with 4409;
+a state frame follows) or `{ "t":"takeover.denied" }`. If nobody controls, takeover succeeds at once.
+Binary frames from a busy device are dropped. A device that reconnects replaces its own earlier
+socket (4409 to the old one) without a prompt.
 
 ## Frames after `ready`
 
-Every WebSocket message is binary: `nonce_counter (u64 BE, 8 bytes) | ciphertext | tag`.
-The AEAD nonce is `dir (1 byte: 0 c2s, 1 s2c) | 3 zero bytes | counter (8 bytes)`,
-using the same counter as the cleartext prefix. The key is `Kc2s` for c2s frames
-and `Ks2c` for s2c frames.
-The receiver requires each counter to be strictly greater than the last one seen
-and drops anything else (replay and reorder protection). Counters start at 1.
-A fresh `nc`/`ns` per connection means counters restart safely.
+Every WebSocket message is binary: `nonce_counter (u64 BE, 8 bytes) | ciphertext | tag (16 bytes)`.
+The AEAD nonce is `dir (1 byte: 0 c2s, 1 s2c) | 3 zero bytes | counter (8 bytes)`.
+The receiver requires each counter to be strictly greater than the last one it accepted and drops
+anything else (replay and reorder protection). Counters start at 1; 0 is never valid. A frame that fails
+authentication does not advance the counter, so a forged frame cannot lock out the real peer. Dropped
+frames are dropped silently; 32 dropped frames on one socket close it (4400). A text frame after `ready`,
+or a binary frame before it, closes the socket with 4400.
 
-Plaintext layout: `op (u8) | payload`. Integers are big-endian.
+Plaintext layout: `op (u8) | payload`. Integers are big-endian. Payload lengths are exact; an unknown op,
+an op sent in the wrong direction, a wrong length, an out-of-range value or invalid UTF-8 is a protocol
+error and closes the socket with 4400 (nothing is executed).
 
 | op | name | payload | direction |
 |---|---|---|---|
@@ -88,66 +103,163 @@ Plaintext layout: `op (u8) | payload`. Integers are big-endian.
 | 0x04 | text | UTF-8 string, max 1024 bytes | C->S |
 | 0x05 | key | `u16 virtual-key, u8 flags (1 down, 2 up, 3 press)` | C->S |
 | 0x06 | media | `u8 cmd (0 playpause, 1 next, 2 prev, 3 stop, 4 volup, 5 voldown, 6 mute)` | C->S |
-| 0x10 | json | UTF-8 JSON control message (remote actions, settings) | both |
-| 0x11 | state | UTF-8 JSON: now playing, volume, lock/elevation status | S->C |
+| 0x10 | json | UTF-8 JSON control message (below) | both |
+| 0x11 | state | UTF-8 JSON, a full snapshot (below) | S->C |
 | 0x7F | ping | empty | both |
 
-Limits enforced by the server: input frames per second, text length, one
-controller. Frames larger than 4 KiB are rejected. TBD by the Core implementer:
-exact rate limits.
+A client `ping` is answered with a server `ping`.
 
-Conventions: `wheel` positive `dy` scrolls up (content moves down), positive
-`dx` scrolls right. Clients split `text` longer than 1024 bytes on code-point
-boundaries into several frames. `key` takes Windows virtual-key codes (for
-example 0x1B Esc, 0x09 Tab, 0x0D Enter, 0x2E Delete, 0x25-0x28 arrows, 0xA2
-LCtrl, 0xA4 LAlt, 0xA0 LShift, 0x5B LWin). Clients send `ping` about every 15 s
-while idle and treat 25 s of silence from the server as a lost connection (the
-server answers a `ping` with a `ping`).
+### Limits enforced by the server
 
-### Control JSON (0x10, 0x11) - provisional
+- A WebSocket message larger than 4096 bytes closes the socket (4400).
+- Text (0x04): at most 1024 bytes of UTF-8 (so fewer characters for Hebrew).
+- Rate: a token bucket of 200 frames per second sustained with a burst of 200, counted over every
+  frame received on the socket. Exceeding it closes the socket (4429).
+- One controller (see Connect).
+- While the PC is locked, input ops (0x01-0x06) are dropped and the phone is told through 0x11.
 
-These schemas are provisional, written by the web client side; the Core
-implementer may revise them here. Objects have a `t` field (except `state`).
-Receivers ignore unknown `t` and unknown fields.
+### 0x10 json (remote action invocation)
 
-C->S (op 0x10):
+The phone names an item of a remote; it never sends the action itself. The PC looks the action up in its
+own remote definitions (so dangerous actions stay pinned to the remote file hash).
 
-- `{ "t":"volume", "set": 0..100 }` set master volume (the `media` op only has steps).
-- `{ "t":"seek", "by": <seconds, signed> }` seek the active media session.
-- `{ "t":"remotes.list" }` ask for the remote list.
-- `{ "t":"remote.get", "id":"stremio" }` ask for one remote's layout.
-- `{ "t":"action", "remote":"stremio", "action": <action object or array> }` run a
-  remote button's action (action objects from `architecture.md`).
-- `{ "t":"slider", "remote":"stremio", "bind":"volume.app", "value": 0..100 }`
-
-S->C (op 0x10):
-
-- `{ "t":"remotes", "list":[ { "id":"stremio", "name":"Stremio" } ] }`
-- `{ "t":"remote", "remote": <remote JSON, schema 1> }`
-
-S->C (op 0x11), sent after `ready` and on change:
+C->S:
 
 ```json
-{ "pc":"Office PC", "volume":62, "muted":false,
-  "media": { "app":"Plex", "title":"Dune: Part Two", "artist":"", "playing":true,
-             "pos":4328, "dur":9960 },
-  "bind": { "smtc.title":"Dune: Part Two", "volume.app":48 },
-  "locked":false, "elevated":false }
+{
+  "type": "object",
+  "required": ["t", "rid", "remote", "item"],
+  "additionalProperties": true,
+  "properties": {
+    "t": { "const": "invoke" },
+    "rid": { "type": "integer", "minimum": 0, "description": "client-chosen request id, echoed in the result" },
+    "remote": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "item": { "type": "string", "minLength": 1, "maxLength": 64, "description": "id of the button/slider in the remote" },
+    "value": { "type": "number", "description": "slider position or other numeric argument" }
+  }
+}
 ```
 
-`media` is `null` when there is no session. `pos` and `dur` are seconds; `pos`
-is a snapshot that the client extrapolates while `playing`. `bind` holds values
-for remote labels and sliders. `locked: true` means input is paused.
+S->C, once per invocation:
+
+```json
+{
+  "type": "object",
+  "required": ["t", "rid", "ok"],
+  "properties": {
+    "t": { "const": "result" },
+    "rid": { "type": "integer", "minimum": 0 },
+    "ok": { "type": "boolean" },
+    "err": { "type": "string", "description": "short code, for example unsupported, busy, denied" }
+  }
+}
+```
+
+Invalid JSON, any other `t`, a negative `rid`, a non-numeric `value` or too-long strings close the
+socket (4400). At most 4 invocations run at once per socket; more get `{ok:false, err:"busy"}`. Until the
+remote engine exists (phase 2) every invocation gets `{ok:false, err:"unsupported"}`.
+
+### 0x11 state
+
+Sent right after the device becomes the controller and again whenever any part changes. Always a full
+snapshot, so the client replaces its copy.
+
+```json
+{
+  "type": "object",
+  "required": ["t", "media", "volume", "host"],
+  "properties": {
+    "t": { "const": "state" },
+    "media": {
+      "oneOf": [
+        { "type": "null", "description": "nothing playing or unknown" },
+        {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "enum": ["none", "playing", "paused", "stopped"] },
+            "title": { "type": "string" },
+            "artist": { "type": "string" },
+            "positionMs": { "type": "integer", "minimum": 0, "description": "snapshot; extrapolate while playing" },
+            "durationMs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "volume": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["level", "muted"],
+          "properties": {
+            "level": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "muted": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "host": {
+      "type": "object",
+      "required": ["locked", "elevated"],
+      "properties": {
+        "locked": { "type": "boolean", "description": "PC is locked: input is being dropped" },
+        "elevated": { "type": "boolean", "description": "foreground window is elevated: input may not reach it" }
+      }
+    }
+  }
+}
+```
+
+### 0x10 json, remote layouts (provisional)
+
+The phone has to know what to draw. Until the remote engine exists nothing is sent and the phone shows
+"no remotes". Provisional design (the web client already implements it; the Core implementer may revise
+it here): after the device becomes the controller, and again whenever the remote set changes, the server
+pushes the layouts. The phone never requests them (an unknown C->S `t` would close the socket).
+
+S->C: `{ "t":"remotes", "remotes":[ <remote JSON, schema 1, as in architecture.md>, ... ] }` (at most 32
+remotes, 64 items each). Every item may carry an `"id"` (string, at most 64); an item without one has the
+id `String(index)`, its zero-based position in `layout.items`. `invoke.item` uses that id. The pushed
+layouts do not need to include the `action` objects, the phone ignores them. Label and slider `bind`
+names the web client understands: `smtc.title`, `smtc.artist`, `volume` (or `volume.master`).
+
+### Client conventions
+
+- `ping`: the client sends one after about 15 s without sending anything and treats 25 s without
+  any frame from the server as a lost connection (it then reconnects).
+- `wheel`: positive `dy` scrolls up (content moves down), positive `dx` scrolls right. A two-finger drag
+  down sends positive `dy` ("natural" direction), 3 units per pixel before sensitivity.
+- `key` uses Windows virtual-key codes (Esc 0x1B, Tab 0x09, Enter 0x0D, Backspace 0x08, Delete 0x2E,
+  arrows 0x25-0x28, LCtrl 0xA2, LAlt 0xA4, LShift 0xA0, LWin 0x5B).
+- `text`: the client splits longer text on code-point boundaries into several frames of at most 1024 bytes.
+- There is no absolute-volume or seek op. The web client approximates the volume slider with `media` ops
+  4/5 (each step is 2 %, it sends the number of steps needed toward the target, at most 50 per move) and
+  seeks with the Left/Right arrow keys, which most players use for it.
+- Held modifiers (`key` flag 1) and a held mouse button are always released on page hide, tab change and
+  socket loss, so a dropped connection never leaves Ctrl or the left button down on the PC.
 
 ## Errors
 
-The server closes with: 4400 malformed, 4401 unauthorised or revoked, 4408
-pairing window closed or expired, 4429 rate limited, 4409 replaced by another
-controller.
+The server closes with: 1000 normal (pairing finished or denied), 4400 malformed, 4401 unauthorised,
+revoked, expired or handshake timeout, 4408 pairing window closed or secret expired or request pending,
+4409 replaced by another controller (or by the same device reconnecting), 4429 rate limited, 1011 internal
+error. A revoked device's live sockets are closed with 4401 at once.
 
 ## Test vectors
 
-`tests/vectors.json` holds fixed vectors for every HKDF/HMAC/AEAD step: pairing
-code, `wrap`, both auth MACs, both session keys, and one frame in each
-direction. The Core tests and the web client's unit tests (`web/src/*.test.ts`)
-pass the same file.
+`tests/vectors.json` (generated by `tests/Core.Tests/VectorsTests.cs`, which also checks it is current)
+holds, with all byte values as lowercase hex (plus `...B64` where a value goes on the wire):
+
+- `rfc`: RFC 5869 A.1 (HKDF-SHA256), RFC 4231 case 1 (HMAC-SHA256), RFC 8439 2.8.2 (ChaCha20-Poly1305).
+  These come from the RFCs, not from our code.
+- `pairing`: `k, nc, ns`, device name (ASCII and Hebrew), the pair MAC, the 4-digit code, the wrap key,
+  the device secret and `wrap`.
+- `connect`: device secret, id, `nc, ns`, both connect MACs and both session keys.
+- `frames`: sealed frames in both directions (counters, plaintext, full frame) covering every op.
+- `receiveSequenceC2S`: a sequence of frames for the server's receiver with the expected accept/drop
+  (replay, gap, reorder, tampered tag, counter 0).
+
+Everything except the RFC section was also reproduced with Node's `crypto` module by
+`tests/verify-vectors.mjs` (run in CI), so the vectors do not depend on the C# implementation alone.
+The web client's unit tests must pass the same file.

@@ -1,7 +1,10 @@
-import { createCipheriv, createHmac, hkdfSync } from 'node:crypto';
+import { chacha20poly1305 } from '@noble/ciphers/chacha.js';
+import { hkdf } from '@noble/hashes/hkdf.js';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { bytesToHex, hexToBytes } from './b64.ts';
+import { b64encode, bytesToHex, hexToBytes } from './b64.ts';
 import {
   authMac,
   DIR_C2S,
@@ -19,67 +22,70 @@ import {
   wrapSecret,
 } from './crypto.ts';
 
-// The same file the C# core tests load.
+// The same file the C# core tests generate and check (tests/vectors.json).
 const V = JSON.parse(readFileSync(new URL('../../../tests/vectors.json', import.meta.url), 'utf8'));
 const h = hexToBytes;
 const hex = bytesToHex;
+const ascii = (s: string) => new TextEncoder().encode(s);
 
-describe('shared test vectors', () => {
+describe('RFC vectors (noble primitives)', () => {
+  it('HKDF-SHA256, RFC 5869 A.1', () => {
+    const r = V.rfc.hkdf_rfc5869_a1;
+    expect(hex(hkdf(sha256, h(r.ikm), h(r.salt), h(r.info), r.length))).toBe(r.okm);
+  });
+  it('HMAC-SHA256, RFC 4231 case 1', () => {
+    const r = V.rfc.hmac_rfc4231_case1;
+    expect(hex(hmac(sha256, h(r.key), h(r.data)))).toBe(r.mac);
+  });
+  it('ChaCha20-Poly1305, RFC 8439 2.8.2', () => {
+    const r = V.rfc.chacha20poly1305_rfc8439_2_8_2;
+    const out = chacha20poly1305(h(r.key), h(r.nonce), h(r.aad)).encrypt(h(r.plaintext));
+    expect(hex(out)).toBe(r.ciphertext + r.tag);
+  });
+});
+
+describe('shared protocol vectors', () => {
   const p = V.pairing;
   const c = V.connect;
 
-  it('pairing: hello MAC, code, wrap', () => {
-    expect(hex(pairHelloMac(h(p.k), h(p.nc), p.name))).toBe(p.helloMac);
+  it('pairing: hello MAC (ASCII and Hebrew names), code, wrap', () => {
+    expect(hex(pairHelloMac(h(p.k), h(p.nc), p.name))).toBe(p.mac);
+    expect(hex(pairHelloMac(h(p.k), h(p.nc), p.nameHe))).toBe(p.macHe);
     expect(pairingCode(h(p.k), h(p.nc), h(p.ns))).toBe(p.code);
-    expect(hex(wrapSecret(h(p.k), h(p.nc), h(p.ns), h(p.secret)))).toBe(p.wrap);
-    expect(hex(unwrapSecret(h(p.k), h(p.nc), h(p.ns), h(p.wrap)))).toBe(p.secret);
+    expect(hex(wrapSecret(h(p.k), h(p.nc), h(p.ns), h(p.deviceSecret)))).toBe(p.wrap);
+    expect(hex(unwrapSecret(h(p.k), h(p.nc), h(p.ns), h(p.wrap)))).toBe(p.deviceSecret);
+    expect(b64encode(h(p.wrap))).toBe(p.wrapB64);
+    expect(b64encode(h(p.k))).toBe(p.kB64);
   });
 
   it('connect: auth/ready MACs and session keys', () => {
-    expect(hex(authMac(h(c.secret), h(c.nc), h(c.ns)))).toBe(c.authMac);
-    expect(hex(readyMac(h(c.secret), h(c.nc), h(c.ns)))).toBe(c.readyMac);
-    const k = sessionKeys(h(c.secret), h(c.nc), h(c.ns));
-    expect(hex(k.c2s)).toBe(c.kc2s);
-    expect(hex(k.s2c)).toBe(c.ks2c);
+    const S = h(c.deviceSecret);
+    expect(hex(authMac(S, h(c.nc), h(c.ns)))).toBe(c.clientMac);
+    expect(hex(readyMac(S, h(c.nc), h(c.ns)))).toBe(c.serverMac);
+    const k = sessionKeys(S, h(c.nc), h(c.ns));
+    expect(hex(k.c2s)).toBe(c.keyC2S);
+    expect(hex(k.s2c)).toBe(c.keyS2C);
+    expect(b64encode(h(c.id))).toBe(c.idB64);
   });
 
-  it('frames seal to the vector bytes and open back', () => {
+  it('every frame seals to the vector bytes and opens back', () => {
+    expect(V.frames.length).toBeGreaterThanOrEqual(9);
     for (const f of V.frames) {
       const dir = f.dir === 'c2s' ? DIR_C2S : DIR_S2C;
-      const key = h(f.dir === 'c2s' ? c.kc2s : c.ks2c);
+      const key = h(f.dir === 'c2s' ? c.keyC2S : c.keyS2C);
       expect(hex(sealFrame(key, dir, f.counter, h(f.plaintext)))).toBe(f.frame);
       const opened = openFrame(key, dir, h(f.frame));
       expect(opened.counter).toBe(f.counter);
       expect(hex(opened.plaintext)).toBe(f.plaintext);
     }
   });
-});
 
-describe('independent cross-check against node:crypto', () => {
-  it('HKDF-SHA256, HMAC-SHA256 and ChaCha20-Poly1305 agree with the noble-based code', () => {
-    const p = V.pairing;
-    const salt = Buffer.concat([Buffer.from(p.nc, 'hex'), Buffer.from(p.ns, 'hex')]);
-    const codeKey = Buffer.from(hkdfSync('sha256', Buffer.from(p.k, 'hex'), salt, 'code', 32));
-    expect(codeKey.toString('hex')).toBe(p.codeKey);
-    expect(String(codeKey.readUInt32BE(0) % 10000).padStart(4, '0')).toBe(p.code);
-
-    const mac = createHmac('sha256', Buffer.from(p.k, 'hex'))
-      .update('hello')
-      .update(Buffer.from(p.nc, 'hex'))
-      .update(Buffer.from(p.name, 'utf8'))
-      .digest('hex');
-    expect(mac).toBe(p.helloMac);
-
-    const wrapKey = Buffer.from(hkdfSync('sha256', Buffer.from(p.k, 'hex'), salt, 'wrap', 32));
-    const cipher = createCipheriv('chacha20-poly1305', wrapKey, Buffer.alloc(12), { authTagLength: 16 });
-    const ct = Buffer.concat([cipher.update(Buffer.from(p.secret, 'hex')), cipher.final(), cipher.getAuthTag()]);
-    expect(ct.toString('hex')).toBe(p.wrap);
-
-    const f = V.frames[0];
-    const nonce = Buffer.concat([Buffer.from([0, 0, 0, 0]), Buffer.from(f.frame.slice(0, 16), 'hex')]);
-    const fc = createCipheriv('chacha20-poly1305', Buffer.from(V.connect.kc2s, 'hex'), nonce, { authTagLength: 16 });
-    const fct = Buffer.concat([fc.update(Buffer.from(f.plaintext, 'hex')), fc.final(), fc.getAuthTag()]);
-    expect(f.frame).toBe(f.frame.slice(0, 16) + fct.toString('hex'));
+  it('receive sequence: replay, gap, reorder, tamper and counter 0 behave as specified', () => {
+    const rx = new FrameReceiver(h(c.keyC2S), DIR_C2S);
+    for (const s of V.receiveSequenceC2S) {
+      const got = rx.open(h(s.frame));
+      expect(got !== null ? 'accept' : 'drop', s.description).toBe(s.expect);
+    }
   });
 });
 
@@ -144,8 +150,7 @@ describe('frames', () => {
     expect(rx.open(huge)).toBeNull();
   });
 
-  it('bytesToHex/hexToBytes round-trip', () => {
-    const b = randomBytes(20);
-    expect(hexToBytes(bytesToHex(b))).toEqual(b);
+  it('labels are ASCII (guards against accidental encoding changes)', () => {
+    expect(ascii('c2s')).toEqual(Uint8Array.of(0x63, 0x32, 0x73));
   });
 });

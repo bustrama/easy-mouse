@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/bustrama/easy-mouse/remotes/remote.schema.json",
+  "title": "Easy Mouse remote, schema 1",
+  "description": "A declarative remote: a layout of buttons, sliders, labels and pads mapped to actions. There is no shell action. Unknown fields and unknown actions are rejected. The C# validator in src/Remotes is authoritative; tests keep this file in sync with it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "layout"],
+  "properties": {
+    "$schema": { "type": "string", "maxLength": 200 },
+    "schema": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process"],
+      "properties": {
+        "process": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._*?-]{1,64}$",
+          "description": "Executable file-name pattern with * and ? wildcards, e.g. stremio*.exe. Needed by focus."
+        }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cols", "items"],
+      "properties": {
+        "cols": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "items": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "#/$defs/item" } }
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["button", "slider", "label", "pad"] },
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$", "description": "Defaults to the zero-based position in layout.items. Effective ids must be unique." },
+        "icon": { "enum": ["mouse", "keyboard", "media", "remotes", "play", "pause", "next", "prev", "fullscreen", "subtitles", "skip", "back", "up", "down", "left", "right", "volume", "mute", "plus", "minus", "home", "power", "settings", "check", "rewind", "forward"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Static text of a label." },
+        "bind": {
+          "enum": ["smtc.title", "smtc.artist", "volume", "volume.master", "volume.app"],
+          "description": "Read-only value shown by a label or followed by a slider. The phone renders smtc.title, smtc.artist, volume and volume.master today."
+        },
+        "action": {
+          "oneOf": [
+            { "$ref": "#/$defs/action" },
+            { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/action" } }
+          ]
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "button" } } }, "then": { "required": ["action"], "anyOf": [{ "required": ["icon"] }, { "required": ["label"] }], "not": { "anyOf": [{ "required": ["bind"] }, { "required": ["text"] }] } } },
+        { "if": { "properties": { "type": { "const": "slider" } } }, "then": { "required": ["action"], "not": { "anyOf": [{ "required": ["icon"] }, { "required": ["text"] }] } } },
+        { "if": { "properties": { "type": { "const": "label" } } }, "then": { "anyOf": [{ "required": ["bind"] }, { "required": ["text"] }, { "required": ["label"] }], "not": { "anyOf": [{ "required": ["action"] }, { "required": ["icon"] }] } } },
+        { "if": { "properties": { "type": { "const": "pad" } } }, "then": { "not": { "anyOf": [{ "required": ["action"] }, { "required": ["icon"] }, { "required": ["bind"] }, { "required": ["text"] }] } } }
+      ]
+    },
+    "action": {
+      "description": "Class in brackets: Safe actions run freely; Sensitive and Dangerous ones make the remote need PC-side approval pinned to the file hash.",
+      "oneOf": [
+        { "$ref": "#/$defs/key" }, { "$ref": "#/$defs/text" }, { "$ref": "#/$defs/media" }, { "$ref": "#/$defs/mouse" },
+        { "$ref": "#/$defs/smtc" }, { "$ref": "#/$defs/volume" }, { "$ref": "#/$defs/focus" }, { "$ref": "#/$defs/launch" },
+        { "$ref": "#/$defs/openUrl" }, { "$ref": "#/$defs/http" }, { "$ref": "#/$defs/delay" }
+      ]
+    },
+    "key": {
+      "description": "[Safe] Press a key chord.",
+      "type": "object", "additionalProperties": false, "required": ["do", "keys"],
+      "properties": {
+        "do": { "const": "key" },
+        "keys": { "type": "string", "maxLength": 40, "description": "Optional Ctrl+, Alt+, Shift+ prefixes, then one key: A-Z, 0-9, F1-F24, Enter, Escape, Space, Tab, Backspace, Delete, Insert, Home, End, PageUp, PageDown, Left, Up, Right, Down, Plus, Minus, Comma, Period, Slash, LeftBracket, RightBracket." },
+        "repeat": { "type": "integer", "minimum": 1, "maximum": 50 }
+      }
+    },
+    "text": {
+      "description": "[Sensitive] Type text (a macro).",
+      "type": "object", "additionalProperties": false, "required": ["do", "text"],
+      "properties": { "do": { "const": "text" }, "text": { "type": "string", "minLength": 1, "maxLength": 1024, "description": "At most 1024 UTF-8 bytes." } }
+    },
+    "media": {
+      "description": "[Safe] Media key.",
+      "type": "object", "additionalProperties": false, "required": ["do", "cmd"],
+      "properties": { "do": { "const": "media" }, "cmd": { "enum": ["playPause", "next", "prev", "stop", "volUp", "volDown", "mute"] } }
+    },
+    "mouse": {
+      "description": "[Safe] Click or scroll at the current pointer position.",
+      "type": "object", "additionalProperties": false, "required": ["do", "cmd"],
+      "properties": { "do": { "const": "mouse" }, "cmd": { "enum": ["click", "rightClick", "middleClick", "doubleClick", "scrollUp", "scrollDown"] } }
+    },
+    "smtc": {
+      "description": "[Safe] System Media Transport Controls of the session of target.process (or the current session).",
+      "type": "object", "additionalProperties": false, "required": ["do", "cmd"],
+      "properties": {
+        "do": { "const": "smtc" },
+        "cmd": { "enum": ["toggle", "play", "pause", "next", "prev", "stop", "seekForward", "seekBack"] },
+        "seconds": { "type": "integer", "minimum": 1, "maximum": 600, "description": "Required for seekForward and seekBack, not allowed otherwise." }
+      }
+    },
+    "volume": {
+      "description": "[Safe] Master or per-app volume. On a slider: exactly one volume action with cmd set and no level; the slider supplies the value.",
+      "type": "object", "additionalProperties": false, "required": ["do"],
+      "properties": {
+        "do": { "const": "volume" },
+        "scope": { "enum": ["master", "app"] },
+        "cmd": { "enum": ["set", "up", "down", "mute", "unmute", "toggleMute"] },
+        "level": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Only with cmd set." },
+        "step": { "type": "integer", "minimum": 1, "maximum": 20 }
+      }
+    },
+    "focus": {
+      "description": "[Safe] Bring the window of target.process to the front. The remote must declare target.process.",
+      "type": "object", "additionalProperties": false, "required": ["do"],
+      "properties": { "do": { "const": "focus" } }
+    },
+    "launch": {
+      "description": "[Dangerous] Start a program. exe is a slot name; the user binds it to a program they pick on the PC when approving. Arguments are fixed and shown in the prompt.",
+      "type": "object", "additionalProperties": false, "required": ["do", "exe"],
+      "properties": {
+        "do": { "const": "launch" },
+        "exe": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" },
+        "args": { "type": "array", "maxItems": 16, "items": { "type": "string", "maxLength": 256, "not": { "pattern": "\\$\\{" } } }
+      }
+    },
+    "openUrl": {
+      "description": "[Sensitive] Open an http or https URL in the default browser.",
+      "type": "object", "additionalProperties": false, "required": ["do", "url"],
+      "properties": { "do": { "const": "openUrl" }, "url": { "type": "string", "pattern": "^https?://[^@/?#]+([/?#].*)?$", "maxLength": 2048 } }
+    },
+    "http": {
+      "description": "[Dangerous] HTTP request to loopback or to hosts the user approved. No redirects. ${secret.name} placeholders (never in the host) are replaced on the PC.",
+      "type": "object", "additionalProperties": false, "required": ["do", "url"],
+      "properties": {
+        "do": { "const": "http" },
+        "method": { "enum": ["GET", "POST", "PUT", "DELETE"] },
+        "url": { "type": "string", "pattern": "^https?://[^@/?#$]+([/?#].*)?$", "maxLength": 2048 },
+        "headers": { "type": "object", "maxProperties": 8, "propertyNames": { "pattern": "^[A-Za-z0-9-]{1,64}$" }, "additionalProperties": { "type": "string", "maxLength": 512 } },
+        "body": { "type": "string", "maxLength": 2048, "description": "Not allowed with GET." },
+        "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 10000 }
+      }
+    },
+    "delay": {
+      "description": "[Safe] Wait between actions. At most 30000 ms in total per item.",
+      "type": "object", "additionalProperties": false, "required": ["do", "ms"],
+      "properties": { "do": { "const": "delay" }, "ms": { "type": "integer", "minimum": 1, "maximum": 10000 } }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../remote.schema.json",
+  "schema": 1,
+  "id": "plex",
+  "name": "Plex",
+  "description": "UNVERIFIED and deliberately minimal: SMTC buttons and PC volume only. Plex's keyboard shortcut page (support.plex.tv) could not be read, so no Plex key is guessed. The Plex Player API (/player/playback/..., documented in the plex-media-player wiki) is not used: its port and whether current Plex apps still expose it are unconfirmed. Whether Plex registers SMTC also needs checking on a real PC. Keys and local HTTP will be added once verified.",
+  "layout": {
+    "cols": 3,
+    "items": [
+      { "type": "button", "icon": "prev", "label": "Previous", "action": { "do": "smtc", "cmd": "prev" } },
+      { "type": "button", "icon": "play", "label": "Play / Pause", "action": { "do": "smtc", "cmd": "toggle" } },
+      { "type": "button", "icon": "next", "label": "Next", "action": { "do": "smtc", "cmd": "next" } },
+      { "type": "button", "icon": "minus", "label": "Volume -", "action": { "do": "media", "cmd": "volDown" } },
+      { "type": "button", "icon": "mute", "label": "Mute", "action": { "do": "media", "cmd": "mute" } },
+      { "type": "button", "icon": "plus", "label": "Volume +", "action": { "do": "media", "cmd": "volUp" } },
+      { "type": "label", "bind": "smtc.title" },
+      { "type": "slider", "label": "PC volume", "bind": "volume", "action": { "do": "volume", "scope": "master" } }
+    ]
+  }
+}

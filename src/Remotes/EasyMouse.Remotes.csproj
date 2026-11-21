@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>EasyMouse.Remotes</RootNamespace>
+    <AssemblyName>EasyMouse.Remotes</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,27 @@
+{
+  "$schema": "../remote.schema.json",
+  "schema": 1,
+  "id": "vlc",
+  "name": "VLC",
+  "description": "Default hotkeys from the VideoLAN hotkeys wiki (wiki.videolan.org/Hotkeys): Space play/pause, S stop, N next, P previous, F fullscreen, Alt+Left/Right jump 10 s, Ctrl+Up/Down volume, M mute, V subtitle track, B audio track. That page is dated and the hotkeys are configurable in VLC, so a changed setup breaks these. UNVERIFIED: whether VLC publishes SMTC, so the title label may stay empty.",
+  "target": { "process": "vlc.exe" },
+  "layout": {
+    "cols": 4,
+    "items": [
+      { "type": "button", "icon": "prev", "label": "Previous", "action": [{ "do": "focus" }, { "do": "key", "keys": "P" }] },
+      { "type": "button", "icon": "play", "label": "Play / Pause", "action": [{ "do": "focus" }, { "do": "key", "keys": "Space" }] },
+      { "type": "button", "icon": "next", "label": "Next", "action": [{ "do": "focus" }, { "do": "key", "keys": "N" }] },
+      { "type": "button", "icon": "power", "label": "Stop", "action": [{ "do": "focus" }, { "do": "key", "keys": "S" }] },
+      { "type": "button", "icon": "rewind", "label": "-10 s", "action": [{ "do": "focus" }, { "do": "key", "keys": "Alt+Left" }] },
+      { "type": "button", "icon": "forward", "label": "+10 s", "action": [{ "do": "focus" }, { "do": "key", "keys": "Alt+Right" }] },
+      { "type": "button", "icon": "fullscreen", "label": "Fullscreen", "action": [{ "do": "focus" }, { "do": "key", "keys": "F" }] },
+      { "type": "button", "icon": "subtitles", "label": "Subtitles", "action": [{ "do": "focus" }, { "do": "key", "keys": "V" }] },
+      { "type": "button", "icon": "minus", "label": "Volume -", "action": [{ "do": "focus" }, { "do": "key", "keys": "Ctrl+Down" }] },
+      { "type": "button", "icon": "mute", "label": "Mute", "action": [{ "do": "focus" }, { "do": "key", "keys": "M" }] },
+      { "type": "button", "icon": "plus", "label": "Volume +", "action": [{ "do": "focus" }, { "do": "key", "keys": "Ctrl+Up" }] },
+      { "type": "button", "label": "Audio track", "action": [{ "do": "focus" }, { "do": "key", "keys": "B" }] },
+      { "type": "label", "bind": "smtc.title" },
+      { "type": "slider", "label": "PC volume", "bind": "volume", "action": { "do": "volume", "scope": "master" } }
+    ]
+  }
+}

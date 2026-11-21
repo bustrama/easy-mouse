@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Devices and remotes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>body{margin:0;font-family:'Heebo',system-ui,sans-serif}</style>
+</helmet>
+<div style="width:860px;height:640px;box-sizing:border-box;background:#0E1116;color:#F3F5F7;border:1px solid #2A323E;display:flex;flex-direction:column">
+<div style="height:40px;display:flex;align-items:center;padding:0 14px;gap:8px;font-size:13px;font-weight:500;color:#C9D1DC"><div style="width:18px;height:18px;border-radius:6px;background:#2563EB"></div>Easy Mouse · Devices</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:200px;flex:none;padding:8px 12px;display:flex;flex-direction:column;gap:2px;box-sizing:border-box">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="6">
+<div style="height:40px;display:flex;align-items:center;padding:0 14px;border-radius:10px;font-size:15px;font-weight:{{n.w}};background:{{n.bg}};color:{{n.fg}}">{{n.label}}</div>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;padding:8px 32px 24px 16px;display:flex;flex-direction:column;gap:22px;overflow:hidden">
+
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="font-size:13px;font-weight:700;color:#9AA4B2;letter-spacing:.4px;text-transform:uppercase">Paired phones</div>
+<button style="height:34px;padding:0 14px;border-radius:10px;border:1px solid #F87171;background:#171C24;font:inherit;font-size:13px;font-weight:700;color:#F87171">Disconnect all</button>
+</div>
+<div style="margin-top:8px;background:#171C24;border:1px solid #2A323E;border-radius:16px;overflow:hidden">
+<sc-for list="{{devices}}" as="d" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #2A323E">
+<div style="width:40px;height:40px;border-radius:12px;background:#0E1116;display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C9D1DC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;font-weight:700">{{d.name}}</div>
+<div style="margin-top:2px;font-size:13px;color:#9AA4B2">{{d.meta}}</div>
+</div>
+<span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:{{d.bg}};color:{{d.fg}}">{{d.status}}</span>
+<button style="height:34px;padding:0 14px;border-radius:10px;border:1px solid #2A323E;background:#171C24;font:inherit;font-size:13px;font-weight:700;color:#F3F5F7">Remove</button>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="font-size:13px;font-weight:700;color:#9AA4B2;letter-spacing:.4px;text-transform:uppercase">Remotes</div>
+<button style="height:34px;padding:0 14px;border-radius:10px;border:none;background:#2563EB;font:inherit;font-size:13px;font-weight:700;color:#fff">Import remote</button>
+</div>
+<div style="margin-top:8px;background:#171C24;border:1px solid #2A323E;border-radius:16px;overflow:hidden">
+<sc-for list="{{remotes}}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #2A323E">
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;font-weight:700">{{r.name}}</div>
+<div style="margin-top:2px;font-size:13px;color:#9AA4B2">{{r.meta}}</div>
+</div>
+<span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:{{r.bg}};color:{{r.fg}}">{{r.tag}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":640}}'>
+class Component extends DCLogic {
+renderVals() {
+const labels = ['General', 'Network', 'Security', 'Devices', 'Remotes', 'About'];
+return {
+nav: labels.map((label, i) => ({ label, w: i === 3 ? 700 : 500, bg: i === 3 ? '#171C24' : 'transparent', fg: i === 3 ? '#5B8CFF' : '#C9D1DC' })),
+devices: [
+{ name: "Dana's iPhone", meta: 'Safari · paired 3 days ago', status: 'Connected', bg: '#DCFCE7', fg: '#14532D' },
+{ name: 'Pixel 8', meta: 'Chrome · last seen yesterday', status: 'Offline', bg: '#2A323E', fg: '#C9D1DC' },
+{ name: 'Living room tablet', meta: 'Chrome · unused for 80 days, expires soon', status: 'Offline', bg: '#FEF3C7', fg: '#78350F' }
+],
+remotes: [
+{ name: 'Stremio', meta: 'Built in · media keys and shortcuts', tag: 'Safe', bg: '#DCFCE7', fg: '#14532D' },
+{ name: 'Plex', meta: 'Built in · calls the local Plex API', tag: 'Approved', bg: '#E3ECFF', fg: '#1747B8' },
+{ name: 'Movie night', meta: 'Imported · launches an app, needs your approval', tag: 'Review needed', bg: '#FEF3C7', fg: '#78350F' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

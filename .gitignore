@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+publish/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Installer output
+installer/Output/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+
+# Local env
+.env
+.env.*

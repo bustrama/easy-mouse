@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone pairing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Heebo',system-ui,sans-serif}
+@keyframes ring{0%{transform:scale(.6);opacity:.8}100%{transform:scale(1.7);opacity:0}}
+.rng{animation:ring 2.2s ease-out infinite}
+@media (prefers-reduced-motion:reduce){.rng{animation:none}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#0E1116;color:#F3F5F7;display:flex;flex-direction:column;align-items:center;padding:96px 32px 40px;text-align:center">
+<div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+<div class="rng" style="position:absolute;width:120px;height:120px;border-radius:50%;border:2px solid #5B8CFF"></div>
+<div style="width:88px;height:88px;border-radius:28px;background:#2563EB;display:flex;align-items:center;justify-content:center">
+<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 2.5v7"/></svg>
+</div>
+</div>
+<h1 style="margin:40px 0 0;font-size:30px;font-weight:800;letter-spacing:-.8px;line-height:1.15">Waiting for approval on your PC</h1>
+<p style="margin:14px 0 0;font-size:17px;line-height:1.5;color:#9AA4B2">Click Allow on the computer. Make sure the code there matches this one.</p>
+<div style="margin-top:36px;background:#171C24;border:1px solid #2A323E;border-radius:24px;padding:22px 40px">
+<div style="font-size:13px;font-weight:700;color:#9AA4B2">Your code</div>
+<div style="margin-top:4px;font-size:54px;font-weight:800;letter-spacing:10px;color:#5B8CFF;direction:ltr">4821</div>
+</div>
+<div style="margin-top:20px;font-size:14px;color:#9AA4B2">Connecting to Office PC</div>
+<div style="flex:1"></div>
+<button style="width:100%;height:56px;border-radius:16px;border:1px solid #3A4452;background:transparent;font:inherit;font-size:17px;font-weight:700;color:#F3F5F7">Cancel</button>
+<div style="margin-top:16px;font-size:13px;line-height:1.5;color:#7D8896">Only you can see this code. Your phone and PC stay on your own network.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

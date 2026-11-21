@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone cannot connect</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>body{margin:0;font-family:'Heebo',system-ui,sans-serif}</style>
+</helmet>
+<div style="width:440px;height:640px;box-sizing:border-box;background:#0E1116;color:#F3F5F7;border:1px solid #2A323E;display:flex;flex-direction:column">
+<div style="height:40px;display:flex;align-items:center;padding:0 14px;gap:8px;font-size:13px;font-weight:500;color:#C9D1DC"><div style="width:18px;height:18px;border-radius:6px;background:#2563EB"></div>Easy Mouse</div>
+<div style="flex:1;padding:8px 32px 28px;display:flex;flex-direction:column">
+<div style="width:48px;height:48px;border-radius:16px;background:#FEF3C7;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12h.01M4 20L20 4"/></svg>
+</div>
+<h1 style="margin:16px 0 0;font-size:24px;font-weight:800;letter-spacing:-.5px">Your phone cannot reach this PC</h1>
+<p style="margin:8px 0 0;font-size:15px;line-height:1.5;color:#C9D1DC">Nothing has connected for a while. This is usually one of these:</p>
+<div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+<div style="background:#171C24;border:1px solid #2A323E;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-size:15px;font-weight:700">{{it.title}}</span><span style="font-size:12px;font-weight:700;color:{{it.color}};white-space:nowrap">{{it.tag}}</span></div>
+<div style="font-size:14px;line-height:1.45;color:#C9D1DC">{{it.body}}</div>
+</div>
+</sc-for>
+</div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:10px">
+<button style="flex:1;height:44px;border-radius:12px;border:1px solid #2A323E;background:#171C24;font:inherit;font-size:15px;font-weight:700;color:#F3F5F7">Show QR again</button>
+<button style="flex:1;height:44px;border-radius:12px;border:none;background:#2563EB;font:inherit;font-size:15px;font-weight:700;color:#fff">Make network Private</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":440,"height":640}}'>
+class Component extends DCLogic {
+renderVals() {
+return { items: [
+{ title: 'This network is set to Public', tag: 'Found', color: '#FBBF24', body: 'Windows blocks other devices on Public networks. Setting it to Private fixes this.' },
+{ title: 'Guest or isolated Wi-Fi', tag: 'Possible', color: '#9AA4B2', body: 'Some Wi-Fi networks keep devices apart on purpose, like guest networks and some hotel or office Wi-Fi. Try the main network.' },
+{ title: 'Phone is on mobile data', tag: 'Possible', color: '#9AA4B2', body: 'Make sure the phone is on the same Wi-Fi as this PC.' }
+] };
+}
+}
+</script>
+</body>
+</html>

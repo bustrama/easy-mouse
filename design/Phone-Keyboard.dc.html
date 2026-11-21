@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone keyboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>body{margin:0;font-family:'Heebo',system-ui,sans-serif}</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#0E1116;color:#F3F5F7;display:flex;flex-direction:column;padding:56px 16px 0">
+<div style="display:flex;justify-content:space-between;align-items:center;height:44px">
+<div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700"><span style="width:9px;height:9px;border-radius:50%;background:#4ADE80"></span>Office PC</div>
+<div style="font-size:13px;font-weight:700;color:#9AA4B2">Keyboard</div>
+</div>
+<div style="margin-top:12px">
+<label for="msg" style="font-size:13px;font-weight:700;color:#9AA4B2">Type, then send to the PC</label>
+<div style="margin-top:8px;background:#171C24;border:1px solid #2A323E;border-radius:20px;padding:16px;min-height:120px;box-sizing:border-box;font-size:18px;line-height:1.5;direction:auto"><span id="msg">Meeting notes for Sunday</span><span style="display:inline-block;width:2px;height:22px;background:#5B8CFF;vertical-align:middle;margin-inline-start:2px"></span></div>
+<button style="margin-top:10px;width:100%;height:52px;border-radius:16px;border:none;background:#2563EB;font:inherit;font-size:17px;font-weight:700;color:#fff">Send text</button>
+</div>
+<div style="margin-top:22px;font-size:13px;font-weight:700;color:#9AA4B2">Keys</div>
+<div style="margin-top:8px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+<button style="height:52px;border-radius:14px;border:1px solid {{k.bd}};background:{{k.bg}};font:inherit;font-size:15px;font-weight:700;color:#F3F5F7;padding:0">{{k.label}}</button>
+</sc-for>
+</div>
+<div style="margin-top:18px;font-size:13px;font-weight:700;color:#9AA4B2">Shortcuts</div>
+<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{shortcuts}}" as="s" hint-placeholder-count="5">
+<button style="height:44px;padding:0 16px;border-radius:999px;border:1px solid #2A323E;background:#171C24;font:inherit;font-size:14px;font-weight:700;color:#F3F5F7;direction:ltr">{{s}}</button>
+</sc-for>
+</div>
+<div style="flex:1"></div>
+<div style="height:84px;border-top:1px solid #2A323E;display:flex;padding-top:8px;padding-bottom:20px;box-sizing:border-box">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;color:{{t.fg}}">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{t.fg}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.d}}"/></svg>{{t.label}}
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const t = [
+['Mouse', 'M12 3v18M3 12h18'],
+['Keyboard', 'M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8'],
+['Media', 'M8 5v14l11-7z'],
+['Remotes', 'M4 6h16M4 12h16M4 18h10']
+];
+const mod = ['Ctrl', 'Alt', 'Shift', 'Win'];
+const other = ['Esc', 'Tab', 'Enter', 'Delete', 'Left', 'Up', 'Down', 'Right'];
+return {
+tabs: t.map(([label, d], i) => ({ label, d, fg: i === 1 ? '#5B8CFF' : '#7D8896' })),
+keys: [...mod.map((label) => ({ label, bg: '#1F2937', bd: '#3A4452' })), ...other.map((label) => ({ label, bg: '#171C24', bd: '#2A323E' }))],
+shortcuts: ['Ctrl + C', 'Ctrl + V', 'Alt + Tab', 'Win + D', 'Alt + F4']
+};
+}
+}
+</script>
+</body>
+</html>

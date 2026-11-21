@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Easy Mouse settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>body{margin:0;font-family:'Heebo',system-ui,sans-serif}</style>
+</helmet>
+<div style="width:860px;height:640px;box-sizing:border-box;background:#0E1116;color:#F3F5F7;border:1px solid #2A323E;display:flex;flex-direction:column">
+<div style="height:40px;display:flex;align-items:center;padding:0 14px;gap:8px;font-size:13px;font-weight:500;color:#C9D1DC"><div style="width:18px;height:18px;border-radius:6px;background:#2563EB"></div>Easy Mouse · Settings</div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:200px;flex:none;padding:8px 12px;display:flex;flex-direction:column;gap:2px;box-sizing:border-box">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+<div style="height:40px;display:flex;align-items:center;padding:0 14px;border-radius:10px;font-size:15px;font-weight:{{n.w}};background:{{n.bg}};color:{{n.fg}}">{{n.label}}</div>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;padding:8px 32px 24px 16px;display:flex;flex-direction:column;gap:22px;overflow:hidden">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div>
+<div style="font-size:13px;font-weight:700;color:#9AA4B2;letter-spacing:.4px;text-transform:uppercase">{{g.title}}</div>
+<div style="margin-top:8px;background:#171C24;border:1px solid #2A323E;border-radius:16px;overflow:hidden">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:16px;padding:14px 18px;border-bottom:1px solid #2A323E">
+<div style="flex:1;min-width:0">
+<div style="font-size:15px;font-weight:700">{{r.title}}</div>
+<div style="margin-top:2px;font-size:13px;line-height:1.45;color:{{r.bodyColor}}">{{r.body}}</div>
+</div>
+<sc-if value="{{r.isToggle}}" hint-placeholder-val="{{true}}">
+<div style="width:44px;height:26px;border-radius:999px;background:{{r.trackBg}};position:relative;flex:none"><div style="position:absolute;top:3px;left:{{r.knobLeft}}px;width:20px;height:20px;border-radius:50%;background:#fff"></div></div>
+</sc-if>
+<sc-if value="{{r.isValue}}" hint-placeholder-val="{{false}}">
+<div style="flex:none;padding:7px 14px;border:1px solid #2A323E;border-radius:10px;background:#0E1116;font-size:14px;font-weight:500;direction:ltr">{{r.value}}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":860,"height":640}}'>
+class Component extends DCLogic {
+renderVals() {
+const tg = (title, body, on, warn) => ({ title, body, bodyColor: warn ? '#FBBF24' : '#9AA4B2', isToggle: true, isValue: false, trackBg: on ? '#2563EB' : '#3A4452', knobLeft: on ? 21 : 3, value: '' });
+const vl = (title, body, value) => ({ title, body, bodyColor: '#9AA4B2', isToggle: false, isValue: true, trackBg: '', knobLeft: 0, value });
+const labels = ['General', 'Network', 'Security', 'Devices', 'Remotes', 'About'];
+return {
+nav: labels.map((label, i) => ({ label, w: i === 2 ? 700 : 500, bg: i === 2 ? '#171C24' : 'transparent', fg: i === 2 ? '#5B8CFF' : '#C9D1DC' })),
+groups: [
+{ title: 'Startup', rows: [
+tg('Start with Windows', 'Easy Mouse opens in the tray when you sign in.', true),
+tg('Start minimised to the tray', 'No window until you need the QR code.', true)
+] },
+{ title: 'Network', rows: [
+vl('Port', 'Fixed, so paired phones keep working.', '8765'),
+vl('Network card', 'The Wi-Fi or Ethernet card phones connect through.', 'Wi-Fi (Private)')
+] },
+{ title: 'Security', rows: [
+tg('Control admin windows and the UAC prompt', 'A paired phone can then approve UAC prompts. It is effectively an administrator on this PC.', true, true),
+vl('Emergency disconnect hotkey', 'Closes every connection at once.', 'Ctrl + Alt + Shift + K'),
+tg('One phone at a time', 'A second phone has to wait or take over.', true)
+] }
+]
+};
+}
+}
+</script>
+</body>
+</html>

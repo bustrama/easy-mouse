@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Easy Mouse landing page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Heebo',system-ui,sans-serif;color:#F3F5F7;background:#0E1116}
+a{color:inherit;text-decoration:none}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes roam{0%{transform:translate(0,0)}30%{transform:translate(170px,50px)}65%{transform:translate(70px,140px)}100%{transform:translate(0,0)}}
+@keyframes scan{0%{top:6%}100%{top:90%}}
+@keyframes ring{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+@keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(8px,-10px)}}
+.up{animation:fadeUp .8s both}
+.d1{animation-delay:.1s}.d2{animation-delay:.25s}.d3{animation-delay:.4s}.d4{animation-delay:.55s}
+.flt{animation:floaty 6s ease-in-out infinite}
+.cur{animation:roam 7s ease-in-out infinite}
+.scn{animation:scan 2.4s ease-in-out infinite alternate}
+.rng{animation:ring 2.4s ease-out infinite}
+.dr{animation:drift 9s ease-in-out infinite}
+.card{transition:transform .25s,box-shadow .25s}
+.card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.45)}
+.btn{transition:transform .2s}.btn:hover{transform:translateY(-2px)}
+@media (prefers-reduced-motion:reduce){.up,.flt,.cur,.scn,.rng,.dr{animation:none}}
+</style>
+</helmet>
+<div style="width:100%;overflow:hidden">
+
+<!-- nav -->
+<div style="max-width:1200px;margin:0 auto;padding:20px 40px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:11px;background:#2563EB;display:flex;align-items:center;justify-content:center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 2.5v7"/></svg>
+</div>
+<span style="font-size:20px;font-weight:800;letter-spacing:-.3px">Easy Mouse</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:center;font-size:15px;font-weight:500;color:#C9D1DC">
+<a href="#how">How it works</a><a href="#features">Features</a><a href="#security">Security</a>
+<a href="#get" class="btn" style="background:#2563EB;color:#fff;padding:10px 20px;border-radius:999px">Download</a>
+</div>
+</div>
+
+<!-- hero -->
+<div style="max-width:1200px;margin:0 auto;padding:40px 40px 80px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:48px;align-items:center">
+<div style="flex:1 1 480px;min-width:0">
+<div class="up" style="display:inline-flex;gap:8px;align-items:center;background:#E3ECFF;color:#1747B8;padding:6px 14px;border-radius:999px;font-size:14px;font-weight:700">Free and open source · MIT</div>
+<h1 class="up d1" style="margin:20px 0 0;font-size:68px;line-height:1.02;font-weight:800;letter-spacing:-2px">Your phone is the remote.</h1>
+<p class="up d2" style="margin:24px 0 0;font-size:20px;line-height:1.55;color:#C9D1DC;max-width:520px">Control your Windows PC from any phone browser. Android or iPhone, nothing to install on the phone, and nothing ever leaves your home network.</p>
+<div class="up d3" style="margin-top:36px;display:flex;flex-wrap:wrap;gap:14px">
+<a href="#get" class="btn" style="background:#2563EB;color:#fff;padding:16px 28px;border-radius:14px;font-size:17px;font-weight:700">Download for Windows</a>
+<a href="#how" class="btn" style="background:#171C24;color:#F3F5F7;padding:16px 28px;border-radius:14px;font-size:17px;font-weight:700;border:1px solid #2A323E">See how it works</a>
+</div>
+<p class="up d4" style="margin:18px 0 0;font-size:14px;color:#9AA4B2">Built for Windows 11. Windows 10 is untested.</p>
+</div>
+
+<div style="flex:1 1 520px;min-width:0;position:relative;height:470px">
+<div class="dr" style="position:absolute;left:0;top:30px;width:430px;height:310px;background:#171C24;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden">
+<div style="height:38px;background:#1F2937;display:flex;align-items:center;padding:0 14px;gap:8px;font-size:13px;font-weight:700;color:#C9D1DC"><span style="width:10px;height:10px;border-radius:50%;background:#C5CCD6"></span>Easy Mouse</div>
+<div style="display:flex;align-items:center;justify-content:center;height:272px;position:relative">
+<div style="position:relative;width:170px;height:170px;padding:12px;background:#fff;border:1px solid #2A323E;border-radius:14px;box-sizing:border-box">
+<div style="display:grid;grid-template-columns:repeat(17,minmax(0,1fr));width:100%;height:100%">
+<sc-for list="{{cells}}" as="c" hint-placeholder-count="289"><div style="background:{{c.bg}}"></div></sc-for>
+</div>
+<div class="scn" style="position:absolute;left:6px;right:6px;height:3px;border-radius:3px;background:#2563EB;opacity:.85"></div>
+</div>
+<svg class="cur" style="position:absolute;left:40px;top:40px" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3l16 7-7 2-2 7z" fill="#fff" stroke="#0E1116" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+</div>
+<div class="flt" style="position:absolute;right:10px;top:60px;width:200px;height:400px;background:#0E1116;border:1px solid #2A323E;border-radius:34px;padding:10px;box-sizing:border-box;box-shadow:0 30px 70px rgba(14,17,22,.28)">
+<div style="width:100%;height:100%;border-radius:26px;background:#171C24;display:flex;flex-direction:column;padding:14px;box-sizing:border-box;gap:10px">
+<div style="display:flex;justify-content:space-between;font-size:11px;color:#9AA4B2;font-weight:700"><span>Connected</span><span style="color:#5B8CFF">Office PC</span></div>
+<div style="flex:1;border-radius:18px;background:#0E1116;border:1px solid #2A323E;position:relative;display:flex;align-items:center;justify-content:center">
+<div class="rng" style="position:absolute;width:70px;height:70px;border-radius:50%;border:2px solid #5B8CFF"></div>
+<div style="width:26px;height:26px;border-radius:50%;background:#5B8CFF"></div>
+</div>
+<div style="display:flex;gap:8px"><div style="flex:1;height:34px;border-radius:12px;background:#2A323E"></div><div style="flex:1;height:34px;border-radius:12px;background:#2A323E"></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- how it works -->
+<div id="how" style="background:#171C24;padding:96px 0">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box">
+<h2 style="margin:0;font-size:44px;font-weight:800;letter-spacing:-1.2px">Three steps. One time.</h2>
+<p style="margin:14px 0 0;font-size:18px;color:#C9D1DC;max-width:560px">After the first pairing, your phone finds the PC on its own.</p>
+<div style="margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+<div class="card" style="background:#0E1116;border-radius:24px;padding:32px;box-sizing:border-box">
+<div style="width:44px;height:44px;border-radius:14px;background:#2563EB;color:#fff;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center">{{s.n}}</div>
+<h3 style="margin:22px 0 0;font-size:24px;font-weight:700">{{s.title}}</h3>
+<p style="margin:10px 0 0;font-size:16px;line-height:1.55;color:#C9D1DC">{{s.body}}</p>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<!-- features -->
+<div id="features" style="padding:96px 0">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box">
+<h2 style="margin:0;font-size:44px;font-weight:800;letter-spacing:-1.2px">More than a touchpad.</h2>
+<div style="margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
+<sc-for list="{{features}}" as="f" hint-placeholder-count="6">
+<div class="card" style="background:#171C24;border-radius:24px;padding:32px;box-sizing:border-box;border:1px solid #2A323E">
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5B8CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{f.d}}"/></svg>
+<h3 style="margin:18px 0 0;font-size:22px;font-weight:700">{{f.title}}</h3>
+<p style="margin:8px 0 0;font-size:16px;line-height:1.55;color:#C9D1DC">{{f.body}}</p>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<!-- security -->
+<div id="security" style="background:#0A0D11;color:#fff;padding:96px 0">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:56px;align-items:center">
+<div style="flex:1 1 420px;min-width:0">
+<h2 style="margin:0;font-size:44px;font-weight:800;letter-spacing:-1.2px">Stays on your network. Always.</h2>
+<p style="margin:18px 0 0;font-size:18px;line-height:1.6;color:#B4BDC9">A phone that can move your mouse needs real protection, even at home. Security is part of the design, not an add-on.</p>
+</div>
+<div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{security}}" as="p" hint-placeholder-count="5">
+<div style="display:flex;gap:16px;align-items:flex-start;background:#171C24;border:1px solid #2A323E;border-radius:18px;padding:18px 22px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5B8CFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+<div><div style="font-size:17px;font-weight:700">{{p.title}}</div><div style="margin-top:4px;font-size:15px;line-height:1.5;color:#B4BDC9">{{p.body}}</div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<!-- remotes -->
+<div style="padding:96px 0">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:56px;align-items:center">
+<div style="flex:1 1 420px;min-width:0">
+<h2 style="margin:0;font-size:44px;font-weight:800;letter-spacing:-1.2px">Build your own remote.</h2>
+<p style="margin:18px 0 0;font-size:18px;line-height:1.6;color:#C9D1DC">A remote is a small text file: buttons, sliders and actions. Make one for Plex or Stremio in minutes, or share it with a pull request. No code runs, and anything risky asks you first.</p>
+</div>
+<div style="flex:1 1 460px;min-width:0;background:#171C24;border:1px solid #2A323E;border-radius:20px;padding:28px;box-sizing:border-box;font-family:ui-monospace,Consolas,monospace;font-size:14px;line-height:1.7;color:#C9D1DC;direction:ltr">
+<div><span style="color:#5B8CFF">"name"</span>: "Stremio",</div>
+<div><span style="color:#5B8CFF">"target"</span>: { "process": "stremio*.exe" },</div>
+<div><span style="color:#5B8CFF">"layout"</span>: [</div>
+<div style="padding-left:20px">{ "type": "button", "icon": "play",</div>
+<div style="padding-left:40px"><span style="color:#5B8CFF">"action"</span>: { "do": "smtc", "cmd": "toggle" } },</div>
+<div style="padding-left:20px">{ "type": "slider", "bind": "volume" }</div>
+<div>]</div>
+</div>
+</div>
+</div>
+
+<!-- download -->
+<div id="get" style="padding:0 0 96px">
+<div style="max-width:1200px;margin:0 auto;padding:0 40px;box-sizing:border-box">
+<div style="background:#2563EB;color:#fff;border-radius:32px;padding:64px 40px;text-align:center">
+<h2 style="margin:0;font-size:48px;font-weight:800;letter-spacing:-1.4px">Ready in a minute.</h2>
+<p style="margin:16px auto 0;font-size:19px;line-height:1.55;max-width:520px;color:#E3ECFF">Install, scan the QR, click Allow. That is the whole setup.</p>
+<div style="margin-top:32px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center">
+<a href="#get" class="btn" style="background:#fff;color:#0E1116;padding:16px 30px;border-radius:14px;font-size:17px;font-weight:700">Download for Windows</a>
+<a href="#get" class="btn" style="background:transparent;color:#fff;padding:16px 30px;border-radius:14px;font-size:17px;font-weight:700;border:1.5px solid #fff">View on GitHub</a>
+</div>
+</div>
+</div>
+</div>
+
+<!-- footer -->
+<div style="border-top:1px solid #2A323E">
+<div style="max-width:1200px;margin:0 auto;padding:32px 40px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;font-size:14px;color:#9AA4B2">
+<span>Easy Mouse · MIT licence</span>
+<span>No cloud. No accounts. No telemetry.</span>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2800}}'>
+class Component extends DCLogic {
+renderVals() {
+const N = 17, cells = [];
+const finder = (r, c) => {
+const boxes = [[0,0],[0,N-7],[N-7,0]];
+for (const [br, bc] of boxes) {
+const rr = r - br, cc = c - bc;
+if (rr >= 0 && rr < 7 && cc >= 0 && cc < 7) {
+const edge = rr === 0 || rr === 6 || cc === 0 || cc === 6;
+const core = rr >= 2 && rr <= 4 && cc >= 2 && cc <= 4;
+return edge || core ? 1 : 0;
+}
+}
+return null;
+};
+for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+let v = finder(r, c);
+if (v === null) v = ((r * 7 + c * 13 + r * c) % 5 < 2) ? 1 : 0;
+cells.push({ bg: v ? '#0E1116' : '#fff' });
+}
+return {
+cells,
+steps: [
+{ n: '1', title: 'Open Easy Mouse', body: 'Start the app on your PC. A small window shows a QR code.' },
+{ n: '2', title: 'Scan with your phone', body: 'Point the camera at the code. The remote opens in the browser.' },
+{ n: '3', title: 'Allow once', body: 'Confirm the phone on your PC. It is remembered from now on.' }
+],
+features: [
+{ d: 'M12 3v18M3 12h18', title: 'Touchpad', body: 'Move, click, scroll and drag with natural gestures, tuned for low delay.' },
+{ d: 'M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8', title: 'Keyboard', body: 'Type text in any language, Hebrew included, plus Ctrl, Alt, Win and shortcuts.' },
+{ d: 'M8 5v14l11-7z', title: 'Media', body: 'Play, pause, skip and volume for whatever is playing, with the title on screen.' },
+{ d: 'M4 6h16M4 12h16M4 18h10', title: 'Custom remotes', body: 'Ready-made remotes for Plex and Stremio, and an easy editor for your own.' },
+{ d: 'M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12h.01', title: 'Reconnects itself', body: 'Scan once. After that the phone finds your PC without a code.' },
+{ d: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', title: 'Admin windows too', body: 'Optional control of administrator windows and the UAC prompt, off unless you allow it.' }
+],
+security: [
+{ title: 'No cloud, no accounts', body: 'The phone talks straight to your PC. Nothing is sent anywhere else.' },
+{ title: 'You approve every device', body: 'A new phone needs your click on the PC, with a matching code.' },
+{ title: 'Encrypted and replay-proof', body: 'Typed passwords are not readable by someone on the same Wi-Fi.' },
+{ title: 'Revoke in one click', body: 'Remove a phone any time, or disconnect everything with a hotkey.' },
+{ title: 'Open source', body: 'Read every line. Releases are built in public and signed.' }
+]
+};
+}
+}
+</script>
+</body>
+</html>

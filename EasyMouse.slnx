@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Core/">
+    <Project Path="src/Core/EasyMouse.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/Server/">
+    <Project Path="src/Server/EasyMouse.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Core.Tests/">
+    <Project Path="tests/Core.Tests/EasyMouse.Core.Tests.csproj" />
+  </Folder>
+</Solution>

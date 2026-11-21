@@ -9,7 +9,8 @@ side. Fixed test vectors are in `tests/vectors.json` (see the end of this file).
 - `GET /` and static assets: the embedded web app.
 - `GET /api/info`: `{ "name": "Office PC", "version": "0.1.0", "proto": 0 }`.
 - `GET /ws` (WebSocket): all control traffic. Handshake messages are text frames (JSON);
-  everything after `ready` is a binary frame.
+  everything after `ready` is a binary frame, with one exception: the controller-negotiation messages
+  `busy`, `takeover`, `active` and `takeover.denied` (see Connect) are text frames.
 - The Host header must be the PC's own IP or `<pcname>.local`, with the port we listen on
   (the port may be omitted only when it is 80). Anything else gets `403`. IPv6 literals are
   not accepted (IPv6 is off in v1).
@@ -88,8 +89,9 @@ The AEAD nonce is `dir (1 byte: 0 c2s, 1 s2c) | 3 zero bytes | counter (8 bytes)
 The receiver requires each counter to be strictly greater than the last one it accepted and drops
 anything else (replay and reorder protection). Counters start at 1; 0 is never valid. A frame that fails
 authentication does not advance the counter, so a forged frame cannot lock out the real peer. Dropped
-frames are dropped silently; 32 dropped frames on one socket close it (4400). A text frame after `ready`,
-or a binary frame before it, closes the socket with 4400.
+frames are dropped silently; 32 dropped frames on one socket close it (4400). A binary frame before
+`ready` closes the socket with 4400, and so does a text frame after `ready` other than `{ "t":"takeover" }`
+from a busy device.
 
 Plaintext layout: `op (u8) | payload`. Integers are big-endian. Payload lengths are exact; an unknown op,
 an op sent in the wrong direction, a wrong length, an out-of-range value or invalid UTF-8 is a protocol
@@ -150,7 +152,7 @@ S->C, once per invocation:
     "t": { "const": "result" },
     "rid": { "type": "integer", "minimum": 0 },
     "ok": { "type": "boolean" },
-    "err": { "type": "string", "description": "short code, for example unsupported, busy, denied" }
+    "err": { "type": "string", "description": "short code: unsupported, busy (too many in flight), locked (PC is locked), denied" }
   }
 }
 ```

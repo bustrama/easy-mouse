@@ -38,7 +38,23 @@ public class SessionFuzzTests
         "{\"t\":\"takeover\"}",
         "{\"t\":\"invoke\"}",
         "[]", "null", "\"t\"", "{}", "{\"t\":1}", "{\"t\":{\"a\":{\"b\":{}}}}", "",
+        // JSON escapes that decode to invalid UTF-16 (lone surrogates): GetString() throws on these.
+        "{\"t\":\"\\ud800\"}", "{\"t\":\"pair.hello\",\"name\":\"\\udc00\",\"nc\":\"AAAAAAAAAAAAAAAAAAAAAA\",\"mac\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}",
+        "{\"t\":\"hello\",\"id\":\"\\ud800\",\"nc\":\"x\"}", "{\"\\ud800\":\"a\"}",
     ];
+
+    [Theory]
+    [InlineData("{\"t\":\"\\ud800\"}")]
+    [InlineData("{\"t\":\"pair.hello\",\"name\":\"\\udc00\",\"nc\":\"AAAAAAAAAAAAAAAAAAAAAA\",\"mac\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}")]
+    [InlineData("{\"\\ud800\":\"a\"}")]
+    public async Task Lone_surrogate_escapes_in_handshake_json_close_with_4400(string json)
+    {
+        var (svc, _) = Services();
+        var transport = new FakeTransport();
+        var session = new ServerSession(svc, transport);
+        await session.OnTextAsync(json);
+        Assert.Equal(CloseCode.Malformed, transport.ClosedWith);
+    }
 
     [Fact]
     public async Task Random_and_mutated_text_never_throws_or_injects_input()

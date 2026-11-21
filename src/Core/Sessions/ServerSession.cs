@@ -426,14 +426,20 @@ public sealed class ServerSession
                 if (valueOk) invocation = new RemoteInvocation(remoteId, itemId, value);
             }
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
-            invocation = null;
+            invocation = null; // malformed JSON, or an escape that decodes to invalid UTF-16
         }
 
         if (invocation is null)
         {
             await CloseAsync(CloseCode.Malformed, "bad json").ConfigureAwait(false);
+            return;
+        }
+        if (_svc.Status.Locked)
+        {
+            // Remote actions can inject input (key, text, launch...): not while the PC is locked.
+            await SendResultAsync(rid, new RemoteActionResult(false, "locked")).ConfigureAwait(false);
             return;
         }
         _ = RunInvocationAsync(invocation, rid);
@@ -542,8 +548,9 @@ public sealed class ServerSession
             }
             return true;
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
+            // InvalidOperationException: an escape such as "\ud800" decodes to invalid UTF-16 on GetString().
             return false;
         }
     }

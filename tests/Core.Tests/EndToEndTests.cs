@@ -622,7 +622,18 @@ public class EndToEndTests
             Assert.Equal("unsupported", json.GetProperty("err").GetString());
         }
 
-        foreach (var bad in new[] { "not json", "[]", "{\"t\":\"shell\",\"cmd\":\"calc\"}", "{\"t\":\"invoke\",\"rid\":-1,\"remote\":\"a\",\"item\":\"b\"}", "{\"t\":\"invoke\",\"rid\":1,\"remote\":\"a\",\"item\":\"b\",\"value\":\"x\"}" })
+        // Locked PC: invocations are refused (they may inject input).
+        host.Services.Status.Update(locked: true, elevated: false);
+        await using (var client = await host.ConnectDeviceAsync(device))
+        {
+            await ReadStateAsync(client);
+            await client.SendFrameAsync(new JsonMessage("{\"t\":\"invoke\",\"rid\":8,\"remote\":\"stremio\",\"item\":\"play\"}"));
+            var json = JsonDocument.Parse(Assert.IsType<JsonMessage>(await client.ReceiveFrameAsync()).Json).RootElement;
+            Assert.Equal("locked", json.GetProperty("err").GetString());
+        }
+        host.Services.Status.Update(locked: false, elevated: false);
+
+        foreach (var bad in new[] { "{\"t\":\"\\ud800\"}", "{\"t\":\"invoke\",\"rid\":1,\"remote\":\"\\udc00\",\"item\":\"b\"}", "not json", "[]", "{\"t\":\"shell\",\"cmd\":\"calc\"}", "{\"t\":\"invoke\",\"rid\":-1,\"remote\":\"a\",\"item\":\"b\"}", "{\"t\":\"invoke\",\"rid\":1,\"remote\":\"a\",\"item\":\"b\",\"value\":\"x\"}" })
         {
             await using var client = await host.ConnectDeviceAsync(device);
             await client.SendFrameAsync(new JsonMessage(bad));

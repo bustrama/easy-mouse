@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Easy Mouse – Your phone is the remote for your Windows PC</title>
+<meta name="description" content="Control your Windows PC from any phone browser. Android or iPhone, nothing to install on the phone, local network only. Free and open source (MIT).">
+<meta name="theme-color" content="#0E1116">
+<link rel="canonical" href="https://bustrama.github.io/easy-mouse/">
+<link rel="alternate" hreflang="en" href="https://bustrama.github.io/easy-mouse/">
+<link rel="alternate" hreflang="he" href="https://bustrama.github.io/easy-mouse/he/">
+<link rel="alternate" hreflang="x-default" href="https://bustrama.github.io/easy-mouse/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Easy Mouse">
+<meta property="og:title" content="Easy Mouse – Your phone is the remote">
+<meta property="og:description" content="Control your Windows PC from any phone browser. Nothing to install on the phone, and nothing ever leaves your home network.">
+<meta property="og:url" content="https://bustrama.github.io/easy-mouse/">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="he_IL">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&amp;display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="wrap">
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="./">
+      <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 2.5v7"/></svg></span>
+      Easy Mouse
+    </a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a class="lang" href="he/" hreflang="he" lang="he">עברית</a></li>
+      <li><a class="btn btn-primary btn-sm" href="https://github.com/bustrama/easy-mouse/releases/latest">Download</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero wrap" aria-labelledby="h1">
+    <div class="row">
+      <div>
+        <span class="badge up">Free and open source · MIT</span>
+        <h1 id="h1" class="up d1">Your phone is the remote.</h1>
+        <p class="sub up d2">Control your Windows PC from any phone browser. Android or iPhone, nothing to install on the phone, and nothing ever leaves your home network.</p>
+        <div class="btns up d3">
+          <a class="btn btn-primary" href="https://github.com/bustrama/easy-mouse/releases/latest">Download for Windows</a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+        <p class="note up d4">Built for Windows 11. Windows 10 is untested.</p>
+      </div>
+      <div class="art-fit" role="img" aria-label="Illustration: the Easy Mouse window on a PC showing a QR code, and a phone acting as a touchpad.">
+        <div class="art" aria-hidden="true">
+          <div class="pc">
+            <div class="pc-bar"><i></i>Easy Mouse</div>
+            <div class="pc-body">
+              <div class="qr"><div class="qr-grid" id="qr"></div><div class="scan"></div></div>
+              <svg class="cursor" width="26" height="26" viewBox="0 0 24 24"><path d="M4 3l16 7-7 2-2 7z" fill="#fff" stroke="#0E1116" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>Connected</span><span>Office PC</span></div>
+            <div class="pad"><div class="ring"></div><div class="dot"></div></div>
+            <div class="keys"><i></i><i></i></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="alt" aria-labelledby="how-h">
+    <div class="wrap">
+      <div class="reveal">
+        <h2 id="how-h">Three steps. One time.</h2>
+        <p class="lead">After the first pairing, your phone finds the PC on its own.</p>
+      </div>
+      <ol class="grid g3">
+        <li class="card step reveal"><div class="num" aria-hidden="true">1</div><h3>Open Easy Mouse</h3><p>Start the app on your PC. A small window shows a QR code.</p></li>
+        <li class="card step reveal" style="--d:.12s"><div class="num" aria-hidden="true">2</div><h3>Scan with your phone</h3><p>Point the camera at the code. The remote opens in the browser.</p></li>
+        <li class="card step reveal" style="--d:.24s"><div class="num" aria-hidden="true">3</div><h3>Allow once</h3><p>Confirm the phone on your PC. It is remembered from now on.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="feat-h">
+    <div class="wrap">
+      <h2 id="feat-h" class="reveal">More than a touchpad.</h2>
+      <ul class="grid g6">
+        <li class="card feat reveal"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg><h3>Touchpad</h3><p>Move, click, scroll and drag with natural gestures, tuned for low delay.</p></li>
+        <li class="card feat reveal" style="--d:.08s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8"/></svg><h3>Keyboard</h3><p>Type text in any language, Hebrew included, plus Ctrl, Alt, Win and shortcuts.</p></li>
+        <li class="card feat reveal" style="--d:.16s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><h3>Media</h3><p>Play, pause, skip and volume for whatever is playing, with the title on screen.</p></li>
+        <li class="card feat reveal"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><h3>Custom remotes</h3><p>Ready-made remotes for Plex and Stremio, and an easy editor for your own.</p></li>
+        <li class="card feat reveal" style="--d:.08s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12h.01"/></svg><h3>Reconnects itself</h3><p>Scan once. After that the phone finds your PC without a code.</p></li>
+        <li class="card feat reveal" style="--d:.16s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><h3>Admin windows too</h3><p>Optional control of administrator windows and the UAC prompt, off unless you allow it.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="security" class="sec" aria-labelledby="sec-h">
+    <div class="wrap row">
+      <div class="reveal">
+        <h2 id="sec-h">Stays on your network. Always.</h2>
+        <p class="lead">A phone that can move your mouse needs real protection, even at home. Security is part of the design, not an add-on.</p>
+      </div>
+      <ul class="checks">
+        <li class="reveal"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>No cloud, no accounts</b><span>The phone talks straight to your PC. Nothing is sent anywhere else.</span></div></li>
+        <li class="reveal" style="--d:.08s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>You approve every device</b><span>A new phone needs your click on the PC, with a matching code.</span></div></li>
+        <li class="reveal" style="--d:.16s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>Encrypted and replay-proof</b><span>Typed passwords are not readable by someone on the same Wi-Fi.</span></div></li>
+        <li class="reveal" style="--d:.24s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>Revoke in one click</b><span>Remove a phone any time, or disconnect everything with a hotkey.</span></div></li>
+        <li class="reveal" style="--d:.32s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>Open source</b><span>Read every line. Releases are built in public and signed.</span></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="remote-h">
+    <div class="wrap row">
+      <div class="reveal">
+        <h2 id="remote-h">Build your own remote.</h2>
+        <p class="lead">A remote is a small text file: buttons, sliders and actions. Make one for Plex or Stremio in minutes, or share it with a pull request. No code runs, and anything risky asks you first.</p>
+      </div>
+      <pre class="reveal" style="--d:.12s" aria-label="Example remote file"><code><span class="k">"name"</span>: "Stremio",
+<span class="k">"target"</span>: { "process": "stremio*.exe" },
+<span class="k">"layout"</span>: [
+  { "type": "button", "icon": "play",
+    <span class="k">"action"</span>: { "do": "smtc", "cmd": "toggle" } },
+  { "type": "slider", "bind": "volume" }
+]</code></pre>
+    </div>
+  </section>
+
+  <section id="get" aria-labelledby="get-h">
+    <div class="wrap">
+      <div class="cta reveal">
+        <h2 id="get-h">Ready in a minute.</h2>
+        <p>Install, scan the QR, click Allow. That is the whole setup.</p>
+        <div class="btns">
+          <a class="btn btn-w" href="https://github.com/bustrama/easy-mouse/releases/latest">Download for Windows</a>
+          <a class="btn btn-o" href="https://github.com/bustrama/easy-mouse">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Easy Mouse · <a href="https://github.com/bustrama/easy-mouse/blob/main/LICENSE">MIT licence</a></span>
+    <span>No cloud. No accounts. No telemetry.</span>
+  </div>
+</footer>
+</body>
+</html>

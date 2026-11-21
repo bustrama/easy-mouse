@@ -13,7 +13,8 @@ public sealed record AppEnvironment
     public ISecretProtector Protector { get; init; } = new DpapiSecretProtector();
     /// <summary>Real autostart registry value, global hotkey and the elevated "make Private" command.</summary>
     public bool SystemIntegration { get; init; } = true;
-    public string MachineName { get; init; } = Environment.MachineName;
+    /// <summary>The DNS host name (what mDNS answers for), not the 15-character NetBIOS name.</summary>
+    public string MachineName { get; init; } = System.Net.Dns.GetHostName();
     public TimeProvider Time { get; init; } = TimeProvider.System;
 }
 

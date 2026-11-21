@@ -79,7 +79,7 @@ public sealed class SettingsViewModel : ViewModelBase
         _portText = app.Settings.Port.ToString();
         _hotkeyText = app.Settings.Hotkey;
                 ApplyPortCommand = new RelayCommand(async () => await ApplyPortAsync());
-        DisconnectAllCommand = new RelayCommand(async () => await _app.DisconnectAllAsync());
+        DisconnectAllCommand = new RelayCommand(async () => await _app.EmergencyStopAsync());
         RemoveCommand = new RelayCommand(async p =>
         {
             if (p is DeviceRowViewModel row && _confirmRemove(row)) await _app.RemoveDeviceAsync(row.Info.Id);

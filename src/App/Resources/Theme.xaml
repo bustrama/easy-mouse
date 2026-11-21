@@ -29,7 +29,7 @@
     <SolidColorBrush x:Key="ChipGreyBg" Color="#2A323E"/>
     <SolidColorBrush x:Key="ChipGreyFg" Color="#C9D1DC"/>
 
-    <FontFamily x:Key="Heebo">pack://application:,,,/Assets/Fonts/#Heebo</FontFamily>
+    <FontFamily x:Key="Heebo">pack://application:,,,/EasyMouse;component/Assets/Fonts/#Heebo</FontFamily>
     <FontFamily x:Key="Glyphs">Segoe MDL2 Assets</FontFamily>
 
     <Style TargetType="TextBlock">

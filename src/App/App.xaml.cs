@@ -29,7 +29,7 @@ public partial class App : Application
         {
             _controller = new AppController(AppPaths.Default());
         }
-        catch (InvalidDataException ex)
+        catch (Exception ex) when (ex is InvalidDataException or System.Security.Cryptography.CryptographicException)
         {
             MessageBox.Show(Loc.Format("Err_StoreBody", ex.Message), Loc.Instance["Err_StoreTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
@@ -40,7 +40,7 @@ public partial class App : Application
         _tray.ShowQrClicked += ShowQr;
         _tray.SettingsClicked += () => ShowSettings(SettingsPage.General);
         _tray.DevicesClicked += () => ShowSettings(SettingsPage.Devices);
-        _tray.DisconnectAllClicked += () => _ = _controller.DisconnectAllAsync();
+        _tray.DisconnectAllClicked += () => _ = _controller.EmergencyStopAsync(); // closes every socket AND stops listening (docs/security.md)
         _tray.ResumeClicked += () => _ = _controller.ResumeAsync();
         _tray.QuitClicked += Quit;
         Loc.Instance.LanguageChanged += (_, _) => RefreshTray();

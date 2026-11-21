@@ -10,7 +10,7 @@
   <data name="Qr_Valid" xml:space="preserve"><value>הקוד תקף עוד {0}</value></data>
   <data name="Qr_Expired" xml:space="preserve"><value>הקוד פג תוקף. לחצו על קוד חדש.</value></data>
   <data name="Qr_ExpiredOverlay" xml:space="preserve"><value>פג תוקף</value></data>
-  <data name="Qr_Footer" xml:space="preserve"><value>טלפונים שכבר חוברו מתחברים מחדש מעצמם. סגירת החלון משאירה את Easy Mouse במגש המערכת.</value></data>
+  <data name="Qr_Footer" xml:space="preserve"><value>טלפונים שכבר צומדו מתחברים מחדש מעצמם. סגירת החלון משאירה את Easy Mouse במגש המערכת.</value></data>
   <data name="Qr_Trouble" xml:space="preserve"><value>הטלפון לא מצליח להתחבר?</value></data>
   <data name="Qr_NotListening" xml:space="preserve"><value>Easy Mouse לא מאזין כרגע, ולכן אין קוד לסריקה.</value></data>
   <data name="Btn_NewCode" xml:space="preserve"><value>קוד חדש</value></data>
@@ -34,7 +34,7 @@
   <data name="Hint_Public_Body" xml:space="preserve"><value>Windows חוסם מכשירים אחרים ברשתות ציבוריות. הגדרת הרשת כפרטית פותרת את זה.</value></data>
   <data name="Hint_Guest_Title" xml:space="preserve"><value>רשת Wi-Fi לאורחים או מבודדת</value></data>
   <data name="Hint_Guest_Body" xml:space="preserve"><value>בחלק מרשתות ה-Wi-Fi המכשירים מופרדים בכוונה, למשל רשתות אורחים ורשתות של מלונות ומשרדים. נסו את הרשת הראשית.</value></data>
-  <data name="Hint_Mobile_Title" xml:space="preserve"><value>הטלפון משתמש בגלשן סלולרי</value></data>
+  <data name="Hint_Mobile_Title" xml:space="preserve"><value>הטלפון משתמש בנתונים סלולריים</value></data>
   <data name="Hint_Mobile_Body" xml:space="preserve"><value>ודאו שהטלפון מחובר לאותה רשת Wi-Fi כמו המחשב.</value></data>
   <data name="Hint_Vpn_Title" xml:space="preserve"><value>VPN פועל במחשב הזה</value></data>
   <data name="Hint_Vpn_Body" xml:space="preserve"><value>VPN עלול להסתיר את המחשב מהטלפון. השהו אותו, או בחרו את כרטיס ה-Wi-Fi או הרשת בהגדרות.</value></data>
@@ -94,20 +94,19 @@
   <data name="Set_HotkeyPress" xml:space="preserve"><value>הקישו את המקשים החדשים</value></data>
   <data name="Set_HotkeyInUse" xml:space="preserve"><value>תוכנה אחרת כבר משתמשת בצירוף הזה.</value></data>
   <data name="Set_HotkeyNeed" xml:space="preserve"><value>כללו Ctrl, Alt או Win יחד עם מקש.</value></data>
-  <data name="Dev_Paired" xml:space="preserve"><value>טלפונים מחוברים</value></data>
+  <data name="Dev_Paired" xml:space="preserve"><value>טלפונים מצומדים</value></data>
   <data name="Dev_DisconnectAll" xml:space="preserve"><value>נתק הכול</value></data>
   <data name="Dev_Remove" xml:space="preserve"><value>הסר</value></data>
   <data name="Dev_Connected" xml:space="preserve"><value>מחובר</value></data>
   <data name="Dev_Offline" xml:space="preserve"><value>לא מחובר</value></data>
   <data name="Dev_Empty" xml:space="preserve"><value>עדיין אין טלפונים מחוברים. הציגו את קוד ה-QR כדי להוסיף.</value></data>
-  <data name="Dev_MetaConnected" xml:space="preserve"><value>חובר {0} · יפוג אחרי {1} ימים ללא שימוש</value></data>
+  <data name="Dev_MetaConnected" xml:space="preserve"><value>צומד {0} · יפוג אחרי {1} ימים ללא שימוש</value></data>
   <data name="Dev_MetaSeen" xml:space="preserve"><value>נראה לאחרונה {0} · יפוג בעוד {1} ימים</value></data>
   <data name="Dev_MetaSoon" xml:space="preserve"><value>לא בשימוש {0} ימים, יפוג בעוד {1} ימים</value></data>
   <data name="Dev_Today" xml:space="preserve"><value>היום</value></data>
   <data name="Dev_Yesterday" xml:space="preserve"><value>אתמול</value></data>
   <data name="Dev_DaysAgo" xml:space="preserve"><value>לפני {0} ימים</value></data>
-  <data name="Dev_ConfirmRemove" xml:space="preserve"><value>להסיר את "{0}"? יהיה צורך לחבר אותו מחדש.</value></data>
-  <data name="Dev_ConfirmAll" xml:space="preserve"><value>לנתק את כל הטלפונים עכשיו? טלפונים שחוברו יישארו מחוברים לשימוש עתידי.</value></data>
+  <data name="Dev_ConfirmRemove" xml:space="preserve"><value>להסיר את "{0}"? יהיה צורך לבצע צימוד מחדש.</value></data>
   <data name="About_Line1" xml:space="preserve"><value>גרסה {0}</value></data>
   <data name="About_Line2" xml:space="preserve"><value>חופשי ובקוד פתוח (רישיון MIT).</value></data>
   <data name="About_Line3" xml:space="preserve"><value>הטלפונים שולטים במחשב הזה דרך הרשת שלכם בלבד. שום דבר לא עובר דרך האינטרנט.</value></data>

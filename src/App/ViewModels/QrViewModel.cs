@@ -118,7 +118,7 @@ public sealed class QrViewModel : ViewModelBase
         bool publicStop = _app.StatusKind == ListenerStatusKind.Public;
         if (publicStop && !_wasPublicStop) { _helpDismissed = false; ShowHelp = true; }
         _wasPublicStop = publicStop;
-        if (!_helpDismissed && _app.Help.ShouldShowHelp) ShowHelp = true;
+        if (!_helpDismissed && _app.Help.ShouldShowHelp && _app.ConnectedCount == 0) ShowHelp = true; // a connected phone proves it can reach us
 
         CanMakePrivate = _app.Category == NetCategory.Public && _app.ChosenAdapter is not null;
         HelpIntro = Loc.Instance[publicStop ? "Help_IntroPublic" : "Help_Intro"];

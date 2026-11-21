@@ -1,0 +1,31 @@
+// Built-in icon set (24x24, stroke). Remotes can only reference these names; they cannot supply SVG or URLs.
+export const ICON_PATHS: Record<string, string> = {
+  mouse: 'M12 3v18M3 12h18',
+  keyboard: 'M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8',
+  media: 'M8 5v14l11-7z',
+  remotes: 'M4 6h16M4 12h16M4 18h10',
+  play: 'M8 5v14l11-7z',
+  pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
+  next: 'M6 5l9 7-9 7zM18 5v14',
+  prev: 'M18 5l-9 7 9 7zM6 5v14',
+  fullscreen: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  subtitles: 'M4 6h16v12H4zM8 12h3M13 12h3M8 15h8',
+  skip: 'M5 12h14M13 6l6 6-6 6',
+  back: 'M10 6l-6 6 6 6M4 12h16',
+  up: 'M6 15l6-6 6 6',
+  down: 'M6 9l6 6 6-6',
+  left: 'M15 6l-6 6 6 6',
+  right: 'M9 6l6 6-6 6',
+  volume: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9a4 4 0 0 1 0 6',
+  mute: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4zM16 9.5l5 5M21 9.5l-5 5',
+  plus: 'M12 5v14M5 12h14',
+  minus: 'M5 12h14',
+  home: 'M4 11l8-7 8 7M6 10v10h12V10',
+  power: 'M12 3v9M7 6.5a7.5 7.5 0 1 0 10 0',
+  settings: 'M4 7h10M18 7h2M4 17h2M10 17h10',
+  check: 'M5 12l5 5 9-10',
+  rewind: 'M11 6l-7 6 7 6zM20 6l-7 6 7 6z',
+  forward: 'M13 6l7 6-7 6zM4 6l7 6-7 6z',
+};
+
+export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(ICON_PATHS));

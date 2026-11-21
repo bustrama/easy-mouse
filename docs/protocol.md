@@ -213,6 +213,34 @@ snapshot, so the client replaces its copy.
 }
 ```
 
+### 0x10 json, remote layouts (provisional)
+
+The phone has to know what to draw. Until the remote engine exists nothing is sent and the phone shows
+"no remotes". Provisional design (the web client already implements it; the Core implementer may revise
+it here): after the device becomes the controller, and again whenever the remote set changes, the server
+pushes the layouts. The phone never requests them (an unknown C->S `t` would close the socket).
+
+S->C: `{ "t":"remotes", "remotes":[ <remote JSON, schema 1, as in architecture.md>, ... ] }` (at most 32
+remotes, 64 items each). Every item may carry an `"id"` (string, at most 64); an item without one has the
+id `String(index)`, its zero-based position in `layout.items`. `invoke.item` uses that id. The pushed
+layouts do not need to include the `action` objects, the phone ignores them. Label and slider `bind`
+names the web client understands: `smtc.title`, `smtc.artist`, `volume` (or `volume.master`).
+
+### Client conventions
+
+- `ping`: the client sends one after about 15 s without sending anything and treats 25 s without
+  any frame from the server as a lost connection (it then reconnects).
+- `wheel`: positive `dy` scrolls up (content moves down), positive `dx` scrolls right. A two-finger drag
+  down sends positive `dy` ("natural" direction), 3 units per pixel before sensitivity.
+- `key` uses Windows virtual-key codes (Esc 0x1B, Tab 0x09, Enter 0x0D, Backspace 0x08, Delete 0x2E,
+  arrows 0x25-0x28, LCtrl 0xA2, LAlt 0xA4, LShift 0xA0, LWin 0x5B).
+- `text`: the client splits longer text on code-point boundaries into several frames of at most 1024 bytes.
+- There is no absolute-volume or seek op. The web client approximates the volume slider with `media` ops
+  4/5 (each step is 2 %, it sends the number of steps needed toward the target, at most 50 per move) and
+  seeks with the Left/Right arrow keys, which most players use for it.
+- Held modifiers (`key` flag 1) and a held mouse button are always released on page hide, tab change and
+  socket loss, so a dropped connection never leaves Ctrl or the left button down on the PC.
+
 ## Errors
 
 The server closes with: 1000 normal (pairing finished or denied), 4400 malformed, 4401 unauthorised,

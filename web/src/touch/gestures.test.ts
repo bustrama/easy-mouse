@@ -139,6 +139,13 @@ describe('gestures', () => {
     expect(ev.at(-1)).toEqual(['button', BUTTON.left, false]);
   });
 
+  it('scroll rail drag produces wheel units', () => {
+    g.scrollBy(10);
+    g.scrollBy(-4);
+    g.flush();
+    expect(ev).toEqual([['wheel', 0, 18]]);
+  });
+
   it('cancel releases a held drag button and drops pending deltas', () => {
     g.down(1, 10, 10, 0);
     g.up(1, 60);

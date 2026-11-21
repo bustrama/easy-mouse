@@ -12,5 +12,10 @@ export default defineConfig({
     cssCodeSplit: false,
     modulePreload: { polyfill: false },
   },
-  server: { host: true, port: 5173 },
+  server: {
+    host: true,
+    port: 5173,
+    // npm run mock serves the protocol on 8787; the page and the socket stay same-origin.
+    proxy: { '/api': 'http://localhost:8787', '/ws': { target: 'ws://localhost:8787', ws: true } },
+  },
 });

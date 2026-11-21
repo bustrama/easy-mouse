@@ -136,6 +136,11 @@ export class Gestures {
     if (this.pts.size === 0) this.mode = 'idle';
   }
 
+  /** Scroll rail: dragging down by `dy` px scrolls like a two-finger drag down. */
+  scrollBy(dy: number): void {
+    this.wy += dy * WHEEL_PER_PX;
+  }
+
   /** pointercancel, page hidden, or socket lost: never leave a button held on the PC. */
   cancel(): void {
     this.releaseDrag();

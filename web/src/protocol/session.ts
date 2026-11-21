@@ -31,6 +31,8 @@ export interface CloseInfo {
   wasOnline: boolean;
   /** true when this socket was a successful pairing (the caller now connects on a new socket) */
   paired: boolean;
+  /** true when the client had already sent `auth`, so a 4401 means the credentials were really refused */
+  authSent: boolean;
 }
 
 export interface Handlers {
@@ -82,10 +84,11 @@ export class Session {
   private sender: FrameSender | null = null;
   private receiver: FrameReceiver | null = null;
   private lastRx = 0;
-  private lastTx = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private wasOnline = false;
   private didPair = false;
+  private authSent = false;
+  private lastPing = 0;
   private closed = false;
 
   constructor(ws: WsLike, opts: SessionOptions) {
@@ -172,6 +175,7 @@ export class Session {
         if (this.phase !== 'auth' || !this.creds) throw new Error('unexpected challenge');
         this.ns = b64decode(String(m['ns']));
         if (this.ns.length !== NONCE_LEN) throw new Error('bad ns');
+        this.authSent = true;
         this.sendJson({ t: 'auth', mac: b64encode(authMac(this.creds.secret, this.nc, this.ns)) });
         return;
       }
@@ -183,7 +187,6 @@ export class Session {
         this.sender = new FrameSender(keys.c2s, DIR_C2S);
         this.receiver = new FrameReceiver(keys.s2c, DIR_S2C);
         this.wasOnline = true;
-        this.lastTx = Date.now();
         this.setPhase('online');
         this.startTimer();
         return;
@@ -210,19 +213,26 @@ export class Session {
     if (!op) return;
     if (op.op === 'state') this.h.onState?.(op.value);
     else if (op.op === 'json') this.h.onJson?.(op.value);
-    else if (op.op === 'ping') this.sendPlain(encPing());
+    // A server ping is only keepalive traffic (it answers ours). Never reply: that would loop.
   }
 
   private startTimer(): void {
     const pingMs = this.opts.pingMs ?? 15000;
     const silenceMs = this.opts.silenceMs ?? 25000;
+    // The server only talks when something changes and answers a ping with a ping, so ask for
+    // proof of life whenever it has been quiet for pingMs, and give up after silenceMs of nothing.
+    // A busy (waiting) device is not answered by the server, so it is not watched.
     this.timer = setInterval(
       () => {
+        if (this.phase !== 'online') return;
         const now = Date.now();
         if (now - this.lastRx > silenceMs) return this.abort(CLOSE_TIMEOUT);
-        if (now - this.lastTx > pingMs) this.sendPlain(encPing());
+        if (now - this.lastRx > pingMs && now - this.lastPing > pingMs) {
+          this.lastPing = now;
+          this.sendPlain(encPing());
+        }
       },
-      Math.min(pingMs, 5000),
+      Math.min(pingMs, 1000),
     );
   }
 
@@ -230,13 +240,15 @@ export class Session {
   sendPlain(plaintext: Uint8Array): boolean {
     if (this.phase !== 'online' || !this.sender) return false;
     this.ws.send(this.sender.seal(plaintext));
-    this.lastTx = Date.now();
     return true;
   }
 
   /** Ask to take control from another device (the PC user must approve). */
   takeover(): void {
-    if (this.phase === 'busy') this.sendJson({ t: 'takeover' });
+    if (this.phase === 'busy') {
+      this.lastRx = Date.now();
+      this.sendJson({ t: 'takeover' });
+    }
   }
 
   close(): void {
@@ -260,6 +272,6 @@ export class Session {
     this.receiver = null;
     this.k = null;
     this.setPhase('closed');
-    this.h.onClose?.({ code, wasOnline: this.wasOnline, paired: this.didPair });
+    this.h.onClose?.({ code, wasOnline: this.wasOnline, paired: this.didPair, authSent: this.authSent });
   }
 }

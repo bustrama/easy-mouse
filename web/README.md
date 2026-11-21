@@ -57,10 +57,11 @@ the browser language to Hebrew (auto-detected).
 
 ## Tests
 
-- `crypto.test.ts`: the shared vectors in `tests/vectors.json`, an independent cross-check
-  of every primitive against `node:crypto`, round trips, replay, reorder, tamper and
-  wrong-direction rejection.
-- `session.test.ts`: pairing and connect handshakes against a scripted server, busy/takeover.
+- `crypto.test.ts`: the shared `tests/vectors.json` (generated and independently verified by the
+  core: RFC sections, pairing, connect, every frame, the receive sequence), plus round trips,
+  replay, reorder, tamper, wrong-direction and counter-0 rejection.
+- `session.test.ts`: pairing and connect handshakes against a scripted server, busy/takeover,
+  and keepalive with fake timers (no ping storm, no timeout while the user is active, busy not watched).
 - `fragment.test.ts`: `#k=` parsing and removal with `history.replaceState`.
 - `gestures.test.ts`: per-frame delta batching, sub-pixel carry, tap / two-finger tap /
   two-finger scroll / tap-hold drag, and button release on cancel.

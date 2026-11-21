@@ -255,7 +255,9 @@ class Client {
       this.store.set({ screen: 'scan', scanReason: reason, connecting: false });
       return;
     }
-    if (info.code === 4401) {
+    if (info.code === 4401 && (info.authSent || info.wasOnline)) {
+      // the server refused our credentials (revoked, expired, unknown). A 4401 before we sent `auth` is
+      // only its handshake timeout (for example the page was suspended), so that case just retries.
       clearCredentials();
       this.creds = null;
       this.store.set({ screen: 'scan', scanReason: 'revoked', connecting: false });

@@ -152,11 +152,10 @@ const REMOTES = {
 const sockets = new Set(); // authenticated controller sockets' contexts
 let controller = null;
 
-function broadcastState() {
+// The position advances silently; the phone extrapolates it from the last snapshot, as it does with the core.
+setInterval(() => {
   if (pcState.media?.status === 'playing') pcState.media.positionMs = Math.min(pcState.media.durationMs, pcState.media.positionMs + 1000);
-  if (controller?.send) controller.send(stateFrame());
-}
-setInterval(broadcastState, 1000);
+}, 1000);
 
 // ---- HTTP: static web app + /api/info ----
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
@@ -211,6 +210,8 @@ function onConnection(ws, req) {
   let rx = null;
   let tx = null;
   let isController = false;
+  let tokens = 200;
+  let refilled = Date.now();
 
   const sendJson = (o) => ws.send(JSON.stringify(o));
   const ctx = {
@@ -310,6 +311,10 @@ function onConnection(ws, req) {
         }
       }
       // binary: encrypted frames
+      const now = Date.now();
+      tokens = Math.min(200, tokens + ((now - refilled) / 1000) * 200);
+      refilled = now;
+      if (--tokens < 0) return fail(4429, 'rate limited');
       if (!rx || phase !== 'ready' || !isController) return; // not the controller: ignore
       const plain = rx.open(new Uint8Array(data));
       if (!plain) return log(tag, 'dropped frame (bad tag, replay or reorder)');
@@ -352,6 +357,7 @@ function handleOp(op, tag, ctx) {
       return ctx.send(stateFrame());
     }
     case 'ping':
+      log(tag, 'ping -> ping');
       return ctx.send(encPing());
     case 'json': {
       const m = op.value;

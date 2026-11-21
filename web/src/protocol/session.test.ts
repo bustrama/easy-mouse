@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { b64decode, b64encode } from './b64.ts';
 import {
   authMac,
@@ -14,7 +14,7 @@ import {
   sessionKeys,
   wrapSecret,
 } from './crypto.ts';
-import { decodeOp, encMove, encState } from './ops.ts';
+import { decodeOp, encMove, encPing, encState } from './ops.ts';
 import { type Credentials, Session, type WsLike } from './session.ts';
 
 /** A scripted server end implementing docs/protocol.md; frames pass through the real crypto. */
@@ -141,7 +141,7 @@ describe('connect handshake', () => {
     new Session(sock, { creds, handlers: { onClose: (i) => info.push(i) } });
     sock.onopen?.({});
     sock.onclose?.({ code: 4401 });
-    expect(info).toEqual([{ code: 4401, wasOnline: true, paired: false }]);
+    expect(info).toEqual([{ code: 4401, wasOnline: true, paired: false, authSent: true }]);
   });
 });
 
@@ -175,7 +175,7 @@ describe('pairing', () => {
     expect(paired?.id).toBe('AAECAwQFBgc');
     expect(paired?.secret).toEqual(S);
     expect(phases).toEqual(['pairing', 'pending', 'closed']);
-    expect(close).toEqual({ code: 1000, wasOnline: false, paired: true });
+    expect(close).toEqual({ code: 1000, wasOnline: false, paired: true, authSent: false });
     expect(sock.closedWith).toBe(1000);
   });
 
@@ -206,5 +206,75 @@ describe('pairing', () => {
     sock.onopen?.({});
     expect(paired).toBe(false);
     expect(code).toBe(4001);
+  });
+});
+
+describe('keepalive', () => {
+  const creds: Credentials = { id: 'AAECAwQFBgc', secret: randomBytes(32) };
+  afterEach(() => vi.useRealTimers());
+
+  /** Online session against a server that, like the core, only talks on change and answers a ping with a ping. */
+  function setup(opts: { answerPings: boolean }) {
+    vi.useFakeTimers();
+    const sock = new FakeSocket();
+    const srv = connectServer(sock, creds.secret);
+    const base = sock.onSend;
+    const stats = { pings: 0, serverPingsSent: 0 };
+    sock.onSend = (d) => {
+      const before = srv.received.length;
+      base(d);
+      const last = srv.received[srv.received.length - 1] as { op?: string } | undefined;
+      if (typeof d !== 'string' && srv.received.length > before && last?.op === 'ping') {
+        stats.pings++;
+        if (opts.answerPings) sock.deliver(srv.tx!.seal(encPing()));
+      }
+    };
+    let closed: number | null = null;
+    const s = new Session(sock, { creds, handlers: { onClose: (i) => (closed = i.code) } });
+    sock.onopen?.({});
+    return { sock, srv, s, stats, closed: () => closed };
+  }
+
+  it('stays online while the user is active for two minutes, with a bounded number of pings', () => {
+    const { s, stats, closed } = setup({ answerPings: true });
+    for (let i = 0; i < 120; i++) {
+      s.sendPlain(encMove(1, 1)); // the touchpad is in use; the server sends nothing back
+      vi.advanceTimersByTime(1000);
+    }
+    expect(closed()).toBeNull();
+    expect(s.phase).toBe('online');
+    expect(stats.pings).toBeGreaterThanOrEqual(5);
+    expect(stats.pings).toBeLessThanOrEqual(9);
+  });
+
+  it('stays online while idle, answered by the server', () => {
+    const { s, stats, closed } = setup({ answerPings: true });
+    vi.advanceTimersByTime(120_000);
+    expect(closed()).toBeNull();
+    expect(stats.pings).toBeLessThanOrEqual(9);
+    expect(s.phase).toBe('online');
+  });
+
+  it('gives up after 25 s of silence when the server never answers', () => {
+    const { closed } = setup({ answerPings: false });
+    vi.advanceTimersByTime(30_000);
+    expect(closed()).toBe(4000);
+  });
+
+  it('never answers a server ping (no ping storm)', () => {
+    const { sock, srv, stats } = setup({ answerPings: true });
+    const sentBefore = sock.sent.length;
+    for (let i = 0; i < 20; i++) sock.deliver(srv.tx!.seal(encPing()));
+    expect(sock.sent.length).toBe(sentBefore);
+    expect(stats.pings).toBe(0);
+  });
+
+  it('does not watch a busy device (the server does not answer it) and keeps waiting for takeover', () => {
+    const { sock, s, stats, closed } = setup({ answerPings: false });
+    sock.deliver(J({ t: 'busy' }));
+    vi.advanceTimersByTime(120_000);
+    expect(closed()).toBeNull();
+    expect(s.phase).toBe('busy');
+    expect(stats.pings).toBe(0);
   });
 });

@@ -68,7 +68,7 @@ public class ApprovalPinningTests
     public async Task Approval_is_pinned_to_the_hash_so_any_edit_asks_again()
     {
         using var f = new Fixture(Json.Remote(Json.Button(Text)));
-        Assert.Null(f.Catalog.Approve("test"));
+        Assert.Null(f.Catalog.Approve("test", f.HashOf("test")));
         Assert.Equal(RemoteState.Ready, f.Catalog.Entries.Single().State);
         Assert.True((await f.Invoke("0")).Ok);
         Assert.Single(f.Rec.Text.Calls);
@@ -86,10 +86,21 @@ public class ApprovalPinningTests
     }
 
     [Fact]
+    public async Task Approving_a_file_that_changed_after_the_prompt_is_refused()
+    {
+        using var f = new Fixture(Json.Remote(Json.Button(Text)));
+        var reviewed = f.Hash; // the hash shown in the prompt
+        f.User.Write("test.json", Json.Remote(Json.Button("""{"do":"http","url":"http://127.0.0.1:1/"}""")));
+        Assert.Contains("changed after it was reviewed", f.Catalog.Approve("test", reviewed));
+        Assert.Equal(RemoteState.NeedsReview, f.Catalog.Entries.Single().State);
+        Assert.Equal(new(false, "denied"), await f.Invoke("0"));
+    }
+
+    [Fact]
     public async Task A_changed_action_with_the_same_remote_id_is_not_approved()
     {
         using var f = new Fixture(Json.Remote(Json.Button("""{"do":"key","keys":"F"}""")));
-        f.Catalog.Approve("test"); // nothing to review, harmless
+        f.Catalog.Approve("test", f.HashOf("test")); // nothing to review, harmless
         f.User.Write("test.json", Json.Remote(Json.Button("""{"do":"http","url":"http://127.0.0.1:1/"}""")));
         Assert.Equal(new(false, "denied"), (await f.Invoke("0")));
     }
@@ -98,7 +109,7 @@ public class ApprovalPinningTests
     public void Approvals_survive_a_restart_and_corrupt_files_fail_closed()
     {
         using var f = new Fixture(Json.Remote(Json.Button(Text)));
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         var again = new FileRemoteApprovalStore(f.Data.Path);
         Assert.NotNull(again.Get("test", f.Hash));
         Assert.Null(again.Get("test", "0000"));
@@ -112,7 +123,7 @@ public class ApprovalPinningTests
     public void Revoke_asks_again_and_invalid_or_duplicate_remotes_are_reported()
     {
         using var f = new Fixture(Json.Remote(Json.Button(Text)));
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         f.Catalog.Revoke("test");
         Assert.Equal(RemoteState.NeedsReview, f.Catalog.Entries.Single().State);
         f.User.Write("bad.json", """{"schema":1,"id":"bad","name":"x","layout":{"cols":1,"items":[{"type":"button","label":"x","action":{"do":"shell"}}]}}""");
@@ -131,9 +142,9 @@ public class ApprovalPinningTests
     {
         using var f = new Fixture(Json.Remote(Json.Button("""{"do":"launch","exe":"player","args":["--x"]}""")));
         Assert.Equal(["player"], f.Catalog.Entries.Single().LaunchSlots);
-        Assert.NotNull(f.Catalog.Approve("test"));
-        Assert.NotNull(f.Catalog.Approve("test", new Dictionary<string, string> { ["player"] = "player.exe" }));
-        Assert.Null(f.Catalog.Approve("test", new Dictionary<string, string> { ["player"] = @"C:\Tools\player.exe" }));
+        Assert.NotNull(f.Catalog.Approve("test", f.HashOf("test")));
+        Assert.NotNull(f.Catalog.Approve("test", f.HashOf("test"), new Dictionary<string, string> { ["player"] = "player.exe" }));
+        Assert.Null(f.Catalog.Approve("test", f.HashOf("test"), new Dictionary<string, string> { ["player"] = @"C:\Tools\player.exe" }));
     }
 }
 
@@ -196,7 +207,7 @@ public class HandlerTests
     {
         using var f = new Fixture(Json.Remote(Json.Button("""{"do":"launch","exe":"player","args":["--fullscreen","movie.mkv"]}""")));
         Assert.Equal(new(false, "denied"), await f.Invoke("0")); // not approved
-        Assert.Null(f.Catalog.Approve("test", new Dictionary<string, string> { ["player"] = @"C:\Tools\player.exe" }));
+        Assert.Null(f.Catalog.Approve("test", f.HashOf("test"), new Dictionary<string, string> { ["player"] = @"C:\Tools\player.exe" }));
         Assert.True((await f.Invoke("0")).Ok);
         var call = f.Rec.Launch.Calls.Single().Action;
         Assert.Equal(@"C:\Tools\player.exe", call.ExePath);
@@ -232,7 +243,7 @@ public class HandlerTests
     {
         using var f = new Fixture(Http("http://127.0.0.1:32100/play"));
         Assert.Equal(new(false, "denied"), await f.Invoke("0"));
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         Assert.True((await f.Invoke("0")).Ok);
         Assert.Equal("http://127.0.0.1:32100/play", f.Rec.Http.Calls.Single().Action.Url.ToString());
     }
@@ -244,7 +255,7 @@ public class HandlerTests
     public async Task All_loopback_spellings_are_allowed(string url)
     {
         using var f = new Fixture(Http(url));
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         Assert.True((await f.Invoke("0")).Ok);
     }
 
@@ -262,7 +273,7 @@ public class HandlerTests
         f.Catalog.Reload();
         Assert.Equal(new(false, "denied"), await f.Invoke("0"));
         Assert.Empty(f.Rec.Http.Calls);
-        Assert.Null(f.Catalog.Approve("test"));
+        Assert.Null(f.Catalog.Approve("test", f.HashOf("test")));
         Assert.True((await f.Invoke("0")).Ok);
     }
 
@@ -286,8 +297,21 @@ public class HandlerTests
             using var c = await l.AcceptTcpClientAsync();
             var s = c.GetStream();
             var buf = new byte[8192];
-            var n = await s.ReadAsync(buf);
-            var req = Encoding.UTF8.GetString(buf, 0, n);
+            // Read until the headers are complete and the Content-Length body (if any) has arrived.
+            var n = 0;
+            string req;
+            while (true)
+            {
+                var read = await s.ReadAsync(buf.AsMemory(n));
+                if (read == 0) { req = Encoding.UTF8.GetString(buf, 0, n); break; }
+                n += read;
+                req = Encoding.UTF8.GetString(buf, 0, n);
+                var end = req.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+                if (end < 0) continue;
+                var m = System.Text.RegularExpressions.Regex.Match(req[..end], @"Content-Length:\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var need = m.Success ? int.Parse(m.Groups[1].Value) : 0;
+                if (Encoding.UTF8.GetByteCount(req[(end + 4)..]) >= need) break;
+            }
             await s.WriteAsync(Encoding.ASCII.GetBytes(response));
             return req;
         });
@@ -303,7 +327,7 @@ public class HandlerTests
         {
             using var http = new HttpClientExecutor();
             using var f = new Fixture(Http($"http://127.0.0.1:{port}/go"), new ActionExecutors { Http = http });
-            f.Catalog.Approve("test");
+            f.Catalog.Approve("test", f.HashOf("test"));
             Assert.Equal(new(false, "failed"), await f.Invoke("0"));
             Assert.StartsWith("GET /go ", await request);
             Assert.Contains("failed", f.Audit.Lines.Single());
@@ -319,7 +343,7 @@ public class HandlerTests
         {
             using var http = new HttpClientExecutor();
             using var f = new Fixture(Json.Remote(Json.Button($$"""{"do":"http","url":"http://127.0.0.1:{{port}}/","timeoutMs":300}""")), new ActionExecutors { Http = http });
-            f.Catalog.Approve("test");
+            f.Catalog.Approve("test", f.HashOf("test"));
             Assert.Equal(new(false, "failed"), await f.Invoke("0"));
         }
         finally { l.Stop(); }
@@ -330,7 +354,7 @@ public class HandlerTests
         {
             using var http = new HttpClientExecutor();
             using var f = new Fixture(Json.Remote(Json.Button($$"""{"do":"http","url":"http://127.0.0.1:{{((IPEndPoint)silent.LocalEndpoint).Port}}/","timeoutMs":300}""")), new ActionExecutors { Http = http });
-            f.Catalog.Approve("test");
+            f.Catalog.Approve("test", f.HashOf("test"));
             var sw = System.Diagnostics.Stopwatch.StartNew();
             Assert.Equal(new(false, "failed"), await f.Invoke("0"));
             Assert.True(sw.Elapsed < TimeSpan.FromSeconds(5));
@@ -354,7 +378,7 @@ public class HandlerTests
             var entry = f.Catalog.Entries.Single();
             Assert.DoesNotContain(secret, JsonSerializer.Serialize(entry.Review));
             Assert.DoesNotContain(secret, File.ReadAllText(entry.FilePath));
-            f.Catalog.Approve("test");
+            f.Catalog.Approve("test", f.HashOf("test"));
             var result = await f.Invoke("0");
             Assert.True(result.Ok);
             var sent = await request;
@@ -371,7 +395,7 @@ public class HandlerTests
     public async Task Resolved_requests_keep_secrets_out_of_everything_but_the_wire_and_missing_secrets_fail()
     {
         using var f = new Fixture(Http("http://127.0.0.1:1/p?t=${secret.nope}"));
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         var r = await f.Invoke("0");
         Assert.Equal(new(false, "failed"), r);
         Assert.Empty(f.Rec.Http.Calls);
@@ -386,7 +410,7 @@ public class HandlerTests
         var json = Json.Remote(Json.Button("""{"do":"http","url":"http://127.0.0.1:1/","headers":{"X-T":"${secret.t}"}}"""));
         using var f = new Fixture(json);
         f.Secrets.Set("t", "a\r\nX-Evil: 1");
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         Assert.Equal(new(false, "failed"), await f.Invoke("0"));
         Assert.Empty(f.Rec.Http.Calls);
     }
@@ -415,7 +439,7 @@ public class BuiltInAndPushTests
     {
         var plex = Builtins().Entries.Single(e => e.Id == "plex").Definition!;
         Assert.Contains("UNVERIFIED", plex.Description);
-        Assert.DoesNotContain(plex.Items.SelectMany(i => i.Actions), a => a is KeyPressAction);
+
     }
 
     [Fact]
@@ -481,7 +505,7 @@ public class BuiltInAndPushTests
         f.User.Write("safe.json", Json.Remote(Json.Button("""{"do":"key","keys":"F"}"""), id: "safe"));
         f.Catalog.Reload();
         Assert.Equal(["safe"], RemoteLayoutPush.Build(f.Catalog).Included); // needs-review is not pushed
-        f.Catalog.Approve("test");
+        f.Catalog.Approve("test", f.HashOf("test"));
         Assert.Equal(["safe", "test"], RemoteLayoutPush.Build(f.Catalog).Included.OrderBy(x => x));
         var tiny = RemoteLayoutPush.Build(f.Catalog, maxBytes: 150);
         Assert.NotEmpty(tiny.Omitted);

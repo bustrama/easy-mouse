@@ -93,7 +93,7 @@ public static partial class RemoteValidator
         var id = o.String("id", true, 64);
         if (id is not null && !RemoteIdRx().IsMatch(id)) errors.Add("$.id", "must match ^[a-z0-9][a-z0-9_-]{0,63}$");
         var name = o.String("name", true, 40);
-        var description = o.String("description", false, 500);
+        var description = o.String("description", false, 1000);
         string? process = null;
         if (o.Raw("target") is { } t)
         {

@@ -16,10 +16,12 @@ public static class RemoteLayoutPush
 {
     public const int MaxRemotes = 32;
     /// <summary>
-    /// One WebSocket message is at most 4096 bytes including the AEAD header and tag (about 26 bytes plus the
-    /// op byte). The phone replaces its list on every <c>remotes</c> message, so the whole set must fit in one.
+    /// The Core puts no cap on messages it sends, but the web client rejects any frame over 4096 + 64 bytes
+    /// (web/src/protocol/crypto.ts). A frame is 8 bytes header + 1 op byte + JSON + 16 bytes tag, so the JSON
+    /// can be 4135 bytes; 4000 leaves room. The phone replaces its list on every <c>remotes</c> message, so the
+    /// whole set must fit in one message.
     /// </summary>
-    public const int MaxJsonBytes = 3900;
+    public const int MaxJsonBytes = 4000;
 
     public static LayoutPush Build(IRemoteCatalog catalog, int maxBytes = MaxJsonBytes)
     {

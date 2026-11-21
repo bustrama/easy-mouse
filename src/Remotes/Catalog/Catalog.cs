@@ -36,8 +36,8 @@ public interface IRemoteCatalog
     /// can never run on an old approval. Returns null for unknown, invalid or no longer readable remotes.
     /// </summary>
     RemoteEntry? Resolve(string remoteId);
-    /// <summary>Approves the remote as it is now. Returns an error text, or null on success.</summary>
-    string? Approve(string remoteId, IReadOnlyDictionary<string, string>? launchTargets = null);
+    /// <summary>Approves the remote only if its current file hash is <paramref name="reviewedHash"/>, the hash the user saw in the prompt. Returns an error text, or null on success.</summary>
+    string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null);
     void Revoke(string remoteId);
 }
 
@@ -102,10 +102,12 @@ public sealed class RemoteCatalog : IRemoteCatalog
         return entry is { State: not RemoteState.Invalid } ? entry : null;
     }
 
-    public string? Approve(string remoteId, IReadOnlyDictionary<string, string>? launchTargets = null)
+    public string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null)
     {
         var entry = Resolve(remoteId);
         if (entry is null) return "unknown or invalid remote";
+        if (!string.Equals(entry.Hash, reviewedHash, StringComparison.Ordinal))
+            return "the file changed after it was reviewed; review it again";
         launchTargets ??= new Dictionary<string, string>();
         foreach (var slot in entry.LaunchSlots)
         {

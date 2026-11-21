@@ -234,11 +234,13 @@ S->C: `{ "t":"remotes", "remotes":[ <layout>, ... ] }` where each `<layout>` is
   `layout.items`; the server omits `"id"` when it equals the position. `invoke.item` uses that id. Effective
   ids are unique within a remote (the validator enforces it, so an explicit id cannot collide with a
   position).
-- **One message.** The phone replaces its whole list on every `remotes` message and one WebSocket message is
-  at most 4096 bytes, so the whole set must fit one frame: the server budgets 3900 bytes of JSON (Hebrew is
-  sent as UTF-8, not `\u` escapes). Remotes that do not fit are left out whole, in catalog order (built-in
-  first), and the host should tell the user. Splitting a larger set over several messages needs a client
-  change (an append or `more` flag) and is not defined yet.
+- **One message.** The phone replaces its whole list on every `remotes` message, and the web client rejects
+  a frame longer than 4096 + 64 bytes (`web/src/protocol/crypto.ts`; the Core itself sets no cap on what it
+  sends). A frame adds 25 bytes (8 header, 1 op, 16 tag), so the JSON can be at most 4135 bytes and the
+  server budgets 4000 (Hebrew is sent as UTF-8, not `\u` escapes). "32 remotes, 64 items each" are upper
+  bounds, not a promise that they fit: about four ordinary remotes do. Remotes that do not fit are left out
+  whole, in catalog order (built-in first), and the host should tell the user. Splitting a larger set over
+  several messages needs a client change (an append or `more` flag) and is not defined yet.
 - `bind` names the web client renders: `smtc.title`, `smtc.artist`, `volume` (or `volume.master`).
   `volume.app` is valid in a remote file but has no value in the state frame yet.
 - A `pad` item is valid in a remote file and in the push; the web client ignores types it does not know.

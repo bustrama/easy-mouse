@@ -78,6 +78,7 @@ internal sealed class Fixture : IDisposable
     }
 
     public string Hash => Catalog.Entries.Single().Hash;
+    public string HashOf(string id) => Catalog.Entries.Single(e => e.Id == id).Hash;
 
     public Task<EasyMouse.Core.Abstractions.RemoteActionResult> Invoke(string item, double? value = null, string remote = "test")
         => Handler.InvokeAsync(new EasyMouse.Core.Abstractions.RemoteInvocation(remote, item, value), CancellationToken.None);

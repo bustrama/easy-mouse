@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks';
+import { capture } from './capture.ts';
 import { client } from '../client.ts';
 import { useT } from '../i18n/useT.ts';
 import { BUTTON } from '../protocol/ops.ts';
@@ -48,7 +49,7 @@ export function Touchpad() {
   const schedule = useRef<() => void>(() => {});
 
   const onDown = (e: PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    capture(e);
     g.current?.down(e.pointerId, e.clientX, e.clientY, e.timeStamp);
     schedule.current();
   };
@@ -65,7 +66,7 @@ export function Touchpad() {
   // scroll rail
   const railY = useRef<number | null>(null);
   const railDown = (e: PointerEvent) => {
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    capture(e);
     railY.current = e.clientY;
   };
   const railMove = (e: PointerEvent) => {
@@ -137,7 +138,7 @@ function ClickButton({ label, button }: { label: string; button: number }) {
     <button
       class="clickbtn"
       onPointerDown={(e) => {
-        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+        capture(e);
         if (!held.current) {
           held.current = true;
           client.button(button, true);

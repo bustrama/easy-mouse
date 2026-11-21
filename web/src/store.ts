@@ -24,6 +24,12 @@ export function createStore<T extends object>(initial: T): Store<T> {
 
 export function useStore<T extends object>(store: Store<T>): T {
   const [, force] = useState(0);
-  useEffect(() => store.subscribe(() => force((n) => n + 1)), [store]);
-  return store.get();
+  const snapshot = store.get();
+  useEffect(() => {
+    const unsubscribe = store.subscribe(() => force((n) => n + 1));
+    // Effects run after paint: an update that landed between render and subscribe must not be lost.
+    if (store.get() !== snapshot) force((n) => n + 1);
+    return unsubscribe;
+  }, [store]);
+  return snapshot;
 }

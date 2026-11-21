@@ -1,4 +1,5 @@
 import { useRef, useState } from 'preact/hooks';
+import { capture } from './capture.ts';
 
 /** Horizontal 0..100 slider. Direction follows the document (RTL flips it). Throttles `onChange` while dragging. */
 export function Slider({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
@@ -34,7 +35,7 @@ export function Slider({ value, onChange, label }: { value: number; onChange: (v
       aria-valuenow={shown}
       tabIndex={0}
       onPointerDown={(e) => {
-        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        capture(e);
         update(e, false);
       }}
       onPointerMove={(e) => {

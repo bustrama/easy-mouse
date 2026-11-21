@@ -108,6 +108,10 @@ Core Audio and key actions.
 - Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. Phase 2 broker covers elevated windows and UAC; the lock screen is out of scope.
 - The App runs in the user session, never as a service.
 - Firewall rule (installer): program + TCP port, Private profile, LocalSubnet. New Wi-Fi defaults to Public; the app detects it and tells the user.
+- Detecting "the foreground window is elevated": a non-elevated process cannot open the token of an elevated or SYSTEM process (`OpenProcessToken` returns access denied; verified for winlogon and services), so access denied is treated as "more privileged than us", which is what UIPI cares about. Per the Win32 docs `SendInput` returns fewer events than asked when blocked (not exercised here: no elevated window available); `SendInputSink` throws `InputInjectionException` rather than hiding it.
+- Lock state: `HostStatusMonitor` takes `WM_WTSSESSION_CHANGE` on a hidden window and checks `OpenInputDesktop` at start (fails while locked or on a secure desktop). The UAC secure desktop sends no foreground event to us.
+- Relative mouse moves go through the user's pointer-acceleration setting, so a +2/-2 pair may not return to the exact pixel.
+- SMTC's "current" session can be a paused one while another plays, so selection prefers playing sessions.
 - Declare PerMonitorV2 DPI. Games and anti-cheat may ignore injected input. Unsigned input injection triggers antivirus/SmartScreen: sign releases (SignPath Foundation).
 
 ## Touch and keyboard

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>EasyMouse.Server</RootNamespace>
+    <AssemblyName>EasyMouse.Server</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
+  </ItemGroup>
+  <!-- Embed the built web client when it exists (web/dist). Absent in a fresh checkout: the server then serves a stub page. -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\web\dist\index.html')">
+    <EmbeddedResource Include="..\..\web\dist\**\*" LogicalName="web/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

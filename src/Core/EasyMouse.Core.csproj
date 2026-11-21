@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>EasyMouse.Core</RootNamespace>
+    <AssemblyName>EasyMouse.Core</AssemblyName>
+  </PropertyGroup>
+</Project>

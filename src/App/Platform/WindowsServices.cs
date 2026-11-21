@@ -1,0 +1,178 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Windows.Interop;
+using EasyMouse.App.Logic;
+using EasyMouse.Core.Devices;
+using Microsoft.Win32;
+
+namespace EasyMouse.App.Platform;
+
+/// <summary>Device secrets at rest: DPAPI, current user scope.</summary>
+public sealed class DpapiSecretProtector : ISecretProtector
+{
+    private static readonly byte[] Entropy = "EasyMouse.DeviceStore.v1"u8.ToArray();
+
+    public byte[] Protect(byte[] plain) => ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser);
+
+    public byte[] Unprotect(byte[] protectedData) => ProtectedData.Unprotect(protectedData, Entropy, DataProtectionScope.CurrentUser);
+}
+
+/// <summary>"Start with Windows": a value in HKCU Run (no admin rights needed).</summary>
+public static class Autostart
+{
+    public static bool IsEnabled()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(AutostartCommand.RunKeyPath);
+        return key?.GetValue(AutostartCommand.ValueName) is string;
+    }
+
+    public static void Set(bool enabled)
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(AutostartCommand.RunKeyPath);
+        if (enabled)
+        {
+            var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot find the program path.");
+            key.SetValue(AutostartCommand.ValueName, AutostartCommand.Build(exe));
+        }
+        else key.DeleteValue(AutostartCommand.ValueName, throwOnMissingValue: false);
+    }
+}
+
+/// <summary>A global hotkey (RegisterHotKey) on a hidden message-only window.</summary>
+public sealed class HotkeyService : IDisposable
+{
+    private const int WmHotkey = 0x0312;
+    private const uint ModNoRepeat = 0x4000;
+    private const int Id = 0x4D45; // "ME"
+    private static readonly IntPtr HwndMessage = new(-3);
+
+    private HwndSource? _source;
+
+    public event EventHandler? Pressed;
+
+    /// <summary>Registers the hotkey, replacing any earlier one. False if another program already owns the combination.</summary>
+    public bool Register(Hotkey hotkey)
+    {
+        Unregister();
+        _source ??= CreateSource();
+        bool ok = RegisterHotKey(_source.Handle, Id, (uint)hotkey.Modifiers | ModNoRepeat, hotkey.VirtualKey);
+        Registered = ok;
+        return ok;
+    }
+
+    public bool Registered { get; private set; }
+
+    public void Unregister()
+    {
+        if (_source is not null && Registered) UnregisterHotKey(_source.Handle, Id);
+        Registered = false;
+    }
+
+    private HwndSource CreateSource()
+    {
+        var source = new HwndSource(new HwndSourceParameters("EasyMouseHotkey") { ParentWindow = HwndMessage, Width = 0, Height = 0 });
+        source.AddHook(WndProc);
+        return source;
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmHotkey && wParam.ToInt32() == Id)
+        {
+            handled = true;
+            Pressed?.Invoke(this, EventArgs.Empty);
+        }
+        return IntPtr.Zero;
+    }
+
+    public void Dispose()
+    {
+        Unregister();
+        _source?.Dispose();
+        _source = null;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+}
+
+/// <summary>Elevation for exactly one command: making the network Private. Everything else in the app runs unelevated.</summary>
+public static class NetworkProfileFixer
+{
+    /// <summary>
+    /// Runs <c>Set-NetConnectionProfile</c> for one interface in an elevated PowerShell (UAC prompt).
+    /// Returns false if the user declined the prompt.
+    /// </summary>
+    public static bool MakePrivate(int interfaceIndex)
+    {
+        if (interfaceIndex <= 0) throw new ArgumentOutOfRangeException(nameof(interfaceIndex));
+        var psi = new ProcessStartInfo("powershell.exe")
+        {
+            // Only an integer is interpolated into the command line: nothing from the network or settings.
+            Arguments = $"-NoProfile -WindowStyle Hidden -Command \"Set-NetConnectionProfile -InterfaceIndex {interfaceIndex} -NetworkCategory Private\"",
+            Verb = "runas",
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+        };
+        try
+        {
+            using var process = Process.Start(psi);
+            process?.WaitForExit(30_000);
+            return process is { HasExited: true, ExitCode: 0 };
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) // ERROR_CANCELLED: the user said no at UAC
+        {
+            return false;
+        }
+    }
+}
+
+/// <summary>One running copy: a named mutex, plus an event so a second launch can ask the first to show its QR window.</summary>
+public sealed class SingleInstance : IDisposable
+{
+    private readonly Mutex _mutex;
+    private readonly EventWaitHandle _show;
+    private readonly CancellationTokenSource _cts = new();
+
+    private SingleInstance(Mutex mutex, EventWaitHandle show)
+    {
+        _mutex = mutex;
+        _show = show;
+    }
+
+    public static SingleInstance? TryAcquire(string name)
+    {
+        var mutex = new Mutex(initiallyOwned: true, $@"Local\{name}", out bool created);
+        var show = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{name}.Show");
+        if (created) return new SingleInstance(mutex, show);
+        show.Set(); // tell the running copy
+        mutex.Dispose();
+        show.Dispose();
+        return null;
+    }
+
+    /// <summary>Calls <paramref name="onShowRequested"/> (on a pool thread) each time another copy was started.</summary>
+    public void ListenForShow(Action onShowRequested)
+    {
+        var token = _cts.Token;
+        _ = Task.Run(() =>
+        {
+            var handles = new[] { _show, token.WaitHandle };
+            while (WaitHandle.WaitAny(handles) == 0) onShowRequested();
+        });
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _mutex.ReleaseMutex();
+        _mutex.Dispose();
+        _show.Dispose();
+        _cts.Dispose();
+    }
+}

@@ -1,0 +1,50 @@
+<views:AppWindow x:Class="EasyMouse.App.Views.ApproveWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:EasyMouse.App"
+        xmlns:views="clr-namespace:EasyMouse.App.Views"
+        Title="{app:T App_Name}" Width="480" Height="440" ResizeMode="NoResize"
+        Background="{StaticResource Surface}" Topmost="True" ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen" FocusManager.FocusedElement="{Binding ElementName=DenyButton}">
+    <Grid Margin="36,12,36,26">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <Border Width="48" Height="48" CornerRadius="16" Background="{StaticResource ChipBlueBg}" HorizontalAlignment="Left">
+                <Path Data="M9.5,2.5 H14.5 A2.5,2.5 0 0 1 17,5 V19 A2.5,2.5 0 0 1 14.5,21.5 H9.5 A2.5,2.5 0 0 1 7,19 V5 A2.5,2.5 0 0 1 9.5,2.5 Z M11,18.5 H13"
+                      Stroke="{StaticResource Accent}" StrokeThickness="1.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Stretch="Uniform" Width="26" Height="26" FlowDirection="LeftToRight"/>
+            </Border>
+            <TextBlock Text="{Binding Title}" Margin="0,16,0,0" FontSize="24" FontWeight="ExtraBold"/>
+            <TextBlock Text="{Binding Body}" Margin="0,8,0,0" FontSize="15" LineHeight="22" Foreground="{StaticResource TextSoft}"/>
+            <Border Margin="0,20,0,0" Background="{StaticResource Ink}" CornerRadius="16" Padding="20,16">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DeviceName}" FontSize="16" FontWeight="Bold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                        <TextBlock Text="{app:T Ap_Sub}" Margin="0,2,0,0" FontSize="13" Foreground="{StaticResource Muted}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0" Visibility="{Binding HasCode, Converter={StaticResource B2V}}">
+                        <TextBlock Text="{app:T Ap_CodeLabel}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+                        <TextBlock Text="{Binding Code}" Margin="0,2,0,0" FontSize="30" FontWeight="ExtraBold" Foreground="{StaticResource Accent}"
+                                   FlowDirection="LeftToRight" TextAlignment="Center" TextWrapping="NoWrap"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </StackPanel>
+        <StackPanel Grid.Row="2">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                <!-- Deny is the default button (Enter) and Escape; Allow needs a deliberate click once it is enabled. -->
+                <Button x:Name="DenyButton" Style="{StaticResource OutlineButton}" Content="{app:T Btn_Deny}" Command="{Binding DenyCommand}"
+                        IsDefault="True" IsCancel="True"/>
+                <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Height="46" FontSize="16" Content="{app:T Btn_Allow}"
+                        Command="{Binding AllowCommand}"/>
+            </Grid>
+            <TextBlock Text="{Binding Foot}" Margin="0,12,0,0" FontSize="12" Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</views:AppWindow>

@@ -6,7 +6,13 @@
   <Folder Name="/src/Server/">
     <Project Path="src/Server/EasyMouse.Server.csproj" />
   </Folder>
+  <Folder Name="/src/App/">
+    <Project Path="src/App/EasyMouse.App.csproj" />
+  </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/App.Tests/">
+    <Project Path="tests/App.Tests/EasyMouse.App.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Core.Tests/">
     <Project Path="tests/Core.Tests/EasyMouse.Core.Tests.csproj" />
   </Folder>

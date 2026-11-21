@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Name" xml:space="preserve"><value>Easy Mouse</value></data>
+  <data name="Qr_Title" xml:space="preserve"><value>Scan to connect your phone</value></data>
+  <data name="Qr_Subtitle" xml:space="preserve"><value>Open the camera on your phone and point it at this code.</value></data>
+  <data name="Qr_Valid" xml:space="preserve"><value>Code is valid for {0}</value></data>
+  <data name="Qr_Expired" xml:space="preserve"><value>Code expired. Press New code.</value></data>
+  <data name="Qr_ExpiredOverlay" xml:space="preserve"><value>Expired</value></data>
+  <data name="Qr_Footer" xml:space="preserve"><value>Paired phones reconnect on their own. Closing this window keeps Easy Mouse in the tray.</value></data>
+  <data name="Qr_Trouble" xml:space="preserve"><value>Phone cannot connect?</value></data>
+  <data name="Qr_NotListening" xml:space="preserve"><value>Easy Mouse is not listening, so there is no code to scan.</value></data>
+  <data name="Btn_NewCode" xml:space="preserve"><value>New code</value></data>
+  <data name="Btn_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Status_Waiting" xml:space="preserve"><value>Waiting for a phone</value></data>
+  <data name="Status_Approve" xml:space="preserve"><value>Waiting for your answer</value></data>
+  <data name="Status_Connected" xml:space="preserve"><value>A phone is connected</value></data>
+  <data name="Status_Stopped" xml:space="preserve"><value>Not listening</value></data>
+  <data name="Net_Listening" xml:space="preserve"><value>Listening on {0}</value></data>
+  <data name="Net_Public" xml:space="preserve"><value>Stopped: this network is set to Public. Make it Private to continue.</value></data>
+  <data name="Net_NoNetwork" xml:space="preserve"><value>Stopped: this PC is not connected to a network.</value></data>
+  <data name="Net_Emergency" xml:space="preserve"><value>Stopped by the emergency hotkey or tray menu. Use the tray menu to start listening again.</value></data>
+  <data name="Net_PortBusy" xml:space="preserve"><value>Port {0} is used by another program. Pick a different port in Settings.</value></data>
+  <data name="Net_Error" xml:space="preserve"><value>Could not start listening: {0}</value></data>
+  <data name="Help_Title" xml:space="preserve"><value>Your phone cannot reach this PC</value></data>
+  <data name="Help_Intro" xml:space="preserve"><value>Nothing has connected for a while. This is usually one of these:</value></data>
+  <data name="Help_IntroPublic" xml:space="preserve"><value>Easy Mouse stopped listening because of this:</value></data>
+  <data name="Tag_Found" xml:space="preserve"><value>Found</value></data>
+  <data name="Tag_Possible" xml:space="preserve"><value>Possible</value></data>
+  <data name="Hint_Public_Title" xml:space="preserve"><value>This network is set to Public</value></data>
+  <data name="Hint_Public_Body" xml:space="preserve"><value>Windows blocks other devices on Public networks. Setting it to Private fixes this.</value></data>
+  <data name="Hint_Guest_Title" xml:space="preserve"><value>Guest or isolated Wi-Fi</value></data>
+  <data name="Hint_Guest_Body" xml:space="preserve"><value>Some Wi-Fi networks keep devices apart on purpose, like guest networks and some hotel or office Wi-Fi. Try the main network.</value></data>
+  <data name="Hint_Mobile_Title" xml:space="preserve"><value>Phone is on mobile data</value></data>
+  <data name="Hint_Mobile_Body" xml:space="preserve"><value>Make sure the phone is on the same Wi-Fi as this PC.</value></data>
+  <data name="Hint_Vpn_Title" xml:space="preserve"><value>A VPN is running on this PC</value></data>
+  <data name="Hint_Vpn_Body" xml:space="preserve"><value>A VPN can hide this PC from your phone. Pause it, or choose the Wi-Fi or Ethernet card in Settings.</value></data>
+  <data name="Hint_Cards_Title" xml:space="preserve"><value>This PC has more than one network card</value></data>
+  <data name="Hint_Cards_Body" xml:space="preserve"><value>Easy Mouse uses {0}. If your phone is on another network, choose the right card in Settings.</value></data>
+  <data name="Hint_NoNet_Title" xml:space="preserve"><value>This PC is not connected to a network</value></data>
+  <data name="Hint_NoNet_Body" xml:space="preserve"><value>Connect to your Wi-Fi or plug in a cable, then try again.</value></data>
+  <data name="Btn_ShowQr" xml:space="preserve"><value>Show QR again</value></data>
+  <data name="Btn_MakePrivate" xml:space="preserve"><value>Make network Private</value></data>
+  <data name="Help_PrivateFailed" xml:space="preserve"><value>The network was not changed. Windows needs your permission for this.</value></data>
+  <data name="Ap_Title" xml:space="preserve"><value>Allow this phone?</value></data>
+  <data name="Ap_Body" xml:space="preserve"><value>A phone wants to control this PC. Allow it only if you started this just now.</value></data>
+  <data name="Ap_Sub" xml:space="preserve"><value>On your network</value></data>
+  <data name="Ap_CodeLabel" xml:space="preserve"><value>Code on the phone</value></data>
+  <data name="Ap_Foot" xml:space="preserve"><value>The codes must match. You can remove this phone later in Devices.</value></data>
+  <data name="Ap_TakeTitle" xml:space="preserve"><value>Switch to another phone?</value></data>
+  <data name="Ap_TakeBody" xml:space="preserve"><value>This phone asks to take over. The phone that controls this PC now will be disconnected.</value></data>
+  <data name="Ap_TakeFoot" xml:space="preserve"><value>Only one phone controls this PC at a time.</value></data>
+  <data name="Btn_Allow" xml:space="preserve"><value>Allow</value></data>
+  <data name="Btn_Deny" xml:space="preserve"><value>Deny</value></data>
+  <data name="Nav_General" xml:space="preserve"><value>General</value></data>
+  <data name="Nav_Network" xml:space="preserve"><value>Network</value></data>
+  <data name="Nav_Security" xml:space="preserve"><value>Security</value></data>
+  <data name="Nav_Devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="Nav_About" xml:space="preserve"><value>About</value></data>
+  <data name="Win_Settings" xml:space="preserve"><value>Easy Mouse · Settings</value></data>
+  <data name="Win_Devices" xml:space="preserve"><value>Easy Mouse · Devices</value></data>
+  <data name="Grp_Startup" xml:space="preserve"><value>Startup</value></data>
+  <data name="Grp_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Grp_Network" xml:space="preserve"><value>Network</value></data>
+  <data name="Grp_Security" xml:space="preserve"><value>Security</value></data>
+  <data name="Set_StartWindows" xml:space="preserve"><value>Start with Windows</value></data>
+  <data name="Set_StartWindowsDesc" xml:space="preserve"><value>Easy Mouse opens in the tray when you sign in.</value></data>
+  <data name="Set_StartMin" xml:space="preserve"><value>Start minimised to the tray</value></data>
+  <data name="Set_StartMinDesc" xml:space="preserve"><value>No window until you need the QR code.</value></data>
+  <data name="Set_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Set_LanguageDesc" xml:space="preserve"><value>Hebrew switches the whole window to right-to-left.</value></data>
+  <data name="Lang_Auto" xml:space="preserve"><value>Automatic (follow Windows)</value></data>
+  <data name="Set_Port" xml:space="preserve"><value>Port</value></data>
+  <data name="Set_PortDesc" xml:space="preserve"><value>Fixed, so paired phones keep working.</value></data>
+  <data name="Set_PortInvalid" xml:space="preserve"><value>Use a number from 1024 to 65535.</value></data>
+  <data name="Set_Card" xml:space="preserve"><value>Network card</value></data>
+  <data name="Set_CardDesc" xml:space="preserve"><value>The Wi-Fi or Ethernet card phones connect through.</value></data>
+  <data name="Set_CardAuto" xml:space="preserve"><value>Automatic ({0})</value></data>
+  <data name="Set_CardNone" xml:space="preserve"><value>Automatic (no network found)</value></data>
+  <data name="Set_CardCategory" xml:space="preserve"><value>{0} ({1})</value></data>
+  <data name="Cat_Public" xml:space="preserve"><value>Public</value></data>
+  <data name="Cat_Private" xml:space="preserve"><value>Private</value></data>
+  <data name="Cat_Domain" xml:space="preserve"><value>Domain</value></data>
+  <data name="Cat_Unknown" xml:space="preserve"><value>unknown profile</value></data>
+  <data name="Set_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Set_Admin" xml:space="preserve"><value>Control admin windows and the UAC prompt</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>A paired phone can then approve UAC prompts. It is effectively an administrator on this PC.</value></data>
+  <data name="Set_AdminPending" xml:space="preserve"><value>Saved, but it does nothing yet: it needs a separate component that is not in this version.</value></data>
+  <data name="Set_Hotkey" xml:space="preserve"><value>Emergency disconnect hotkey</value></data>
+  <data name="Set_HotkeyDesc" xml:space="preserve"><value>Closes every connection and stops listening until you start it again from the tray.</value></data>
+  <data name="Set_HotkeyPress" xml:space="preserve"><value>Press the new keys</value></data>
+  <data name="Set_HotkeyInUse" xml:space="preserve"><value>Another program already uses this combination.</value></data>
+  <data name="Set_HotkeyNeed" xml:space="preserve"><value>Include Ctrl, Alt or Win with a key.</value></data>
+  <data name="Dev_Paired" xml:space="preserve"><value>Paired phones</value></data>
+  <data name="Dev_DisconnectAll" xml:space="preserve"><value>Disconnect all</value></data>
+  <data name="Dev_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Dev_Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Dev_Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="Dev_Empty" xml:space="preserve"><value>No phones are paired yet. Show the QR code to add one.</value></data>
+  <data name="Dev_MetaConnected" xml:space="preserve"><value>Paired {0} · expires after {1} days without use</value></data>
+  <data name="Dev_MetaSeen" xml:space="preserve"><value>Last seen {0} · expires in {1} days</value></data>
+  <data name="Dev_MetaSoon" xml:space="preserve"><value>Unused for {0} days, expires in {1} days</value></data>
+  <data name="Dev_Today" xml:space="preserve"><value>today</value></data>
+  <data name="Dev_Yesterday" xml:space="preserve"><value>yesterday</value></data>
+  <data name="Dev_DaysAgo" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="Dev_ConfirmRemove" xml:space="preserve"><value>Remove "{0}"? It will have to be paired again.</value></data>
+  <data name="Dev_ConfirmAll" xml:space="preserve"><value>Disconnect every phone right now? Paired phones stay paired.</value></data>
+  <data name="About_Line1" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="About_Line2" xml:space="preserve"><value>Free and open source (MIT license).</value></data>
+  <data name="About_Line3" xml:space="preserve"><value>Phones control this PC over your own network only. Nothing goes through the internet.</value></data>
+  <data name="Tray_ShowQr" xml:space="preserve"><value>Show QR code</value></data>
+  <data name="Tray_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Tray_Devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="Tray_DisconnectAll" xml:space="preserve"><value>Disconnect all</value></data>
+  <data name="Tray_Resume" xml:space="preserve"><value>Start listening again</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>Quit</value></data>
+  <data name="Tray_Tip" xml:space="preserve"><value>Easy Mouse</value></data>
+  <data name="Tray_TipConnected" xml:space="preserve"><value>Easy Mouse · phone connected</value></data>
+  <data name="Tray_TipStopped" xml:space="preserve"><value>Easy Mouse · not listening</value></data>
+  <data name="Toast_Connected" xml:space="preserve"><value>{0} connected</value></data>
+  <data name="Toast_ConnectedBody" xml:space="preserve"><value>It can now control this PC. Use Disconnect all in the tray to stop it.</value></data>
+  <data name="Toast_Emergency" xml:space="preserve"><value>All phones disconnected</value></data>
+  <data name="Toast_EmergencyBody" xml:space="preserve"><value>Easy Mouse stopped listening. Use the tray menu to start again.</value></data>
+  <data name="Toast_Public" xml:space="preserve"><value>This network is Public</value></data>
+  <data name="Toast_PublicBody" xml:space="preserve"><value>Easy Mouse stopped listening. Open the QR window to fix it.</value></data>
+  <data name="Err_StoreTitle" xml:space="preserve"><value>Easy Mouse cannot read its device list</value></data>
+  <data name="Err_StoreBody" xml:space="preserve"><value>{0}
+
+Easy Mouse does not start with an empty list, because that would silently unpair every phone. Move or delete that file to start over.</value></data>
+  <data name="Err_HotkeyTitle" xml:space="preserve"><value>Emergency hotkey not active</value></data>
+</root>

@@ -506,7 +506,8 @@ public class BrokerInputSinkTests
     {
         var name = NewPipe();
         using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        var accepted = Task.Run(server.WaitForConnection);
+        // The probe hangs up at once, so the server may see the connection end while still accepting ("pipe is being closed"): either way a client connected.
+        var accepted = Task.Run(() => { try { server.WaitForConnection(); } catch (IOException) { } });
         Assert.Null(BrokerInputSink.Probe(name, _ => true));
         await accepted.WaitAsync(TimeSpan.FromSeconds(2));
     }

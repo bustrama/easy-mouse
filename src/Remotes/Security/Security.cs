@@ -27,11 +27,21 @@ public sealed record ReviewItem(string Path, ActionClass Class, string Kind, str
 
 public static class ReviewBuilder
 {
+    /// <summary>A launcher chord or a long run of key presses can type a command into a shell, so it needs review.</summary>
+    public const int MaxSafeKeyPresses = 3;
+
     public static IReadOnlyList<ReviewItem> Build(RemoteDefinition remote)
     {
         var list = new List<ReviewItem>();
         foreach (var item in remote.Items)
         {
+            var keys = item.Actions.OfType<KeyPressAction>().ToList();
+            var sequence = keys.Count > MaxSafeKeyPresses
+                ? $"presses {keys.Count} keys in a row (enough to type a command)"
+                : keys.FirstOrDefault(k => IsLauncherChord(k.Chord)) is { } l ? $"presses {l.Keys}, which opens the Start menu or Task Manager" : null;
+            if (sequence is not null)
+                list.Add(new ReviewItem($"layout.items[{item.Index}].action", ActionClass.Sensitive, "key", sequence));
+
             for (var a = 0; a < item.Actions.Count; a++)
             {
                 var act = item.Actions[a];
@@ -42,6 +52,9 @@ public static class ReviewBuilder
         }
         return list;
     }
+
+    /// <summary>Ctrl+Escape opens the Start menu (a search box that runs what is typed) and Ctrl+Shift+Escape opens Task Manager; the Win key itself is already refused by the key parser.</summary>
+    internal static bool IsLauncherChord(KeyChord chord) => chord.Key == 0x1B && chord.Modifiers.Contains(KeyParser.Ctrl);
 
     private static string Describe(RemoteAction a) => a switch
     {

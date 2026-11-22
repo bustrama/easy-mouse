@@ -15,4 +15,7 @@ public sealed record SessionLimits
     public TimeSpan HandshakeTimeout { get; init; } = TimeSpan.FromSeconds(10);
     /// <summary>Consecutive-or-not frames that fail authentication or replay checks before the socket is closed.</summary>
     public int MaxInvalidFrames { get; init; } = 32;
+    public const int MaxSocketsPerPeerDefault = 16;
+    /// <summary>WebSocket connections one remote address may hold at once (a phone needs one, or two while it reconnects). Stops one LAN host from exhausting sockets and memory.</summary>
+    public int MaxSocketsPerPeer { get; init; } = MaxSocketsPerPeerDefault;
 }

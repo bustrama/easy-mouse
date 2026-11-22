@@ -15,6 +15,12 @@ internal static class ArtworkReader
 {
     public const int MaxSide = 256;
     public const int MaxBytes = 64 * 1024;
+    /// <summary>The thumbnail comes from whatever app or web page owns the media session: refuse sources that are huge on disk or in pixels before decoding them.</summary>
+    public const ulong MaxSourceBytes = 8 * 1024 * 1024;
+    public const ulong MaxSourcePixels = 64UL * 1024 * 1024;
+
+    internal static bool Accepts(ulong sourceBytes, uint width, uint height)
+        => width != 0 && height != 0 && sourceBytes is > 0 and <= MaxSourceBytes && (ulong)width * height <= MaxSourcePixels;
 
     private static readonly double[] Qualities = [0.8, 0.6, 0.4];
 
@@ -25,7 +31,7 @@ internal static class ArtworkReader
         {
             using var source = await thumbnail.OpenReadAsync();
             var decoder = await BitmapDecoder.CreateAsync(source);
-            if (decoder.PixelWidth == 0 || decoder.PixelHeight == 0) return null;
+            if (!Accepts(source.Size, decoder.PixelWidth, decoder.PixelHeight)) return null;
 
             var side = MaxSide;
             for (int attempt = 0; attempt < 2; attempt++)

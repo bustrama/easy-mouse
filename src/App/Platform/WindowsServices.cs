@@ -111,7 +111,8 @@ public static class NetworkProfileFixer
     public static bool MakePrivate(int interfaceIndex)
     {
         if (interfaceIndex <= 0) throw new ArgumentOutOfRangeException(nameof(interfaceIndex));
-        var psi = new ProcessStartInfo("powershell.exe")
+        // Full path: a bare name is searched in the app folder and PATH, and this process is started elevated.
+        var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))
         {
             // Only an integer is interpolated into the command line: nothing from the network or settings.
             Arguments = $"-NoProfile -WindowStyle Hidden -Command \"Set-NetConnectionProfile -InterfaceIndex {interfaceIndex} -NetworkCategory Private\"",

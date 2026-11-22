@@ -76,13 +76,16 @@ public sealed class EasyMouseServer : IAsyncDisposable
             k.Limits.MaxRequestBodySize = 0;
             k.Limits.MaxRequestHeadersTotalSize = 16 * 1024;
             k.Limits.MaxRequestLineSize = 4 * 1024;
+            // Slow or idle HTTP connections from the LAN (slowloris): short header and keep-alive timeouts.
+            k.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(10);
+            k.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(30);
             k.Listen(_options.BindAddress, _options.Port, o => o.Protocols = HttpProtocols.Http1);
         });
         builder.Services.AddSingleton(_services);
 
         var app = builder.Build();
         _logger = app.Logger;
-        app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
+        app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20), KeepAliveTimeout = TimeSpan.FromSeconds(30) });
         app.Use(Guard);
         app.MapGet("/api/info", Info);
         app.Map("/ws", HandleSocket);
@@ -187,6 +190,42 @@ public sealed class EasyMouseServer : IAsyncDisposable
             ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
+        // One host cannot hold unlimited sockets: each costs a buffer, a session and up to 10 s of handshake time.
+        var peer = ctx.Connection.RemoteIpAddress is { } ip ? (ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4() : ip) : IPAddress.None;
+        if (!TryEnterPeer(peer))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            return;
+        }
+        try { await RunSocketAsync(ctx).ConfigureAwait(false); }
+        finally { LeavePeer(peer); }
+    }
+
+    private readonly object _peerGate = new();
+    private readonly Dictionary<IPAddress, int> _peerSockets = [];
+
+    private bool TryEnterPeer(IPAddress peer)
+    {
+        lock (_peerGate)
+        {
+            _peerSockets.TryGetValue(peer, out var n);
+            if (n >= _services.Limits.MaxSocketsPerPeer) return false;
+            _peerSockets[peer] = n + 1;
+            return true;
+        }
+    }
+
+    private void LeavePeer(IPAddress peer)
+    {
+        lock (_peerGate)
+        {
+            if (!_peerSockets.TryGetValue(peer, out var n)) return;
+            if (n <= 1) _peerSockets.Remove(peer); else _peerSockets[peer] = n - 1;
+        }
+    }
+
+    private async Task RunSocketAsync(HttpContext ctx)
+    {
         using var socket = await ctx.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
         var session = new ServerSession(_services, new WebSocketTransport(socket));
         session.Start();

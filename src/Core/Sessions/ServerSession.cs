@@ -137,17 +137,25 @@ public sealed class ServerSession
     private async Task DispatchAsync(Message message)
     {
         bool locked = _svc.Status.Locked;
-        switch (message)
+        try
         {
-            case MoveMessage m when !locked: _svc.Input.MoveRelative(m.Dx, m.Dy); break;
-            case ButtonMessage m when !locked: _svc.Input.Button(m.Button, m.Down); break;
-            case WheelMessage m when !locked: _svc.Input.Wheel(m.Dx, m.Dy); break;
-            case TextMessage m when !locked: _svc.Input.Text(m.Text); break;
-            case KeyMessage m when !locked: _svc.Input.Key(m.VirtualKey, m.Action); break;
-            case MediaMessage m when !locked: _svc.Media.Execute(m.Command); break;
-            case JsonMessage m: await OnJsonAsync(m.Json).ConfigureAwait(false); break;
-            case PingMessage: await SendFrameAsync(new PingMessage()).ConfigureAwait(false); break;
-            // Locked: input is dropped; the phone already knows from the state message.
+            switch (message)
+            {
+                case MoveMessage m when !locked: _svc.Input.MoveRelative(m.Dx, m.Dy); break;
+                case ButtonMessage m when !locked: _svc.Input.Button(m.Button, m.Down); break;
+                case WheelMessage m when !locked: _svc.Input.Wheel(m.Dx, m.Dy); break;
+                case TextMessage m when !locked: _svc.Input.Text(m.Text); break;
+                case KeyMessage m when !locked: _svc.Input.Key(m.VirtualKey, m.Action); break;
+                case MediaMessage m when !locked: _svc.Media.Execute(m.Command); break;
+                case JsonMessage m: await OnJsonAsync(m.Json).ConfigureAwait(false); break;
+                case PingMessage: await SendFrameAsync(new PingMessage()).ConfigureAwait(false); break;
+                // Locked: input is dropped; the phone already knows from the state message.
+            }
+        }
+        catch (InputBlockedException)
+        {
+            // The PC refuses input right now (elevated foreground window, UAC, lock screen). That is a normal condition,
+            // not a protocol error: drop this input and stay connected; host.elevated/locked in the state frame tells the phone.
         }
     }
 
@@ -387,8 +395,8 @@ public sealed class ServerSession
             {
                 w.WriteStartObject("media");
                 w.WriteString("status", np.Status.ToString().ToLowerInvariant());
-                if (np.Title is not null) w.WriteString("title", np.Title);
-                if (np.Artist is not null) w.WriteString("artist", np.Artist);
+                if (np.Title is not null) w.WriteString("title", SanitizeText(np.Title));
+                if (np.Artist is not null) w.WriteString("artist", SanitizeText(np.Artist));
                 if (np.PositionMs is long p) w.WriteNumber("positionMs", p);
                 if (np.DurationMs is long d) w.WriteNumber("durationMs", d);
                 w.WriteEndObject();
@@ -411,6 +419,35 @@ public sealed class ServerSession
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    /// <summary>Longest title or artist sent to the phone (the web client keeps 200 as well).</summary>
+    public const int MaxMediaTextChars = 200;
+
+    /// <summary>
+    /// Now-playing text is written by whatever app or web page owns the media session, so it is untrusted: control
+    /// characters are dropped, unpaired surrogates (which cannot be encoded as UTF-8 and would make the state frame
+    /// fail) become U+FFFD, and the length is capped so the frame stays within the 4096-byte limit.
+    /// </summary>
+    public static string SanitizeText(string text)
+    {
+        var sb = new StringBuilder(Math.Min(text.Length, MaxMediaTextChars));
+        for (int i = 0; i < text.Length && sb.Length < MaxMediaTextChars; i++)
+        {
+            char c = text[i];
+            if (char.IsHighSurrogate(c))
+            {
+                if (i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
+                {
+                    if (sb.Length + 2 > MaxMediaTextChars) break;
+                    sb.Append(c).Append(text[++i]);
+                }
+                else sb.Append('�');
+            }
+            else if (char.IsLowSurrogate(c)) sb.Append('�');
+            else if (!char.IsControl(c)) sb.Append(c);
+        }
+        return sb.ToString();
     }
 
     private async Task OnJsonAsync(string json)
@@ -535,16 +572,26 @@ public sealed class ServerSession
 
     private bool Terminate()
     {
+        bool wasController;
         lock (_gate)
         {
             if (_phase == Phase.Closed) return false;
+            wasController = _phase == Phase.Controlling;
             _phase = Phase.Closed;
         }
         _pairRequest?.Deny();
         _cts.Cancel();
         Unsubscribe();
         _svc.Hub.Leave(this);
+        // The phone may have held a key or button when it vanished; nothing else will ever lift it.
+        if (wasController) ReleaseHeldInput();
         return true;
+    }
+
+    private void ReleaseHeldInput()
+    {
+        try { _svc.Input.ReleaseAll(); }
+        catch (InputBlockedException) { /* injection is blocked right now (secure desktop); the keys cannot be lifted from here */ }
     }
 
     private static bool TryParseFlat(string text, out Dictionary<string, string> fields)

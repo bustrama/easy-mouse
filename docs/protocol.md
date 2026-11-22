@@ -120,6 +120,9 @@ A client `ping` is answered with a server `ping`.
 - Rate: a token bucket of 200 frames per second sustained with a burst of 200, counted over every
   frame received on the socket. Exceeding it closes the socket (4429).
 - One controller (see Connect).
+- At most 16 WebSocket connections per remote address at once; a further upgrade request gets `429` and no socket. A phone needs one, or two for a moment while it reconnects.
+- The server pings every 20 s and drops a socket that does not answer within 30 s, so a vanished phone is noticed and its held keys and buttons are released (the server also releases them whenever the controlling socket closes, for any reason).
+- Input the PC cannot inject right now (an elevated foreground window, the UAC prompt, the lock screen) is dropped without closing the socket; `host.elevated` and `host.locked` in the state frame tell the phone.
 - While the PC is locked, input ops (0x01-0x06) are dropped and the phone is told through 0x11.
 
 ### 0x10 json (remote action invocation)
@@ -207,8 +210,8 @@ snapshot, so the client replaces its copy.
           "required": ["status"],
           "properties": {
             "status": { "enum": ["none", "playing", "paused", "stopped"] },
-            "title": { "type": "string" },
-            "artist": { "type": "string" },
+            "title": { "type": "string", "maxLength": 200, "description": "untrusted text from the media app: control characters removed, unpaired surrogates replaced by U+FFFD, cut to 200 characters" },
+            "artist": { "type": "string", "maxLength": 200, "description": "same rules as title" },
             "positionMs": { "type": "integer", "minimum": 0, "description": "snapshot; extrapolate while playing" },
             "durationMs": { "type": "integer", "minimum": 0 }
           }

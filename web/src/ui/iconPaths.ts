@@ -1,6 +1,18 @@
 // Built-in icon set (24x24, stroke). Remotes can only reference these names; they cannot supply SVG or URLs.
 export const ICON_PATHS: Record<string, string> = {
-  mouse: 'M12 3v18M3 12h18',
+  // computer mouse: rounded body, centre divider between the buttons, scroll wheel
+  mouse: 'M12 2.5a6 6 0 0 0-6 6v7a6 6 0 0 0 12 0v-7a6 6 0 0 0-6-6zM12 2.5v6M12 11v2.5',
+  enter: 'M20 5v7a2 2 0 0 1-2 2H5M9 10l-4 4 4 4',
+  backspace: 'M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7zM12.5 9.5l5 5M17.5 9.5l-5 5',
+  delete: 'M15 5H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h11l6-7zM11.5 9.5l-5 5M6.5 9.5l5 5',
+  tab: 'M3 12h13M12 8l4 4-4 4M20 6v12',
+  shift: 'M12 4l8 9h-5v7H9v-7H4z',
+  win: 'M3 5.5l8-1.2v7H3zM13 4.1l8-1.2v8.4h-8zM3 12.7h8v7l-8-1.2zM13 12.7h8v8.4l-8-1.2z',
+  'arrow-left': 'M19 12H5M11 6l-6 6 6 6',
+  'arrow-right': 'M5 12h14M13 6l6 6-6 6',
+  'arrow-up': 'M12 19V5M6 11l6-6 6 6',
+  'arrow-down': 'M12 5v14M6 13l6 6 6-6',
+  space: 'M4 10v5h16v-5',
   keyboard: 'M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8',
   media: 'M8 5v14l11-7z',
   remotes: 'M4 6h16M4 12h16M4 18h10',

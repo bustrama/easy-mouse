@@ -76,13 +76,13 @@ public class PairingServiceTests
     }
 
     [Fact]
-    public void Secret_expires_after_two_minutes()
+    public void Secret_expires_after_five_minutes()
     {
         var (svc, _, _) = Create();
         svc.OpenWindow();
         var k = svc.CurrentSecret!.Secret;
-        Assert.Equal(_time.GetUtcNow() + TimeSpan.FromMinutes(2), svc.CurrentSecret.ExpiresAt);
-        _time.Advance(TimeSpan.FromMinutes(2) - TimeSpan.FromSeconds(1));
+        Assert.Equal(_time.GetUtcNow() + TimeSpan.FromMinutes(5), svc.CurrentSecret.ExpiresAt);
+        _time.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromSeconds(1));
         var (nc, mac) = Hello(k);
         Assert.Equal(PairingError.None, svc.Begin("Phone", nc, mac).Error);
     }
@@ -93,7 +93,7 @@ public class PairingServiceTests
         var (svc, _, _) = Create();
         svc.OpenWindow();
         var k = svc.CurrentSecret!.Secret;
-        _time.Advance(TimeSpan.FromMinutes(2));
+        _time.Advance(TimeSpan.FromMinutes(5));
         var (nc, mac) = Hello(k);
         Assert.Equal(PairingError.Expired, svc.Begin("Phone", nc, mac).Error);
         svc.Regenerate();

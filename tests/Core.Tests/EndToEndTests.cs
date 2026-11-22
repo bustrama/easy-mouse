@@ -284,7 +284,7 @@ public class EndToEndTests
         await using var host = await TestHost.StartAsync();
         host.Services.Pairing.OpenWindow();
         var k = host.Services.Pairing.CurrentSecret!.Secret;
-        host.Time.Advance(TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(1));
+        host.Time.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(1));
         await using var client = await host.ConnectAsync();
         var nc = HandshakeCrypto.Random(16);
         await client.SendTextAsync(JsonSerializer.Serialize(new { t = "pair.hello", name = "Late", nc = B64.Encode(nc), mac = B64.Encode(HandshakeCrypto.PairMac(k, nc, "Late")) }));

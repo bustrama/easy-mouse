@@ -67,7 +67,7 @@ changed through Windows' consent prompt, so no setting the App or a phone can wr
 
 ## Pairing and reconnect
 
-- QR holds `http://host:port/#k=<128-bit one-time secret>`, valid 2 minutes. The fragment never reaches the wire or logs; the page removes it with `history.replaceState`.
+- QR holds `http://host:port/#k=<128-bit one-time secret>`, valid 5 minutes. The fragment never reaches the wire or logs; the page removes it with `history.replaceState`.
 - The phone proves knowledge of `k`; the PC shows device name, browser and a 4-digit code that also appears on the phone. The user clicks Allow.
 - The PC issues a 256-bit per-device secret, stored with DPAPI. Each connection derives a session key by nonce challenge-response; frames are AEAD with counter nonces (replay protection).
 - Browser storage is per origin, so the web app prefers the stable `<pcname>.local` origin. If the IP changes and `.local` does not resolve, re-pairing costs one scan and one click.

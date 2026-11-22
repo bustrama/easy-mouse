@@ -12,7 +12,7 @@ design requirement, not a later phase.
 | Passive sniffer who knows the Wi-Fi password | Reads keystrokes and typed passwords | All frames are AEAD-encrypted with a session key. The QR secret never crosses the network |
 | Active man-in-the-middle (ARP spoofing) | Rewrites the JavaScript at page load | **Not defended in default mode.** Planned opt-in secure mode (trusted HTTPS) |
 | Malicious web page in the PC's or phone's browser | DNS rebinding, CSRF, cross-origin WebSocket | Host header allow-list (own IP and `.local` name only), strict Origin check on WebSocket and POST, no cookies, no CORS headers |
-| Someone photographing the QR | Pairs their own phone | Secret is single-use, expires in 2 minutes, and still needs approval on the PC |
+| Someone photographing the QR | Pairs their own phone | Secret is single-use, expires in 5 minutes, and still needs approval on the PC |
 | Racing attacker or shoulder-surfer | Gets their own request approved | Dialog shows device name and a 4-digit code that must match the phone; one pending request at a time; Deny is the default button; Allow enables after one second |
 | Malicious remote file | Launches programs, calls local services | Not applicable in 0.1: Remotes is disabled and no remote file is read (docs/remotes.md). Design if re-enabled: per-remote approval of dangerous actions, pinned to the file hash |
 | URL leakage | Secret ends up in history or logs | Secret is in the URL fragment, removed with `history.replaceState`; `Referrer-Policy: no-referrer` |

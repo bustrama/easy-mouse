@@ -5,7 +5,7 @@ namespace EasyMouse.Core.Pairing;
 
 public sealed record PairingOptions
 {
-    public TimeSpan SecretLifetime { get; init; } = TimeSpan.FromMinutes(2);
+    public TimeSpan SecretLifetime { get; init; } = TimeSpan.FromMinutes(5);
     public int MaxFailedAttempts { get; init; } = 5;
     public TimeSpan AllowDelay { get; init; } = TimeSpan.FromSeconds(1);
     /// <summary>How long the PC user has to click before the request is denied.</summary>

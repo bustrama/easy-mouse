@@ -108,4 +108,5 @@ To check the locked reading: `Start-Sleep 8; & ...\EasyMouse.exe --wts` and pres
 | Install-location check on real files (`EasyMouse.exe --acl PATH`): the installed 0.1.0 under Program Files passes; System32 and a Temp folder do not | Checked |
 | Broker exe starts, refuses to run outside Program Files (exit 13), `--enable` needs an administrator | Checked on a dev machine, not elevated |
 | `WTSSessionInfoEx.SessionFlags` reads 1 in an unlocked session | Checked |
-| Service install, switch on/off, input into an elevated window, UAC prompt, lock screen, upgrade/uninstall of the service | **Not yet run on a real machine** (needs administrator approval on the PC; the session that wrote this could not obtain it) |
+| Service install (branch installer), switch on with decline-first, typing into an elevated Notepad from a paired phone, UAC prompt approved from the phone, lock screen refusing input, upgrade with the switch on, uninstall removing the service | Run by the project owner on a Windows 11 PC; every step worked as described. A first installer build had a folder-permission bug that this run found; it is fixed |
+| Fault cases (service killed while on, pipe name squatted, portable copy) and Windows 10 | Not run |

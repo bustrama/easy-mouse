@@ -57,7 +57,7 @@ public sealed class TrayIcon : IDisposable
         _update.Font = new Font(_menu.Font, FontStyle.Bold);
     }
 
-    public void SetRemotesText(string text) => _remotes.Text = text;
+    public void SetRemotesText(string text, bool visible = true) { _remotes.Text = text; _remotes.Visible = visible; }
 
     /// <summary>Shows the "Start listening again" entry only while stopped by the emergency hotkey.</summary>
     public void SetResumeVisible(bool visible) => _resume.Visible = visible;

@@ -15,6 +15,7 @@ import { type CloseInfo, Session, type Credentials, type WsLike } from './protoc
 import { type Art, makeArt } from './art.ts';
 import { EMPTY_STATE, type PcState, parseState } from './pcstate.ts';
 import { type Remote, sanitizeRemotes } from './remotes.ts';
+import { REMOTES_ENABLED } from './features.ts';
 import { clearCredentials, loadCredentials, saveCredentials, storageGet, storageSet } from './storage.ts';
 import { createStore } from './store.ts';
 
@@ -158,6 +159,7 @@ class Client {
   }
 
   setTab(tab: Tab): void {
+    if (tab === 'remotes' && !REMOTES_ENABLED) return;
     this.releaseInputs();
     this.store.set({ tab });
   }
@@ -257,6 +259,7 @@ class Client {
     if (typeof v !== 'object' || v === null) return;
     const m = v as Record<string, unknown>;
     if (m['t'] === 'remotes') {
+      if (!REMOTES_ENABLED) return; // DEPRECATED: disabled for 0.1 (docs/remotes.md)
       this.store.set({ remotes: sanitizeRemotes(m) });
     } else if (m['t'] === 'result' && m['ok'] === false) {
       this.showToast(toastFor(m['err']));
@@ -380,6 +383,7 @@ class Client {
   private rid = 0;
   /** Press a remote's button or move its slider: the phone names the item, the PC owns the action. */
   invoke(remote: string, item: string, value?: number): boolean {
+    if (!REMOTES_ENABLED) return false; // DEPRECATED: disabled for 0.1 (docs/remotes.md); the PC refuses invokes too
     return this.json({ t: 'invoke', rid: this.rid++, remote, item, ...(value === undefined ? {} : { value }) });
   }
 

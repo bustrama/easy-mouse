@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 // Declarative remotes (docs/architecture.md, "Remotes"). The PC sends the layouts; the phone only
 // renders them and names the item the user pressed (`invoke`). It never sends or runs an action.
 // Everything is validated and copied into a plain structure: labels become text nodes in the UI,

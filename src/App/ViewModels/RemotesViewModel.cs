@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media;

@@ -78,6 +78,8 @@ adapters and several network cards, each with a one-line fix.
 
 ## Remotes (declarative)
 
+> **DEPRECATED: Remotes is disabled for 0.1 and scheduled for removal** (see [remotes.md](remotes.md)). This section describes the design as built; none of it is active in 0.1.
+
 A remote is a JSON layout of buttons, sliders, labels and pads mapped to actions.
 
 ```json
@@ -160,8 +162,8 @@ docs/             architecture.md, security.md, protocol.md, remotes.md
 ## Roadmap
 
 1. **Phase 1:** installer, autostart, QR window and tray, pair/approve/revoke, touchpad, keyboard, media keys and volume, reconnect, network hints, Hebrew/English.
-2. **Phase 2:** SMTC now-playing, remote engine, built-in Plex/Stremio/browser remotes, SYSTEM broker for admin windows and UAC (not in 0.1; the Settings option is shown disabled).
-3. **Phase 3:** phone-side remote editor, import/export, signing, winget, landing page polish.
+2. **Phase 2:** SMTC now-playing, ~~remote engine, built-in Plex/Stremio/browser remotes~~ (Remotes is disabled for 0.1 and scheduled for removal, docs/remotes.md), SYSTEM broker for admin windows and UAC (not in 0.1; the Settings option is shown disabled).
+3. **Phase 3:** signing, winget, landing page polish.
 4. **Phase 4, on demand:** provider processes for deep integrations, opt-in secure mode.
 
 Out of scope: plugin SDK, registry, trust tiers, silent or automatic installation of updates, screen mirroring,

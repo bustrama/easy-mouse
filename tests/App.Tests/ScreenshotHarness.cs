@@ -58,6 +58,7 @@ public class ScreenshotHarness
         NetCategory category = NetCategory.Private;
         var controller = new AppController(new AppPaths(temp), new AppEnvironment
         {
+            RemotesEnabled = true, // the harness still renders the (disabled) Remotes window
             SystemIntegration = false,
             MachineName = "OFFICE-PC",
             Protector = new XorProtector(),

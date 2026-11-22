@@ -25,6 +25,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 - An active man-in-the-middle on the LAN who rewrites the web app on load.
 - A stolen, unlocked, already-paired phone (use revoke / "Disconnect all").
 - Malware already running on the PC.
+- A leak of the update signing key together with control of the release channel (see [Updates](#updates)); the key can be rotated with a new app release.
 - A paired phone can type `Win+R` and any command. Remote-file guards stop
   third-party files and make abuse visible; they are not a boundary against a
   paired device.
@@ -68,14 +69,55 @@ Input to admin windows and the UAC secure desktop requires a SYSTEM component.
 - The capability would be a setting with a clear warning that a paired phone can then approve UAC prompts.
 - Consequence to state plainly: with this on, a paired phone is effectively an administrator on the PC. Keep the broker small, audited and free of parsing logic.
 
+## Updates
+
+Updates come from GitHub Releases and are **opt-in, verified and confirmed by the user, never silent**. This is the only
+traffic that leaves the LAN: HTTPS requests to `api.github.com` (release metadata) and, when the user clicks Update,
+`github.com` (assets, which GitHub serves through `objects.githubusercontent.com` or `release-assets.githubusercontent.com`).
+The README and the Settings page say so. The requests carry a generic `EasyMouse-Updater` user agent and nothing else that
+identifies the user or the PC: no account, no cookies, no version, no machine name.
+
+What the user controls: Settings > Updates has "Check for updates" (default **on**, at most once a day, plus "Check now") and
+"Include pre-releases" (default off). An available update shows in the tray and in Settings. It is downloaded only after the
+user clicks Update and confirms, and Windows then shows its own UAC prompt for the installer. The app itself keeps running
+with normal user rights.
+
+Verification, in this order, each step failing closed with a clear message and nothing run:
+
+1. Every URL must be HTTPS on the default port, without credentials, on an allow-listed host. Redirects are followed by hand
+   and each hop is checked. Release asset URLs must be exactly `https://github.com/bustrama/easy-mouse/releases/download/<tag>/<file>`.
+2. Size limits (API 2 MB, checksum list 64 KB, signature exactly 64 bytes, installer 200 MB) and timeouts.
+3. `SHA256SUMS.sig` must be a valid **Ed25519** signature of `SHA256SUMS` under the public key compiled into the app
+   (`src/App/Updates/UpdateTrust.cs`). The checksum list is parsed only after its signature is valid.
+4. The SHA-256 of the downloaded installer must equal the signed entry for `EasyMouse-Setup-<version>.exe`. The file is held open
+   read-only from hashing until the installer process exists, so it cannot be swapped in between.
+5. The installer's own file version must equal the release version, and the version must be strictly newer than the running one.
+
+Signing and key handling: the Ed25519 private key exists only as the `UPDATE_SIGNING_KEY` secret of the GitHub Actions
+environment `release` (and an offline backup held by the maintainer); it is never committed. The release workflow signs
+`SHA256SUMS` with it and then checks the result against the public key embedded in the app, so a wrong secret fails the release
+instead of shipping an update every app would reject. Steps to generate, store and rotate the key are in
+[releasing.md](releasing.md). The updater's signature is independent of Authenticode: code signing (SignPath Foundation, planned)
+protects against SmartScreen warnings and tampering after installation; the Ed25519 signature protects the update channel.
+
+| Attacker | Attack | Defence |
+|---|---|---|
+| Compromised GitHub release (stolen maintainer account or token) | Uploads a malicious installer to a release | The attacker cannot produce a valid `SHA256SUMS.sig` without the private key (a secret of a protected environment, not an account credential), so every app refuses it. Residual: an attacker who also steals the signing key |
+| Compromised CI run | Builds a tampered installer and signs it | Releases are built only from a tagged commit that is on `main`; actions are pinned by commit SHA; the key is available only to the `release` job, which does not build code. GitHub build attestations let anyone check which workflow produced the files |
+| Downgrade or replay | Serves an old, genuinely signed release (with known bugs) as the "latest" | Versions must be strictly newer than the running one; the signed list must contain the exact installer name for the tag, so an old list replayed under a newer tag fails; the installer's embedded version must match |
+| Network man-in-the-middle | Tampers with the download | HTTPS with the system trust store only, HTTP and foreign hosts refused, and the content is verified by signature and hash regardless of the transport |
+| Malicious redirect or hostile API response | Points the download at another host, a huge file, or crafts JSON to crash or trick the parser | Host allow-list on every hop, canonical asset URLs, size caps, strict JSON shape checks (anything unexpected is skipped or an error), release notes shown as plain text with control and bidi characters removed |
+| Local malware in the same session | Swaps the downloaded installer after verification | The verified file is held open without write sharing until the installer starts. Malware already running as the user can do far more than this; it is listed under "Not defended" |
+| GitHub rate limiting or outage | Makes the app spam errors or hammer the API | One request per day, an hourly quiet retry after a failed automatic check, a pause until the reset time on rate limits, no error pop-ups for offline |
+
 ## Supply chain
 
-- Releases are built only by CI from tagged commits, signed through SignPath Foundation, and published with SHA-256 sums and GitHub build attestations.
+- Releases are built only by CI from tagged commits on `main`, code-signed through SignPath Foundation (planned; the workflow has a marked hook), and published with SHA-256 sums, an Ed25519 signature of those sums, and GitHub build attestations (see [Updates](#updates)).
 - Deterministic .NET builds, SDK pinned in `global.json`.
 - NuGet lock files in locked mode, `npm ci --ignore-scripts`, GitHub Actions pinned by commit SHA, minimal dependencies (QR and crypto libraries pinned exactly).
 - The web client is embedded in the signed exe; no CDN.
 - Community remotes arrive by pull request with a CI lint that flags dangerous actions. They are data, and the PC prompt is the enforcement.
-- Branch protection, required review, `SECURITY.md` with private vulnerability reporting. No auto-update in v1.
+- Branch protection, required review, `SECURITY.md` with private vulnerability reporting. Updates are opt-in, verified and user-confirmed, never silent (see [Updates](#updates)).
 
 ## CI security checks
 

@@ -4,7 +4,7 @@ Status: proposal, approved in design discussion. Nothing is implemented yet.
 
 Easy Mouse is an open-source (MIT) Windows app that turns any phone browser
 (Android or iPhone, nothing to install) into a remote for the PC, over the
-local network only. No cloud, no relay, no accounts, no telemetry. (The only network call the PC makes on its own is the optional loopback lookup of Stremio's file name on 127.0.0.1, see Media.)
+local network only. No cloud, no relay, no accounts, no telemetry.
 
 ## Flow
 

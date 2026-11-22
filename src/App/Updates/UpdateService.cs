@@ -9,8 +9,9 @@ public enum UpdatePhase { Idle, Checking, Downloading, Verifying, Launching }
 /// <summary>Starts the (already verified) installer elevated. Replaced by a fake in tests.</summary>
 public interface IInstallerLauncher
 {
+    /// <returns>A task that completes with the installer's exit code when it ends (null if not tracked).</returns>
     /// <exception cref="UpdateException"><see cref="UpdateErrorKind.Cancelled"/> when the user declined the Windows permission prompt.</exception>
-    void Launch(string installerPath);
+    Task<int>? Launch(string installerPath);
 }
 
 /// <summary>Remembers the last release answer so "Update available" survives a restart without another request.</summary>
@@ -70,7 +71,7 @@ public sealed class UpdateService
         _http = http; _verifier = verifier; _launcher = launcher; _cache = cache;
         _settings = settings; _update = update; Current = current; _time = time;
         _workRoot = workRoot ?? Path.GetTempPath();
-        _installerVersion = installerVersion ?? (p => FileVersionInfo.GetVersionInfo(p).ProductVersion);
+        _installerVersion = installerVersion ?? (p => FileVersionInfo.GetVersionInfo(p).ProductVersion?.Trim('\0', ' ')); // Inno pads the string with spaces
         LoadCached();
     }
 
@@ -117,8 +118,16 @@ public sealed class UpdateService
                 throw new UpdateException(UpdateErrorKind.RateLimited, "Still rate limited.", retryAfter: until);
 
             var url = includePre ? UpdateTrust.ReleaseListUrl : UpdateTrust.LatestReleaseUrl;
-            var raw = await _http.GetBytesAsync(url, UpdateTrust.ApiHosts, UpdateTrust.MaxApiBytes, UpdateTrust.ApiTimeout,
-                "application/vnd.github+json", ct).ConfigureAwait(false);
+            byte[] raw;
+            try
+            {
+                raw = await _http.GetBytesAsync(url, UpdateTrust.ApiHosts, UpdateTrust.MaxApiBytes, UpdateTrust.ApiTimeout,
+                    "application/vnd.github+json", ct).ConfigureAwait(false);
+            }
+            catch (UpdateException ex) when (ex.Kind == UpdateErrorKind.NoRelease)
+            {
+                raw = "[]"u8.ToArray(); // GitHub answers 404 for "latest" while no release is published: that is simply "nothing newer"
+            }
             var best = ReleaseParser.SelectBest(raw, includePre); // throws Malformed for junk
             _cache.Save(raw);
 
@@ -225,8 +234,9 @@ public sealed class UpdateService
 
             Phase = UpdatePhase.Launching;
             Raise();
-            _launcher.Launch(installerPath);
+            var exit = _launcher.Launch(installerPath);
             launched = true;
+            if (exit is not null) _ = exit.ContinueWith(OnInstallerExited, TaskScheduler.Default);
             InstallerRunning = true;
         }
         catch (UpdateException ex) { Fail(ex, manual: true); }
@@ -241,6 +251,18 @@ public sealed class UpdateService
             End();
         }
         if (launched) InstallerStarted?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>The installer ended while this app is still running: it was declined at the permission prompt late, or it failed.</summary>
+    private void OnInstallerExited(Task<int> exit)
+    {
+        lock (_gate)
+        {
+            InstallerRunning = false;
+            if (exit.IsFaulted || exit.Result != 0)
+                LastError = new UpdateException(UpdateErrorKind.InstallerFailed, "The installer ended without completing the update.");
+        }
+        Raise();
     }
 
     /// <summary>Removes leftovers of earlier updates (the installer cannot delete its own folder while it runs).</summary>
@@ -325,14 +347,19 @@ public sealed class InstallerLauncher : IInstallerLauncher
     /// <summary>A silent install takes much longer than this; a Setup that ends sooner was declined at the UAC prompt or failed to start.</summary>
     private static readonly TimeSpan EarlyExitWindow = TimeSpan.FromSeconds(8);
 
-    public void Launch(string installerPath)
+    public Task<int>? Launch(string installerPath)
     {
         try
         {
-            using var process = Process.Start(new ProcessStartInfo(installerPath, SilentArguments) { UseShellExecute = true });
-            if (process is null) throw new UpdateException(UpdateErrorKind.InstallerFailed, "The installer did not start.");
-            if (process.WaitForExit(EarlyExitWindow) && process.ExitCode != 0)
-                throw new UpdateException(UpdateErrorKind.Cancelled, $"The installer ended early (exit code {process.ExitCode}), most likely because the permission prompt was declined.");
+            var process = Process.Start(new ProcessStartInfo(installerPath, SilentArguments) { UseShellExecute = true })
+                ?? throw new UpdateException(UpdateErrorKind.InstallerFailed, "The installer did not start.");
+            var exit = Task.Run(() =>
+            {
+                using (process) { process.WaitForExit(); return process.ExitCode; }
+            });
+            if (exit.Wait(EarlyExitWindow) && exit.Result != 0)
+                throw new UpdateException(UpdateErrorKind.Cancelled, $"The installer ended early (exit code {exit.Result}), most likely because the permission prompt was declined.");
+            return exit;
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {

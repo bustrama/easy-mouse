@@ -525,14 +525,16 @@ public sealed class UpdateServiceTests : IDisposable
     {
         public List<string> Launched { get; } = [];
         public bool Decline { get; set; }
+        public TaskCompletionSource<int>? Exit { get; set; }
         public bool FileWasLockedAgainstWrites { get; private set; }
-        public void Launch(string installerPath)
+        public Task<int>? Launch(string installerPath)
         {
             if (Decline) throw new UpdateException(UpdateErrorKind.Cancelled, "declined");
             // While the installer starts, the verified file must not be replaceable.
             try { using var _ = new FileStream(installerPath, FileMode.Open, FileAccess.Write, FileShare.Read); }
             catch (IOException) { FileWasLockedAgainstWrites = true; }
             Launched.Add(installerPath);
+            return Exit?.Task;
         }
     }
 
@@ -802,6 +804,48 @@ public sealed class UpdateServiceTests : IDisposable
     {
         public byte[]? Load() => raw;
         public void Save(byte[] value) => raw = value;
+    }
+
+    [Fact]
+    public async Task No_release_published_yet_is_up_to_date_not_an_error()
+    {
+        // GitHub answers 404 for /releases/latest until the first release is published.
+        _github.Respond = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        Assert.Null(svc.LastError);
+        Assert.Null(svc.Available);
+        Assert.True(svc.UpToDate);
+        Assert.Equal(_time.GetUtcNow(), _settings.LastUpdateCheckUtc); // recorded, so no hourly retry loop
+        Assert.False(svc.IsDue());
+    }
+
+    [Fact]
+    public async Task A_404_for_an_asset_is_an_error_not_a_silent_success()
+    {
+        Serve();
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        var inner = _github.Respond;
+        _github.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/SHA256SUMS") ? new HttpResponseMessage(HttpStatusCode.NotFound) : inner(r);
+        await svc.InstallAsync();
+        Assert.NotNull(svc.LastError);
+        Assert.Empty(_launcher.Launched);
+    }
+
+    [Fact]
+    public async Task Installer_that_ends_with_an_error_after_starting_clears_the_running_status()
+    {
+        Serve();
+        _launcher.Exit = new TaskCompletionSource<int>();
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        await svc.InstallAsync();
+        Assert.True(svc.InstallerRunning);
+        _launcher.Exit.SetResult(5); // e.g. the user declined the permission prompt late
+        await Task.Delay(100);
+        Assert.False(svc.InstallerRunning);
+        Assert.Equal(UpdateErrorKind.InstallerFailed, svc.LastError!.Kind);
     }
 
     [Fact]

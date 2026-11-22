@@ -75,7 +75,7 @@ public sealed class UpdatesViewModel : ViewModelBase
         UpdateErrorKind.Offline => Loc.Instance["Upd_Err_Offline"],
         UpdateErrorKind.RateLimited => Loc.Format("Upd_Err_RateLimited",
             (e.RetryAfter ?? DateTimeOffset.UtcNow.AddHours(1)).ToLocalTime().ToString("t", Loc.Instance.Culture)),
-        UpdateErrorKind.Malformed or UpdateErrorKind.NoRelease => Loc.Instance["Upd_Err_Malformed"],
+        UpdateErrorKind.Malformed => Loc.Instance["Upd_Err_Malformed"],
         UpdateErrorKind.Untrusted => Loc.Instance["Upd_Err_Untrusted"],
         UpdateErrorKind.TooLarge => Loc.Instance["Upd_Err_TooLarge"],
         UpdateErrorKind.SignatureInvalid => Loc.Instance["Upd_Err_Signature"],

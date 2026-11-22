@@ -84,6 +84,8 @@ public sealed class GitHubHttp : IDisposable
 
             if (code is 403 or 429 && IsRateLimited(response, out var retryAfter))
                 throw new UpdateException(UpdateErrorKind.RateLimited, "GitHub rate limit reached.", retryAfter: retryAfter);
+            if (code == 404)
+                throw new UpdateException(UpdateErrorKind.NoRelease, "GitHub has nothing at this address (404).");
             if (code != 200)
                 throw new UpdateException(UpdateErrorKind.Http, $"GitHub answered HTTP {code}.");
 

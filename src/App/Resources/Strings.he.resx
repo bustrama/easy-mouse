@@ -87,8 +87,8 @@
   <data name="Cat_Unknown" xml:space="preserve"><value>פרופיל לא ידוע</value></data>
   <data name="Set_Status" xml:space="preserve"><value>מצב</value></data>
   <data name="Set_Admin" xml:space="preserve"><value>שליטה בחלונות מנהל ובהודעת UAC</value></data>
-  <data name="Set_AdminDesc" xml:space="preserve"><value>טלפון מחובר יוכל לאשר הודעות UAC. בפועל הוא מנהל מערכת במחשב הזה.</value></data>
-  <data name="Set_AdminPending" xml:space="preserve"><value>נשמר, אבל עדיין אינו פועל: הוא דורש רכיב נפרד שאינו חלק מהגרסה הזו.</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>מתוכנן לגרסה עתידית: יאפשר לטלפון מחובר לאשר הודעות UAC.</value></data>
+  <data name="Set_AdminPending" xml:space="preserve"><value>לא זמין בגרסה הזו.</value></data>
   <data name="Set_Hotkey" xml:space="preserve"><value>מקש קיצור לניתוק חירום</value></data>
   <data name="Set_HotkeyDesc" xml:space="preserve"><value>סוגר את כל החיבורים ועוצר את ההאזנה עד שמפעילים אותה שוב מתפריט המגש.</value></data>
   <data name="Set_HotkeyPress" xml:space="preserve"><value>הקישו את המקשים החדשים</value></data>

@@ -28,7 +28,7 @@ local network only. No cloud, no relay, no accounts, no telemetry.
 | Media | Windows SMTC as generic layer, media virtual keys as fallback |
 | Installer | Inno Setup, per-machine, installed as administrator; adds the firewall rule |
 | Autostart | Setting (and installer checkbox). Starts minimised to tray |
-| Elevated windows and UAC | Separate small SYSTEM broker service (phase 2), behind a setting with a clear warning |
+| Elevated windows and UAC | **Not in 0.1.** Planned for phase 2: a separate small SYSTEM broker service behind a setting with a clear warning. Settings shows the option disabled ("Not available in this version") |
 | Controllers | One controlling device at a time |
 | Languages | Hebrew and English in every UI, with RTL support |
 | Platforms | Windows 11 supported. Windows 10 is untested and documented as such |
@@ -50,12 +50,12 @@ Phone browser (Preact)                    Windows PC
                                                            | named pipe, ACL'd
                                         +------------------v-------------------+
                                         | Easy Mouse.Broker (SYSTEM service)   |
-                                        |  phase 2: input on admin windows,    |
-                                        |  UAC secure desktop. No network.     |
+                                        |  PLANNED (phase 2, not in 0.1):      |
+                                        |  admin windows, UAC. No network.     |
                                         +--------------------------------------+
 ```
 
-The network-facing process never runs elevated. Only the broker does, it
+The network-facing process never runs elevated. The broker is not built in 0.1; when it exists, only it will run elevated, it
 listens on no socket, and it accepts only the App over an ACL-protected pipe.
 
 ## Pairing and reconnect
@@ -105,7 +105,7 @@ Core Audio and key actions.
 
 ## Windows limits
 
-- Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. Phase 2 broker covers elevated windows and UAC; the lock screen is out of scope.
+- Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. This is a limitation of 0.1: a planned phase 2 broker would cover elevated windows and UAC; the lock screen is out of scope.
 - The App runs in the user session, never as a service.
 - Firewall rule (installer): program + TCP port, Private profile, LocalSubnet. New Wi-Fi defaults to Public; the app detects it and tells the user.
 - Detecting "the foreground window is elevated": a non-elevated process cannot open the token of an elevated or SYSTEM process (`OpenProcessToken` returns access denied; verified for winlogon and services), so access denied is treated as "more privileged than us", which is what UIPI cares about. Per the Win32 docs `SendInput` returns fewer events than asked when blocked (not exercised here: no elevated window available); `SendInputSink` throws `InputInjectionException` rather than hiding it.
@@ -140,7 +140,7 @@ docs/             architecture.md, security.md, protocol.md, remotes.md
 ## Roadmap
 
 1. **Phase 1:** installer, autostart, QR window and tray, pair/approve/revoke, touchpad, keyboard, media keys and volume, reconnect, network hints, Hebrew/English.
-2. **Phase 2:** SMTC now-playing, remote engine, built-in Plex/Stremio/browser remotes, SYSTEM broker for admin windows and UAC.
+2. **Phase 2:** SMTC now-playing, remote engine, built-in Plex/Stremio/browser remotes, SYSTEM broker for admin windows and UAC (not in 0.1; the Settings option is shown disabled).
 3. **Phase 3:** phone-side remote editor, import/export, signing, winget, landing page polish.
 4. **Phase 4, on demand:** provider processes for deep integrations, opt-in secure mode.
 

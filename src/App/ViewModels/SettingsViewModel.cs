@@ -159,11 +159,11 @@ public sealed class SettingsViewModel : ViewModelBase
     }
 
     // ---- Security
-    public bool ControlAdmin
-    {
-        get => _app.Settings.ControlAdminWindows;
-        set => _ = _app.UpdateSettingsAsync(s => s with { ControlAdminWindows = value });
-    }
+    /// <summary>
+    /// Admin windows and the UAC prompt need a SYSTEM broker that does not exist in this version, so the setting is shown
+    /// disabled and never reads or writes <see cref="AppSettings.ControlAdminWindows"/> (the field stays only for the future).
+    /// </summary>
+    public bool ControlAdminAvailable => false;
 
     public string HotkeyText { get => _capturing ? Loc.Instance["Set_HotkeyPress"] : _hotkeyText; private set => Set(ref _hotkeyText, value); }
     public string HotkeyMessage { get => _hotkeyMessage; private set { if (Set(ref _hotkeyMessage, value)) Raise(nameof(HasHotkeyMessage)); } }
@@ -224,7 +224,6 @@ public sealed class SettingsViewModel : ViewModelBase
         Raise(nameof(LanguageCode));
         Raise(nameof(StartWithWindows));
         Raise(nameof(StartMinimised));
-        Raise(nameof(ControlAdmin));
     }
 
     public bool HasDevices => Devices.Count > 0;

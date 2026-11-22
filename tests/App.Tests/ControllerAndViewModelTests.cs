@@ -207,6 +207,203 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         Assert.Equal(ListenerStatusKind.Listening, app.StatusKind);
     }
 
+    // ------------------------------------------------------------------ QR visibility: pairing is open only while the QR is shown
+
+    private static async Task Eventually(Func<bool> condition)
+    {
+        for (int i = 0; i < 200 && !condition(); i++) await Task.Delay(25);
+        Assert.True(condition());
+    }
+
+    private static Uri WsOf(AppController app) => new($"ws://{app.Listener.EndPoint!.Address}:{app.Listener.EndPoint.Port}/ws");
+
+    /// <summary>Pairs a fake phone through the real listener and leaves it connected.</summary>
+    private async Task<TestClient> ConnectPhoneAsync(AppController app, string name)
+    {
+        await using var pairing = await TestClient.ConnectAsync(WsOf(app));
+        var secret = app.Core.Pairing.CurrentSecret!.Secret;
+        var paired = pairing.PairAsync(secret, name);
+        await Eventually(() => app.Approvals.Current is not null);
+        _time.Advance(TimeSpan.FromSeconds(2)); // the Allow button's one-second delay
+        Assert.True(app.Approvals.Current!.Allow());
+        var credentials = await paired;
+        var phone = await TestClient.ConnectAsync(WsOf(app));
+        await phone.AuthenticateAsync(credentials);
+        await Eventually(() => app.ConnectedCount > 0);
+        return phone;
+    }
+
+    [Fact]
+    public async Task With_no_phone_connected_the_visible_window_shows_the_qr_and_accepts_pairing()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        var vm = new QrViewModel(app, () => { });
+
+        Assert.True(app.PairingOpen);
+        Assert.NotNull(app.Core.Pairing.CurrentSecret);
+        Assert.NotNull(vm.Matrix);
+        Assert.True(vm.ShowQr);
+        Assert.False(vm.ShowConnected);
+        Assert.False(vm.HasConnected);
+    }
+
+    [Fact]
+    public async Task A_hidden_window_never_accepts_pairing()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+
+        app.SetQrWindowVisible(true);
+        app.SetQrWindowVisible(false);
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+        Assert.Equal(EasyMouse.Core.Pairing.PairingState.Closed, app.Core.Pairing.State);
+    }
+
+    [Fact]
+    public async Task A_connected_phone_hides_the_qr_and_closes_pairing_and_the_old_secret_stops_working()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        var vm = new QrViewModel(app, () => { });
+        var oldSecret = app.Core.Pairing.CurrentSecret!.Secret.ToArray();
+
+        await using var phone = await ConnectPhoneAsync(app, "Dana's iPhone");
+        vm.Refresh();
+
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+        Assert.Null(app.QrUrl());
+        Assert.Equal(EasyMouse.Core.Pairing.PairingState.Closed, app.Core.Pairing.State);
+        Assert.True(vm.ShowConnected);
+        Assert.False(vm.ShowQr);
+        Assert.True(vm.HasConnected);
+        Assert.Null(vm.Matrix);
+
+        // The code that was on screen no longer pairs anyone.
+        await using var intruder = await TestClient.ConnectAsync(WsOf(app));
+        await Assert.ThrowsAnyAsync<Exception>(() => intruder.PairAsync(oldSecret, "Intruder"));
+        Assert.Null(app.Approvals.Current);
+        Assert.Single(app.Core.Hub.ConnectedDeviceIds);
+    }
+
+    [Fact]
+    public async Task Show_connection_qr_reopens_pairing_with_a_new_secret_and_hide_closes_it_again()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        var vm = new QrViewModel(app, () => { });
+        var firstSecret = app.Core.Pairing.CurrentSecret!.Secret.ToArray();
+        await using var phone = await ConnectPhoneAsync(app, "Dana's iPhone");
+        vm.Refresh();
+        Assert.True(vm.ShowConnected);
+
+        vm.ShowConnectionQrCommand.Execute(null);
+        Assert.True(app.PairingOpen);
+        Assert.False(vm.ShowConnected);
+        Assert.True(vm.ShowQr);
+        Assert.NotNull(vm.Matrix);
+        Assert.True(vm.HasConnected); // so the Hide QR button is offered
+        Assert.NotEqual(firstSecret, app.Core.Pairing.CurrentSecret!.Secret);
+
+        vm.HideQrCommand.Execute(null);
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+        Assert.True(vm.ShowConnected);
+    }
+
+    [Fact]
+    public async Task Pairing_a_second_phone_from_the_requested_qr_hides_it_again_once_connected()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        await using var first = await ConnectPhoneAsync(app, "Phone A");
+        app.ShowQr();
+        Assert.True(app.PairingOpen);
+
+        await using var second = await ConnectPhoneAsync(app, "Phone B");
+        Assert.Equal(2, app.ConnectedCount);
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+    }
+
+    [Fact]
+    public async Task Closing_the_window_while_the_qr_was_requested_resets_to_hidden_on_the_next_open()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        await using var phone = await ConnectPhoneAsync(app, "Dana's iPhone");
+        app.ShowQr();
+        Assert.True(app.PairingOpen);
+
+        app.SetQrWindowVisible(false);
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+
+        app.SetQrWindowVisible(true); // reopened from the tray with a phone still connected
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+    }
+
+    [Fact]
+    public async Task Emergency_stop_closes_pairing_and_resume_reopens_it_only_if_the_qr_is_due()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        Assert.True(app.PairingOpen);
+
+        await app.EmergencyStopAsync();
+        Assert.False(app.PairingOpen);
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+        app.ShowQr(); // even an explicit request cannot open pairing during an emergency stop
+        Assert.False(app.PairingOpen);
+
+        await app.ResumeAsync();
+        Assert.True(app.PairingOpen); // visible window, nobody connected
+        Assert.NotNull(app.Core.Pairing.CurrentSecret);
+    }
+
+    [Fact]
+    public async Task New_code_does_nothing_while_the_qr_is_hidden()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        await using var phone = await ConnectPhoneAsync(app, "Dana's iPhone");
+        app.NewCode();
+        Assert.Null(app.Core.Pairing.CurrentSecret);
+        Assert.False(app.PairingOpen);
+    }
+
+    [Fact]
+    public async Task Copy_link_copies_the_address_without_any_pairing_secret_and_confirms_briefly()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+        string? copied = null;
+        var vm = new QrViewModel(app, () => { }) { CopyToClipboard = t => { copied = t; return true; } };
+        Assert.Equal("Copy link", vm.CopyLinkText);
+
+        vm.CopyLinkCommand.Execute(null);
+        Assert.Equal($"http://{app.Listener.EndPoint!.Address}:{app.Settings.Port}", copied);
+        Assert.DoesNotContain("#k=", copied);
+        Assert.Equal("Link copied", vm.CopyLinkText);
+
+        _time.Advance(TimeSpan.FromSeconds(3));
+        vm.Refresh();
+        Assert.Equal("Copy link", vm.CopyLinkText);
+    }
+
     [Fact]
     public async Task Changing_the_port_in_settings_moves_the_listener_and_rejects_bad_ports()
     {

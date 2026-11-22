@@ -39,7 +39,7 @@ side. Fixed test vectors are in `tests/vectors.json` (see the end of this file).
 - All text frames are JSON, UTF-8. `b64` is base64url without padding. Decoders must reject padding,
   the standard alphabet, a wrong length and non-zero trailing bits.
 
-## Pairing (once per device, only while the QR window is open)
+## Pairing (once per device, only while the QR is shown)
 
 QR content: `http://<host>:<port>/#k=<b64 16 bytes>`. `k` is single-use, valid 2
 minutes. The page reads `k`, then removes it with `history.replaceState`.

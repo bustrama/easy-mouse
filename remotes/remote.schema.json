@@ -42,7 +42,7 @@
       "properties": {
         "type": { "enum": ["button", "slider", "label", "pad"] },
         "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,64}$", "description": "Defaults to the zero-based position in layout.items. Effective ids must be unique." },
-        "icon": { "enum": ["mouse", "keyboard", "media", "remotes", "play", "pause", "next", "prev", "fullscreen", "subtitles", "skip", "back", "up", "down", "left", "right", "volume", "mute", "plus", "minus", "home", "power", "settings", "check", "rewind", "forward"] },
+        "icon": { "enum": ["mouse", "keyboard", "media", "remotes", "play", "pause", "next", "prev", "fullscreen", "subtitles", "skip", "back", "up", "down", "left", "right", "volume", "mute", "plus", "minus", "home", "power", "settings", "check", "rewind", "forward", "enter", "backspace", "delete", "tab", "shift", "win", "arrow-left", "arrow-right", "arrow-up", "arrow-down", "space"] },
         "label": { "type": "string", "minLength": 1, "maxLength": 40 },
         "text": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Static text of a label." },
         "bind": {

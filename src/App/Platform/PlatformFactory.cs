@@ -12,8 +12,18 @@ namespace EasyMouse.App.Platform;
 /// </summary>
 public static class PlatformFactory
 {
-    public static (IInputSink Input, IMediaController Media) Create(bool real)
-        => real ? (new Win.SendInputSink(), new Win.WindowsMediaController()) : (new RecordingInputSink(), new RecordingMediaController());
+    /// <summary>
+    /// Real: normal input goes through SendInput; only when the admin feature is on AND the foreground window or desktop is out of its
+    /// reach does it go to the SYSTEM broker (see <see cref="Win.Broker.RoutingInputSink"/>). <c>status</c> is read lazily: it exists only after the core services do.
+    /// </summary>
+    public static (IInputSink Input, IMediaController Media) Create(bool real, IAdminControl admin, Func<HostStatus?> status)
+    {
+        if (!real) return (new RecordingInputSink(), new RecordingMediaController());
+        var route = new Win.Broker.BrokerRoute(status, () => admin.Wanted);
+        var client = new Win.Broker.BrokerInputSink();
+        (admin as BrokerAdminControl)?.UseClient(client);
+        return (new Win.Broker.RoutingInputSink(new Win.SendInputSink(), client, route.UseBroker), new Win.WindowsMediaController());
+    }
 
     /// <summary>
     /// The remote-action executors for the pair <see cref="Create"/> returned. Real: Windows executors (key/text/mouse/media over the

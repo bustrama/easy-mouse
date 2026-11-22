@@ -12,12 +12,18 @@
   <Folder Name="/src/Platform.Windows/">
     <Project Path="src/Platform.Windows/EasyMouse.Platform.Windows.csproj" />
   </Folder>
+  <Folder Name="/src/Broker/">
+    <Project Path="src/Broker/EasyMouse.Broker.csproj" />
+  </Folder>
   <Folder Name="/src/Remotes/">
     <Project Path="src/Remotes/EasyMouse.Remotes.csproj" />
   </Folder>
   <Folder Name="/tools/" />
   <Folder Name="/tools/Platform.SmokeTest/">
     <Project Path="tools/Platform.SmokeTest/EasyMouse.Platform.SmokeTest.csproj" />
+  </Folder>
+  <Folder Name="/tools/Broker.SmokeTest/">
+    <Project Path="tools/Broker.SmokeTest/EasyMouse.Broker.SmokeTest.csproj" />
   </Folder>
   <Folder Name="/tools/RemoteLint/">
     <Project Path="tools/RemoteLint/RemoteLint.csproj" />

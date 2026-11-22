@@ -150,9 +150,20 @@
                     <Border Style="{StaticResource Card}">
                         <StackPanel Margin="0,0,0,-1">
                             <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Set_Admin}" Tag="{app:T Set_AdminDesc}">
-                                <CheckBox x:Name="AdminToggle" Style="{StaticResource ToggleSwitch}" IsEnabled="False" IsChecked="False"/>
+                                <CheckBox x:Name="AdminToggle" Style="{StaticResource ToggleSwitch}" IsEnabled="{Binding AdminAvailable}" IsChecked="{Binding AdminChecked, Mode=OneWay}" Click="OnAdminToggled"/>
                             </HeaderedContentControl>
-                            <TextBlock Text="{app:T Set_AdminPending}" Foreground="{StaticResource Warn}" FontSize="13" Margin="18,0,18,12"/>
+                            <TextBlock Text="{Binding AdminStatusText}" TextWrapping="Wrap" FontSize="13" Margin="18,0,18,12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AdminStatusIsProblem}" Value="True"><Setter Property="Foreground" Value="{StaticResource Warn}"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding AdminMessage}" Foreground="{StaticResource Warn}" TextWrapping="Wrap" FontSize="13" Margin="18,0,18,12"
+                                       Visibility="{Binding HasAdminMessage, Converter={StaticResource B2V}}"/>
                             <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Set_Hotkey}" Tag="{app:T Set_HotkeyDesc}">
                                 <TextBox x:Name="HotkeyBox" Style="{StaticResource ValueBox}" MinWidth="170" IsReadOnly="True" IsReadOnlyCaretVisible="False"
                                          Text="{Binding HotkeyText, Mode=OneWay}" GotKeyboardFocus="OnHotkeyFocus" LostKeyboardFocus="OnHotkeyBlur"

@@ -17,6 +17,7 @@
 
 #define AppName "Easy Mouse"
 #define AppExe "EasyMouse.exe"
+#define BrokerExe "EasyMouse.Broker.exe"
 ; The name of the firewall rule that lets the app accept connections from the local network.
 #define RuleName "Easy Mouse (phone remote)"
 
@@ -136,9 +137,92 @@ begin
   end;
 end;
 
+
+{ ---- The Easy Mouse Broker service (admin windows and the UAC prompt, docs/security.md). ----
+  The service is registered but left OFF (start type "manual", not running): turning the feature on is the user's act, in the app's
+  Settings, behind Windows' own consent prompt. An update keeps whatever the user had chosen. It is only registered when the app
+  is installed under Program Files, because it runs files from the app folder as SYSTEM and a folder an ordinary user can write to would let
+  that user replace them. In another folder the app works as before and the Settings switch says the helper is not installed. }
+
+const
+  BrokerService = 'EasyMouseBroker';
+
+var
+  PreviousBrokerStart: Cardinal;
+
+function InProtectedFolder: Boolean;
+var
+  App: String;
+begin
+  App := Lowercase(ExpandConstant('{app}')) + '\';
+  Result := (Pos(Lowercase(ExpandConstant('{commonpf64}')) + '\', App) = 1) or (Pos(Lowercase(ExpandConstant('{commonpf32}')) + '\', App) = 1);
+end;
+
+function BrokerProcessRunning: Boolean;
+var
+  Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{cmd}'), '/C tasklist /FI "IMAGENAME eq {#BrokerExe}" /NH | find /I "{#BrokerExe}"',
+    '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+end;
+
+{ Stops the service and waits until its process (and the agent it started) has ended, so the files can be replaced or removed. }
+procedure StopBrokerService;
+var
+  Code, Waited: Integer;
+begin
+  Exec(ExpandConstant('{sys}\sc.exe'), 'stop ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Waited := 0;
+  while BrokerProcessRunning and (Waited < 15000) do
+  begin
+    Sleep(500);
+    Waited := Waited + 500;
+  end;
+end;
+
+procedure RegisterBrokerService;
+var
+  Code: Integer;
+  Start: Cardinal;
+  Exists: Boolean;
+begin
+  if not InProtectedFolder then Exit;
+  Exists := RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', Start);
+  if not Exists then
+    Exec(ExpandConstant('{sys}\sc.exe'), 'create ' + BrokerService + ' binPath= "\"' + ExpandConstant('{app}\{#BrokerExe}') + '\" --service" start= demand DisplayName= "Easy Mouse Broker"',
+      '', SW_HIDE, ewWaitUntilTerminated, Code)
+  else
+    Exec(ExpandConstant('{sys}\sc.exe'), 'config ' + BrokerService + ' binPath= "\"' + ExpandConstant('{app}\{#BrokerExe}') + '\" --service"',
+      '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Exec(ExpandConstant('{sys}\sc.exe'), 'description ' + BrokerService + ' "Lets the Easy Mouse phone remote control administrator windows and the UAC prompt, only when you turn that on in Easy Mouse Settings. Does nothing otherwise."',
+    '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Exec(ExpandConstant('{sys}\sc.exe'), 'failure ' + BrokerService + ' reset= 86400 actions= restart/5000', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  { An update of an installation where the user had switched it on: start it again (the new files are in place). }
+  if Exists and (PreviousBrokerStart = 2) then
+    Exec(ExpandConstant('{sys}\sc.exe'), 'start ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+procedure RemoveBrokerService;
+var
+  Code: Integer;
+  Start: Cardinal;
+begin
+  if not RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', Start) then Exit;
+  StopBrokerService;
+  Exec(ExpandConstant('{sys}\sc.exe'), 'delete ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then RegisterBrokerService;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   QuitRunningApp;
+  { Remember whether the user had turned the broker on, then stop it so its files can be replaced. }
+  if not RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', PreviousBrokerStart) then PreviousBrokerStart := 0;
+  StopBrokerService;
   Result := '';
 end;
 
@@ -160,7 +244,11 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Data: String;
 begin
-  if CurUninstallStep = usUninstall then RemoveAutostartValue;
+  if CurUninstallStep = usUninstall then
+  begin
+    RemoveAutostartValue;
+    RemoveBrokerService; { before the files go: stop it, wait for its process to end, delete the service }
+  end;
   if CurUninstallStep <> usPostUninstall then Exit;
   Data := ExpandConstant('{userappdata}\EasyMouse');
   if not DirExists(Data) then Exit;

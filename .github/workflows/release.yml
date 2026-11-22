@@ -87,6 +87,21 @@ jobs:
           -p:RestoreLockedMode=true -p:Version=${{ steps.version.outputs.version }}
           --output publish/win-x64
 
+      # The SYSTEM broker (docs/security.md): published into the SAME folder, so it shares the app's runtime files and the installer
+      # ships both. The installer registers it as a Windows service that stays off until the user turns the feature on.
+      - name: Publish the broker (self-contained, win-x64, same folder as the app)
+        run: >
+          dotnet publish src/Broker --configuration Release --runtime win-x64 --self-contained true
+          -p:RestoreLockedMode=true -p:Version=${{ steps.version.outputs.version }}
+          --output publish/win-x64
+
+      - name: Check the broker is in the publish folder
+        shell: pwsh
+        run: |
+          foreach ($f in "EasyMouse.exe", "EasyMouse.Broker.exe", "EasyMouse.Broker.runtimeconfig.json", "EasyMouse.Broker.deps.json") {
+            if (-not (Test-Path "publish/win-x64/$f")) { throw "missing $f in publish/win-x64" }
+          }
+
       # ---------------------------------------------------------------------------------------------------------
       # HOOK: code signing with SignPath Foundation (not enabled; needs an approved SignPath project first).
       # When it is approved, sign here, BEFORE the installer is built, the files that go into it:

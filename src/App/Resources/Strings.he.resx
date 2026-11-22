@@ -92,8 +92,21 @@
   <data name="Cat_Unknown" xml:space="preserve"><value>פרופיל לא ידוע</value></data>
   <data name="Set_Status" xml:space="preserve"><value>מצב</value></data>
   <data name="Set_Admin" xml:space="preserve"><value>שליטה בחלונות מנהל ובהודעת UAC</value></data>
-  <data name="Set_AdminDesc" xml:space="preserve"><value>מתוכנן לגרסה עתידית: יאפשר לטלפון מחובר לאשר הודעות UAC.</value></data>
-  <data name="Set_AdminPending" xml:space="preserve"><value>לא זמין בגרסה הזו.</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>מאפשר לטלפון מחובר להקליד וללחוץ בחלונות מנהל ולאשר הודעות UAC של Windows. דורש את השירות Easy Mouse Broker ואת אישורך במחשב הזה.</value></data>
+  <data name="Admin_ConfirmBody" xml:space="preserve"><value>להפעיל שליטה בחלונות מנהל ובהודעת UAC?
+
+כשזה מופעל, טלפון מחובר יכול לאשר הודעות UAC של Windows. כלומר הוא למעשה מנהל מערכת במחשב הזה: מי שמחזיק טלפון מחובר יכול להתקין תוכנות ולשנות הגדרות מערכת.
+
+הפעילו רק אם אתם סומכים על כל הטלפונים המחוברים, וכבו כשאין בזה צורך. מסך הנעילה עדיין אף פעם אינו נשלט.
+
+בהמשך Windows יבקש את אישורכם.</value></data>
+  <data name="Admin_NotInstalled" xml:space="preserve"><value>לא זמין: השירות Easy Mouse Broker אינו מותקן. התקינו את Easy Mouse עם ההתקנה (הגרסה הניידת אינה כוללת אותו).</value></data>
+  <data name="Admin_Off" xml:space="preserve"><value>כבוי. שום רכיב מורשה אינו פועל.</value></data>
+  <data name="Admin_On" xml:space="preserve"><value>מופעל. טלפון מחובר יכול להשתמש בחלונות מנהל ולאשר הודעות UAC. כבו כשאין בזה צורך.</value></data>
+  <data name="Admin_Faulted" xml:space="preserve"><value>הוגדר כמופעל, אבל השירות Easy Mouse Broker אינו רץ, ולכן חלונות מנהל עדיין מחוץ לטווח. נסו לכבות ולהפעיל שוב, או להפעיל מחדש את המחשב.</value></data>
+  <data name="Admin_Unknown" xml:space="preserve"><value>לא ניתן לקרוא את מצב השירות Easy Mouse Broker.</value></data>
+  <data name="Admin_Cancelled" xml:space="preserve"><value>האישור של Windows לא ניתן. שום דבר לא השתנה.</value></data>
+  <data name="Admin_Failed" xml:space="preserve"><value>השינוי לא הושלם. בדקו את המצב שמעל.</value></data>
   <data name="Set_Hotkey" xml:space="preserve"><value>מקש קיצור לניתוק חירום</value></data>
   <data name="Set_HotkeyDesc" xml:space="preserve"><value>סוגר את כל החיבורים ועוצר את ההאזנה עד שמפעילים אותה שוב מתפריט המגש.</value></data>
   <data name="Set_HotkeyPress" xml:space="preserve"><value>הקישו את המקשים החדשים</value></data>

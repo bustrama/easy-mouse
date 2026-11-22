@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The privileged half of "Control admin windows and the UAC prompt" (docs/security.md). A Windows service that runs as
+    SYSTEM, plus the agent it starts in the signed-in user's session. It does input injection and nothing else: no network
+    socket, no files, no parsing beyond src/Platform.Windows/Broker/BrokerProtocol.cs.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>EasyMouse.Broker</RootNamespace>
+    <AssemblyName>EasyMouse.Broker</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>../../assets/icon/icon.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Platform.Windows\EasyMouse.Platform.Windows.csproj" />
+    <InternalsVisibleTo Include="EasyMouse.Broker.Tests" />
+  </ItemGroup>
+</Project>

@@ -1,5 +1,6 @@
 using EasyMouse.Core.Abstractions;
 using EasyMouse.Core.Fakes;
+using EasyMouse.Remotes.Execution;
 using Win = global::EasyMouse.Platform.Windows;
 
 namespace EasyMouse.App.Platform;
@@ -7,12 +8,28 @@ namespace EasyMouse.App.Platform;
 /// <summary>
 /// THE ONE PLACE where the PC-side implementations are chosen: SendInput, Windows media/volume and the lock/elevation
 /// monitor from <c>src/Platform.Windows</c> in the real app; the recording fakes when <paramref name="real"/> is false
-/// (tests and the screenshot harness, which must never move the real mouse).
+/// (tests and the screenshot harness, which must never move the real mouse, focus a window or start a program).
 /// </summary>
 public static class PlatformFactory
 {
     public static (IInputSink Input, IMediaController Media) Create(bool real)
         => real ? (new Win.SendInputSink(), new Win.WindowsMediaController()) : (new RecordingInputSink(), new RecordingMediaController());
+
+    /// <summary>
+    /// The remote-action executors for the pair <see cref="Create"/> returned. Real: Windows executors (key/text/mouse/media over the
+    /// same input sink and media controller, SMTC, volume, focus, launch, openUrl, http). Not real: recorders, returned in <paramref name="recorded"/>.
+    /// </summary>
+    public static ActionExecutors CreateExecutors(IInputSink input, IMediaController media, bool real, out RecordingActionExecutors? recorded)
+    {
+        if (!real)
+        {
+            recorded = new RecordingActionExecutors();
+            return recorded.Executors;
+        }
+        recorded = null;
+        var windowsMedia = (Win.WindowsMediaController)media;
+        return Win.Remotes.WindowsRemoteExecutors.Create(input, media, windowsMedia, windowsMedia);
+    }
 
     /// <summary>Keeps <see cref="HostStatus"/> (locked / foreground elevated) current; null when not real.</summary>
     public static IDisposable? StartHostStatusMonitor(HostStatus status, bool real)

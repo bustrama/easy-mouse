@@ -1,0 +1,20 @@
+/* "Add to Home Screen" sheet. Rounded rectangles only; logical properties keep it correct in RTL. */
+.sheet.a2hs { max-height: 88dvh; overflow-y: auto; outline: none; }
+/* offered by itself: the dimmed backdrop is gone and touches pass through to the touchpad above */
+.sheetback.a2hs-float { background: transparent; pointer-events: none; }
+.sheetback.a2hs-float .sheet { pointer-events: auto; border: 1px solid var(--border2); border-bottom: 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5); }
+.a2hs h2 { margin: 0; font-size: 20px; }
+.a2hs-lead { margin: 6px 0 14px; font-size: 15px; line-height: 1.5; color: var(--muted); }
+.a2hs-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.a2hs-steps li { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; background: var(--ink); border: 1px solid var(--border); border-radius: 16px; }
+.a2hs-num { flex: none; width: 28px; height: 28px; border-radius: 9px; background: var(--raised); color: var(--accent); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.a2hs-text { flex: 1; font-size: 15px; line-height: 1.45; color: var(--soft); }
+.a2hs-glyph { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border2); background: var(--surface); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.a2hs-note { margin: 12px 0 0; padding: 10px 12px; border-radius: 14px; background: var(--ink); border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: var(--muted); }
+.a2hs-note.warn { border-color: var(--accent); color: var(--soft); }
+.a2hs-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.a2hs-row { display: flex; gap: 10px; }
+.a2hs-row .a2hs-btn { flex: 1; padding: 0 8px; }
+.a2hs-btn { width: 100%; min-height: 48px; height: auto; font-size: 16px; }
+.btn.a2hs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-a2hs { width: 100%; min-height: 44px; margin-top: 18px; }

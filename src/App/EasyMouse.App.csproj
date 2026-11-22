@@ -30,6 +30,10 @@
     <Resource Include="Assets\Fonts\*.ttf" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The built-in remotes live next to the exe as files: the catalog hashes and re-reads them on every invocation. -->
+    <Content Include="..\..\remotes\builtin\*.json" Link="remotes\builtin\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="EasyMouse.App.Tests" />
   </ItemGroup>
 </Project>

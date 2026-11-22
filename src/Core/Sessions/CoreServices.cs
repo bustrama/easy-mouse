@@ -13,6 +13,7 @@ public sealed class CoreServices
     public required IInputSink Input { get; init; }
     public required IMediaController Media { get; init; }
     public required IRemoteActionHandler Actions { get; init; }
+    public IRemoteLayoutSource Layouts { get; init; } = new NoRemoteLayouts();
     public required HostStatus Status { get; init; }
     public required SessionLimits Limits { get; init; }
     public required TimeProvider Time { get; init; }
@@ -22,6 +23,7 @@ public sealed class CoreServices
         IInputSink input,
         IMediaController media,
         IRemoteActionHandler? actions = null,
+        IRemoteLayoutSource? layouts = null,
         TimeProvider? time = null,
         PairingOptions? pairingOptions = null,
         SessionLimits? limits = null,
@@ -38,6 +40,7 @@ public sealed class CoreServices
             Input = input,
             Media = media,
             Actions = actions ?? new NoRemoteActions(),
+            Layouts = layouts ?? new NoRemoteLayouts(),
             Status = new HostStatus(),
             Limits = limits ?? new SessionLimits(),
             Time = time,

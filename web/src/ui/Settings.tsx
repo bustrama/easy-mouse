@@ -3,7 +3,7 @@ import { useT } from '../i18n/useT.ts';
 import { useStore } from '../store.ts';
 import { LangSwitch } from './Screens.tsx';
 
-export function Settings({ onClose }: { onClose: () => void }) {
+export function Settings({ onClose, onAddToHome }: { onClose: () => void; onAddToHome?: () => void }) {
   const t = useT();
   const { sensitivity } = useStore(client.store);
   return (
@@ -30,6 +30,11 @@ export function Settings({ onClose }: { onClose: () => void }) {
         />
         <div class="sect">{t('settings.language')}</div>
         <LangSwitch />
+        {onAddToHome && (
+          <button class="btn ghost small settings-a2hs" onClick={onAddToHome}>
+            {t('settings.a2hs')}
+          </button>
+        )}
       </div>
     </div>
   );

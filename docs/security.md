@@ -32,7 +32,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 
 ## Pairing and credentials
 
-- QR secret: 128-bit, single-use, 2-minute expiry, regenerated after use or five failed attempts. Pairing is accepted only while the QR window is open.
+- QR secret: 128-bit, single-use, 2-minute expiry, regenerated after use or five failed attempts. Pairing is accepted only while the QR is actually shown: while a phone is connected the app hides the QR, closes pairing and discards the secret until the user clicks "Show connection QR".
 - Per-device credential: 256-bit symmetric secret, DPAPI-protected on the PC. A key pair is not used: without `crypto.subtle` (unavailable on plain HTTP) the browser cannot hold a non-extractable key.
 - Rotation: manual re-key per device; devices unused for 90 days expire (configurable). No per-connection rotation, because a lost message would desynchronise both sides.
 - Revocation: per device and "revoke all", effective immediately and closing live sockets.

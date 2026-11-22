@@ -119,6 +119,13 @@
       "easymouse.platform.windows": {
         "type": "Project",
         "dependencies": {
+          "EasyMouse.Core": "[0.1.0, )",
+          "EasyMouse.Remotes": "[0.1.0, )"
+        }
+      },
+      "easymouse.remotes": {
+        "type": "Project",
+        "dependencies": {
           "EasyMouse.Core": "[0.1.0, )"
         }
       },

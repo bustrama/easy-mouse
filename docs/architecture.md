@@ -104,6 +104,25 @@ thumbnail, status, timeline and play/pause/next/seek for apps that register
 snapshot to extrapolate. Volume, subtitles and fullscreen are not in SMTC: use
 Core Audio and key actions.
 
+### Readable titles (`MediaTitleResolver`)
+
+Some players publish junk as the SMTC title. Stremio's desktop app sends a torrent fragment
+(`announce&tr=dht:<40-hex infoHash>`), not the file name. Before the title reaches the phone:
+
+1. **Stremio:** extract the infoHash and ask Stremio's own local streaming server,
+   `GET http://127.0.0.1:11470/stats.json` (hard-coded loopback host and port, 1 s timeout, no redirects, 4 MB cap,
+   defensive JSON parsing, 5-minute cache per hash, 15 s for "not found"). It runs off the SMTC event path: the app name is
+   shown until the answer arrives, then the title refreshes. The per-torrent endpoints (`/<hash>/stats.json`,
+   `/<hash>/<fileIdx>/stats.json`) return the same file list and nothing about which file is playing, so the one
+   documented endpoint is used. For a multi-file torrent the only video file is used, else the torrent name.
+   **No external lookup is made** (no Cinemeta or any web service): the choice keeps the app local-first and means titles
+   are exactly the file names Stremio already has.
+2. **Release names** (extension, `[Group]`, CRC, 1080p/WEB-DL/x265/... tags, dotted words) go through `ReleaseNameCleaner`,
+   which keeps the title, season/episode markers and year: `[SubsPlease] Yuusha-kei ni Shosu - 09 (1080p) [AFD2CAE7].mkv`
+   becomes `Yuusha-kei ni Shosu - 09`.
+3. **Clearly junk** text (magnet or tracker fragments, URLs, 32+ hex characters) that cannot be resolved is replaced by the
+   app name.
+
 ## Windows limits
 
 - Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. This is a limitation of 0.1: a planned phase 2 broker would cover elevated windows and UAC; the lock screen is out of scope.

@@ -43,6 +43,11 @@
   <data name="Hint_NoNet_Title" xml:space="preserve"><value>המחשב לא מחובר לרשת</value></data>
   <data name="Hint_NoNet_Body" xml:space="preserve"><value>התחברו ל-Wi-Fi או חברו כבל, ואז נסו שוב.</value></data>
   <data name="Btn_ShowQr" xml:space="preserve"><value>הצג שוב את הקוד</value></data>
+  <data name="Connected_Body" xml:space="preserve"><value>Easy Mouse מוכן לשימוש. קוד החיבור מוסתר והצימוד סגור, כך שאף טלפון חדש לא יכול להצטרף.</value></data>
+  <data name="Btn_ShowConnectionQr" xml:space="preserve"><value>הצג קוד חיבור</value></data>
+  <data name="Btn_HideQr" xml:space="preserve"><value>הסתר את הקוד</value></data>
+  <data name="Btn_CopyLink" xml:space="preserve"><value>העתק קישור</value></data>
+  <data name="Btn_LinkCopied" xml:space="preserve"><value>הקישור הועתק</value></data>
   <data name="Btn_MakePrivate" xml:space="preserve"><value>הגדר את הרשת כפרטית</value></data>
   <data name="Help_PrivateFailed" xml:space="preserve"><value>הרשת לא שונתה. Windows צריך את אישורך לשינוי הזה.</value></data>
   <data name="Ap_Title" xml:space="preserve"><value>לאפשר לטלפון הזה?</value></data>
@@ -165,4 +170,51 @@ Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק �
   <data name="Tray_Update" xml:space="preserve"><value>יש עדכון ({0})</value></data>
   <data name="Toast_Update" xml:space="preserve"><value>יש עדכון</value></data>
   <data name="Toast_UpdateBody" xml:space="preserve"><value>Easy Mouse {0} מוכן. פתחו הגדרות, עדכונים, כדי להתקין.</value></data>
+  <data name="Tray_Remotes" xml:space="preserve"><value>שלטים…</value></data>
+  <data name="Rm_Title" xml:space="preserve"><value>שלטים</value></data>
+  <data name="Rm_Intro" xml:space="preserve"><value>שלטים הם פריסות כפתורים לטלפון. שלט שרק לוחץ על מקשים או שולט במדיה פועל כמו שהוא. שלט שמקליד טקסט, פותח אתרים, מפעיל תוכנות או פונה למכשירים אחרים נשאר כבוי עד שתאשרו בדיוק מה הוא עושה.</value></data>
+  <data name="Rm_Import" xml:space="preserve"><value>ייבוא שלט…</value></data>
+  <data name="Rm_OpenFolder" xml:space="preserve"><value>פתיחת תיקיית השלטים</value></data>
+  <data name="Rm_BuiltIn" xml:space="preserve"><value>מובנה</value></data>
+  <data name="Rm_User" xml:space="preserve"><value>שלכם</value></data>
+  <data name="Rm_StateReady" xml:space="preserve"><value>פעיל</value></data>
+  <data name="Rm_StateReview" xml:space="preserve"><value>ממתין לאישורכם</value></data>
+  <data name="Rm_StateRejected" xml:space="preserve"><value>לא אושר</value></data>
+  <data name="Rm_StateInvalid" xml:space="preserve"><value>קובץ לא תקין</value></data>
+  <data name="Rm_Approve" xml:space="preserve"><value>אישור</value></data>
+  <data name="Rm_Reject" xml:space="preserve"><value>דחייה</value></data>
+  <data name="Rm_Revoke" xml:space="preserve"><value>כיבוי</value></data>
+  <data name="Rm_ReviewAgain" xml:space="preserve"><value>בדיקה מחדש</value></data>
+  <data name="Rm_Hash" xml:space="preserve"><value>האישור חל על הקובץ הזה בדיוק (טביעת אצבע {0}). אם הקובץ משתנה בכל צורה, תישאלו שוב.</value></data>
+  <data name="Rm_ApprovedHash" xml:space="preserve"><value>אושר עבור קובץ עם טביעת אצבע {0}.</value></data>
+  <data name="Rm_ItemWhere" xml:space="preserve"><value>כפתור “{0}”</value></data>
+  <data name="Rm_ItemUnnamed" xml:space="preserve"><value>כפתור {0}</value></data>
+  <data name="Rm_Act_Text" xml:space="preserve"><value>מקליד את הטקסט הזה בתוכנה שבחזית ({0} תווים): “{1}”</value></data>
+  <data name="Rm_Act_OpenUrl" xml:space="preserve"><value>פותח את {0} בדפדפן ברירת המחדל</value></data>
+  <data name="Rm_Act_Launch" xml:space="preserve"><value>מפעיל את התוכנה שתבחרו עבור “{0}”</value></data>
+  <data name="Rm_Act_LaunchArgs" xml:space="preserve"><value>, עם הארגומנטים: {0}</value></data>
+  <data name="Rm_Act_Http" xml:space="preserve"><value>שולח בקשת {0} אל {1}</value></data>
+  <data name="Rm_Act_HttpOutside" xml:space="preserve"><value>מכשיר או אתר מחוץ למחשב הזה</value></data>
+  <data name="Rm_Act_Secrets" xml:space="preserve"><value>משתמש בסודות ששמרתם: {0}.</value></data>
+  <data name="Rm_Act_Other" xml:space="preserve"><value>עושה משהו שדורש בדיקה</value></data>
+  <data name="Rm_Dangerous" xml:space="preserve"><value>יכול להפעיל תוכנות או לפנות למכשירים אחרים</value></data>
+  <data name="Rm_Sensitive" xml:space="preserve"><value>רגיש</value></data>
+  <data name="Rm_Slot" xml:space="preserve"><value>תוכנה עבור “{0}”</value></data>
+  <data name="Rm_Choose" xml:space="preserve"><value>בחירת תוכנה…</value></data>
+  <data name="Rm_NoneChosen" xml:space="preserve"><value>עדיין לא נבחרה תוכנה</value></data>
+  <data name="Rm_Hosts" xml:space="preserve"><value>תותר לו פנייה אל: {0}</value></data>
+  <data name="Rm_ImportOk" xml:space="preserve"><value>הוייבא “{0}”.</value></data>
+  <data name="Rm_ImportReplaced" xml:space="preserve"><value>עודכן “{0}”. מאחר שהקובץ השתנה, הוא ידרוש אישור מחדש אם יש בו פעולות רגישות.</value></data>
+  <data name="Rm_ImportSame" xml:space="preserve"><value>השלט הזה כבר יובא.</value></data>
+  <data name="Rm_ImportFailed" xml:space="preserve"><value>אי אפשר להשתמש בקובץ הזה כשלט:</value></data>
+  <data name="Rm_ImportBuiltIn" xml:space="preserve"><value>שלט מובנה כבר משתמש במזהה “{0}”. שנו את המזהה בקובץ ונסו שוב.</value></data>
+  <data name="Rm_ImportOtherFile" xml:space="preserve"><value>קובץ השלט {0} כבר משתמש במזהה “{1}”. הסירו אותו או שנו את המזהה.</value></data>
+  <data name="Rm_ImportReadFail" xml:space="preserve"><value>אי אפשר לקרוא את הקובץ: {0}</value></data>
+  <data name="Rm_ImportFilter" xml:space="preserve"><value>קבצי שלט (*.json)|*.json</value></data>
+  <data name="Rm_ProgramFilter" xml:space="preserve"><value>תוכנות (*.exe)|*.exe</value></data>
+  <data name="Rm_Omitted" xml:space="preserve"><value>השלטים האלה עדיין לא נכנסים למסך הטלפון, ולכן הטלפון לא מציג אותם: {0}.</value></data>
+  <data name="Rm_Empty" xml:space="preserve"><value>לא נמצאו שלטים.</value></data>
+  <data name="Rm_ApprovalsError" xml:space="preserve"><value>אי אפשר לקרוא את האישורים השמורים, ולכן כל שלט שדורש אישור כבוי: {0}</value></data>
+  <data name="Rm_Errors" xml:space="preserve"><value>בעיות בקובץ הזה:</value></data>
+  <data name="Rm_Close" xml:space="preserve"><value>סגירה</value></data>
 </root>

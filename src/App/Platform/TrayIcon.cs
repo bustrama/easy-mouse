@@ -12,7 +12,7 @@ public sealed class TrayIcon : IDisposable
     private readonly NotifyIcon _icon;
     private readonly ContextMenuStrip _menu = new();
     private readonly Dictionary<TrayState, Icon> _icons;
-    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
+    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
 
     public TrayIcon()
     {
@@ -25,10 +25,11 @@ public sealed class TrayIcon : IDisposable
         _menu.Renderer = new DarkRenderer();
         _menu.ShowImageMargin = false;
         _menu.Font = new Font("Segoe UI", 9.5f);
-        _menu.Items.AddRange([_update, _showQr, _settings, _devices, new ToolStripSeparator(), _disconnect, _resume, new ToolStripSeparator(), _quit]);
+    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
         _showQr.Click += (_, _) => ShowQrClicked?.Invoke();
         _settings.Click += (_, _) => SettingsClicked?.Invoke();
         _devices.Click += (_, _) => DevicesClicked?.Invoke();
+        _remotes.Click += (_, _) => RemotesClicked?.Invoke();
         _disconnect.Click += (_, _) => DisconnectAllClicked?.Invoke();
         _resume.Click += (_, _) => ResumeClicked?.Invoke();
         _quit.Click += (_, _) => QuitClicked?.Invoke();
@@ -38,8 +39,7 @@ public sealed class TrayIcon : IDisposable
         _icon.BalloonTipClicked += (_, _) => ShowQrClicked?.Invoke();
     }
 
-    public event Action? UpdateClicked;
-    public event Action? ShowQrClicked, SettingsClicked, DevicesClicked, DisconnectAllClicked, ResumeClicked, QuitClicked;
+    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
 
     public void SetTexts(string showQr, string settings, string devices, string disconnectAll, string resume, string quit, bool rtl)
     {
@@ -48,13 +48,7 @@ public sealed class TrayIcon : IDisposable
         _menu.RightToLeft = rtl ? RightToLeft.Yes : RightToLeft.No;
     }
 
-    /// <summary>The "Update available" entry (top of the menu, bold); null hides it.</summary>
-    public void SetUpdate(string? text)
-    {
-        _update.Visible = text is not null;
-        _update.Text = text ?? "";
-        _update.Font = new Font(_menu.Font, FontStyle.Bold);
-    }
+    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
 
     /// <summary>Shows the "Start listening again" entry only while stopped by the emergency hotkey.</summary>
     public void SetResumeVisible(bool visible) => _resume.Visible = visible;

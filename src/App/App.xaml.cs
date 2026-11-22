@@ -13,6 +13,7 @@ public partial class App : Application
     private TrayIcon? _tray;
     private QrWindow? _qr;
     private SettingsWindow? _settings;
+    private RemotesWindow? _remotes;
     private ApproveWindow? _approve;
     private string? _toastedUpdate;
 
@@ -49,12 +50,14 @@ public partial class App : Application
         _tray.DevicesClicked += () => ShowSettings(SettingsPage.Devices);
         _tray.DisconnectAllClicked += () => _ = _controller.EmergencyStopAsync(); // closes every socket AND stops listening (docs/security.md)
         _tray.ResumeClicked += () => _ = _controller.ResumeAsync();
+        _tray.RemotesClicked += () => _remotes?.ShowAndActivate();
         _tray.QuitClicked += Quit;
         _tray.UpdateClicked += () => ShowSettings(SettingsPage.Updates);
         Loc.Instance.LanguageChanged += (_, _) => RefreshTray();
 
         _qr = new QrWindow(_controller, () => ShowSettings(SettingsPage.Network));
         _settings = new SettingsWindow(_controller);
+        _remotes = new RemotesWindow(_controller);
 
         _controller.StateChanged += (_, _) => { RefreshTray(); ShowPendingApproval(); };
         _controller.DeviceConnected += name => _tray.Toast(Loc.Format("Toast_Connected", name), Loc.Instance["Toast_ConnectedBody"]);
@@ -81,6 +84,7 @@ public partial class App : Application
         if (_tray is null || _controller is null) return;
         _tray.SetTexts(Loc.Instance["Tray_ShowQr"], Loc.Instance["Tray_Settings"], Loc.Instance["Tray_Devices"],
             Loc.Instance["Tray_DisconnectAll"], Loc.Instance["Tray_Resume"], Loc.Instance["Tray_Quit"], Loc.Instance.FlowDirection == FlowDirection.RightToLeft);
+        _tray.SetRemotesText(Loc.Instance["Tray_Remotes"]);
         _tray.SetResumeVisible(_controller.EmergencyStopped);
         var available = _controller.Updates.Available;
         _tray.SetUpdate(available is null ? null : Loc.Format("Tray_Update", available.Version));
@@ -112,8 +116,10 @@ public partial class App : Application
         if (_controller is null) { Shutdown(); return; }
         _qr!.AllowClose = true;
         _settings!.AllowClose = true;
+        _remotes!.AllowClose = true;
         _qr.Close();
         _settings.Close();
+        _remotes.Close();
         _tray?.Dispose();
         await _controller.DisposeAsync();
         _instance?.Dispose();

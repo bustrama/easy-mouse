@@ -25,7 +25,7 @@ public sealed class TrayIcon : IDisposable
         _menu.Renderer = new DarkRenderer();
         _menu.ShowImageMargin = false;
         _menu.Font = new Font("Segoe UI", 9.5f);
-    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
+        _menu.Items.AddRange([_update, _showQr, _settings, _devices, _remotes, new ToolStripSeparator(), _disconnect, _resume, new ToolStripSeparator(), _quit]);
         _showQr.Click += (_, _) => ShowQrClicked?.Invoke();
         _settings.Click += (_, _) => SettingsClicked?.Invoke();
         _devices.Click += (_, _) => DevicesClicked?.Invoke();
@@ -39,7 +39,8 @@ public sealed class TrayIcon : IDisposable
         _icon.BalloonTipClicked += (_, _) => ShowQrClicked?.Invoke();
     }
 
-    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
+    public event Action? UpdateClicked;
+    public event Action? ShowQrClicked, SettingsClicked, DevicesClicked, RemotesClicked, DisconnectAllClicked, ResumeClicked, QuitClicked;
 
     public void SetTexts(string showQr, string settings, string devices, string disconnectAll, string resume, string quit, bool rtl)
     {
@@ -48,7 +49,15 @@ public sealed class TrayIcon : IDisposable
         _menu.RightToLeft = rtl ? RightToLeft.Yes : RightToLeft.No;
     }
 
-    private readonly ToolStripMenuItem _showQr = new(), _settings = new(), _devices = new(), _remotes = new(), _disconnect = new(), _resume = new(), _quit = new(), _update = new() { Visible = false };
+    /// <summary>The "Update available" entry (top of the menu, bold); null hides it.</summary>
+    public void SetUpdate(string? text)
+    {
+        _update.Visible = text is not null;
+        _update.Text = text ?? "";
+        _update.Font = new Font(_menu.Font, FontStyle.Bold);
+    }
+
+    public void SetRemotesText(string text) => _remotes.Text = text;
 
     /// <summary>Shows the "Start listening again" entry only while stopped by the emergency hotkey.</summary>
     public void SetResumeVisible(bool visible) => _resume.Visible = visible;

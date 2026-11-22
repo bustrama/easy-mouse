@@ -43,6 +43,11 @@
   <data name="Hint_NoNet_Title" xml:space="preserve"><value>המחשב לא מחובר לרשת</value></data>
   <data name="Hint_NoNet_Body" xml:space="preserve"><value>התחברו ל-Wi-Fi או חברו כבל, ואז נסו שוב.</value></data>
   <data name="Btn_ShowQr" xml:space="preserve"><value>הצג שוב את הקוד</value></data>
+  <data name="Connected_Body" xml:space="preserve"><value>Easy Mouse מוכן לשימוש. קוד החיבור מוסתר והצימוד סגור, כך שאף טלפון חדש לא יכול להצטרף.</value></data>
+  <data name="Btn_ShowConnectionQr" xml:space="preserve"><value>הצג קוד חיבור</value></data>
+  <data name="Btn_HideQr" xml:space="preserve"><value>הסתר את הקוד</value></data>
+  <data name="Btn_CopyLink" xml:space="preserve"><value>העתק קישור</value></data>
+  <data name="Btn_LinkCopied" xml:space="preserve"><value>הקישור הועתק</value></data>
   <data name="Btn_MakePrivate" xml:space="preserve"><value>הגדר את הרשת כפרטית</value></data>
   <data name="Help_PrivateFailed" xml:space="preserve"><value>הרשת לא שונתה. Windows צריך את אישורך לשינוי הזה.</value></data>
   <data name="Ap_Title" xml:space="preserve"><value>לאפשר לטלפון הזה?</value></data>

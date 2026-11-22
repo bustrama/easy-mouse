@@ -2,6 +2,7 @@ using System.Net.NetworkInformation;
 using EasyMouse.App.Logic;
 using EasyMouse.App.Platform;
 using EasyMouse.Core.Devices;
+using EasyMouse.Core.Pairing;
 using EasyMouse.Core.Sessions;
 
 namespace EasyMouse.App;
@@ -36,6 +37,8 @@ public sealed class AppController : IAsyncDisposable
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlySet<string> _connected = new HashSet<string>();
     private string _lastSignature = "";
+    private readonly object _pairGate = new();
+    private bool _pairingOpen, _qrWindowVisible, _qrRequested;
 
     /// <summary>Throws <see cref="InvalidDataException"/> if the device file is unreadable (never starts with a silently empty list).</summary>
     public AppController(AppPaths paths, AppEnvironment? env = null)
@@ -191,24 +194,78 @@ public sealed class AppController : IAsyncDisposable
 
     // ------------------------------------------------------------------ pairing window
 
+    /// <summary>True while pairing is accepted, i.e. while a one-time secret exists and the QR can be on screen.</summary>
+    public bool PairingOpen { get { lock (_pairGate) return _pairingOpen; } }
+
+    /// <summary>The QR window became visible or hidden. Pairing is open only while the QR is shown (see <see cref="SyncPairing"/>).</summary>
+    public void SetQrWindowVisible(bool visible)
+    {
+        lock (_pairGate)
+        {
+            _qrWindowVisible = visible;
+            if (!visible) _qrRequested = false; // reopening the window with a phone connected starts hidden again
+            SyncPairingLocked();
+        }
+    }
+
+    /// <summary>The user asked to see the QR although a phone is connected: opens pairing with a fresh secret.</summary>
+    public void ShowQr()
+    {
+        lock (_pairGate) { _qrRequested = true; SyncPairingLocked(); }
+    }
+
+    /// <summary>Hides the QR again (a phone is connected): closes pairing and discards the secret.</summary>
+    public void HideQr()
+    {
+        lock (_pairGate) { _qrRequested = false; SyncPairingLocked(); }
+    }
+
+    /// <summary>
+    /// Pairing is accepted only while the QR is actually shown: the window is visible, no emergency stop is active, and
+    /// either no phone is connected or the user asked for the QR. Hiding it closes the pairing window, which discards the
+    /// one-time secret (and denies a pending request); showing it again creates a new secret.
+    /// </summary>
+    private void SyncPairingLocked()
+    {
+        bool want = _qrWindowVisible && !EmergencyStopped && (ConnectedCount == 0 || _qrRequested);
+        if (want == _pairingOpen) return;
+        _pairingOpen = want;
+        if (want) { Help.WindowOpened(); Core.Pairing.OpenWindow(); }
+        else { Help.WindowClosed(); Core.Pairing.CloseWindow(); }
+    }
+
+    private void SyncPairing() { lock (_pairGate) SyncPairingLocked(); }
+
+    /// <summary>Opens pairing directly (tests, and the window logic above).</summary>
     public void OpenPairing()
     {
-        Help.WindowOpened();
-        Core.Pairing.OpenWindow();
+        lock (_pairGate)
+        {
+            _pairingOpen = true;
+            Help.WindowOpened();
+            Core.Pairing.OpenWindow();
+        }
     }
 
     public void ClosePairing()
     {
-        Help.WindowClosed();
-        Core.Pairing.CloseWindow();
+        lock (_pairGate)
+        {
+            _pairingOpen = false;
+            Help.WindowClosed();
+            Core.Pairing.CloseWindow();
+        }
     }
 
     public void NewCode()
     {
-        Help.WindowOpened();
-        Core.Pairing.OpenWindow(); // a fresh secret and a restarted countdown
+        lock (_pairGate)
+        {
+            if (!_pairingOpen) return; // no QR on screen, so nothing to renew
+            Help.WindowOpened();
+            Core.Pairing.OpenWindow(); // a fresh secret and a restarted countdown
+        }
     }
-
     // ------------------------------------------------------------------ actions
 
     /// <summary>Closes every phone socket and stops the listener until <see cref="ResumeAsync"/>.</summary>
@@ -216,7 +273,7 @@ public sealed class AppController : IAsyncDisposable
     {
         if (EmergencyStopped) return;
         EmergencyStopped = true;
-        Core.Pairing.CloseWindow();
+        SyncPairing(); // EmergencyStopped is set: closes pairing and denies a pending request
         Approvals.DenyAll();
         (Core.Input as global::EasyMouse.Platform.Windows.SendInputSink)?.ReleaseAll(); // no key or button left held down
         await ApplyNetworkAsync(Network).ConfigureAwait(false);
@@ -228,6 +285,7 @@ public sealed class AppController : IAsyncDisposable
     {
         if (!EmergencyStopped) return;
         EmergencyStopped = false;
+        SyncPairing();
         await RefreshNetworkAsync().ConfigureAwait(false);
         RaiseStateChanged();
     }
@@ -299,6 +357,12 @@ public sealed class AppController : IAsyncDisposable
         var now = Core.Hub.ConnectedDeviceIds.ToHashSet();
         var added = now.Except(_connected).ToList();
         _connected = now;
+        lock (_pairGate)
+        {
+            // A phone just connected: hide the QR again, unless a pairing request is waiting for the user's answer.
+            if (added.Count > 0 && Core.Pairing.State != PairingState.Pending) _qrRequested = false;
+            SyncPairingLocked();
+        }
         foreach (var id in added)
         {
             var name = Core.Devices.Store.Get(id)?.Name;

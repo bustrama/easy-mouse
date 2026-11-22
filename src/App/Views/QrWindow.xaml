@@ -37,7 +37,7 @@
 
                 <Border Margin="0,22,0,0" HorizontalAlignment="Center" Padding="0">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="{Binding ChipDot}" VerticalAlignment="Center"/>
+                        <Border Width="8" Height="8" CornerRadius="2" Background="{Binding ChipDot}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusText}" Margin="8,0,0,0" FontSize="14" FontWeight="Bold" Foreground="{Binding ChipForeground}" TextWrapping="NoWrap"/>
                     </StackPanel>
                 </Border>
@@ -52,9 +52,43 @@
                     <Button Style="{StaticResource SecondaryButton}" Content="{app:T Btn_NewCode}" Command="{Binding NewCodeCommand}"/>
                     <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="{app:T Btn_Settings}" Command="{Binding SettingsCommand}"/>
                 </Grid>
+                <Button Margin="0,10,0,0" Style="{StaticResource SecondaryButton}" Content="{app:T Btn_HideQr}" Command="{Binding HideQrCommand}"
+                        Visibility="{Binding HasConnected, Converter={StaticResource B2V}}"/>
                 <Button Margin="0,10,0,0" Height="28" Style="{StaticResource SecondaryButton}" BorderThickness="0" Background="Transparent"
-                        FontSize="13" Foreground="{StaticResource Accent}" Content="{app:T Qr_Trouble}" Command="{Binding ShowTroubleCommand}"/>
-                <TextBlock Text="{app:T Qr_Footer}" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+                        FontSize="13" Foreground="{StaticResource Accent}" Content="{app:T Qr_Trouble}" Command="{Binding ShowTroubleCommand}"
+                        Visibility="{Binding NoneConnected, Converter={StaticResource B2V}}"/>
+                <TextBlock Text="{app:T Qr_Footer}" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource Muted}" TextAlignment="Center"
+                           Visibility="{Binding NoneConnected, Converter={StaticResource B2V}}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Connected: the QR is hidden and pairing is closed -->
+        <Grid Visibility="{Binding ShowConnected, Converter={StaticResource B2V}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.RowSpan="2">
+                <Border Width="96" Height="96" CornerRadius="28" Background="{StaticResource ChipGreenBg}" HorizontalAlignment="Center">
+                    <Path Data="M7,12.5 L10.5,16 L17,8.5" Stroke="{StaticResource ChipGreenFg}" StrokeThickness="2.4"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="44" Height="44" Stretch="Uniform"
+                          FlowDirection="LeftToRight"/>
+                </Border>
+                <TextBlock Text="{app:T Status_Connected}" Margin="0,28,0,0" FontSize="26" FontWeight="ExtraBold" TextAlignment="Center"/>
+                <TextBlock Text="{app:T Connected_Body}" Margin="0,10,0,0" FontSize="15" LineHeight="22" Foreground="{StaticResource TextSoft}"
+                           TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Origin}" Margin="0,16,0,0" FontSize="13" Foreground="{StaticResource Muted}" TextAlignment="Center"
+                           FlowDirection="LeftToRight" HorizontalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+                <Button Style="{StaticResource PrimaryButton}" Content="{app:T Btn_ShowConnectionQr}" Command="{Binding ShowConnectionQrCommand}"/>
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource SecondaryButton}" Content="{Binding CopyLinkText}" Command="{Binding CopyLinkCommand}"/>
+                    <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="{app:T Btn_Settings}" Command="{Binding SettingsCommand}"/>
+                </Grid>
+                <TextBlock Text="{app:T Qr_Footer}" Margin="0,12,0,0" FontSize="12" Foreground="{StaticResource Muted}" TextAlignment="Center" TextWrapping="Wrap"/>
             </StackPanel>
         </Grid>
 

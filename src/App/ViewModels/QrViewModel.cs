@@ -25,6 +25,9 @@ public sealed class QrViewModel : ViewModelBase
     private string _statusText = "";
     private QrStatusKind _statusKind;
     private bool _showHelp;
+    private bool _showConnected;
+    private bool _hasConnected;
+    private DateTimeOffset? _copiedAt;
     private bool _helpDismissed;
     private bool _wasPublicStop;
     private string _helpIntro = "";
@@ -48,13 +51,16 @@ public sealed class QrViewModel : ViewModelBase
             _app.Help.WindowOpened(); // the "nothing connected" clock starts over
             Refresh();
         });
+        ShowConnectionQrCommand = new RelayCommand(() => { _app.ShowQr(); Refresh(force: true); });
+        HideQrCommand = new RelayCommand(() => { _app.HideQr(); Refresh(force: true); });
+        CopyLinkCommand = new RelayCommand(CopyLink);
         MakePrivateCommand = new RelayCommand(async () =>
         {
             bool ok = await _app.MakeNetworkPrivateAsync();
             PrivateMessage = ok ? "" : Loc.Instance["Help_PrivateFailed"];
             Refresh();
         });
-        Loc.Instance.LanguageChanged += (_, _) => Refresh(force: true);
+        Loc.Instance.LanguageChanged += (_, _) => { Raise(nameof(CopyLinkText)); Refresh(force: true); };
         Refresh(force: true);
     }
 
@@ -63,6 +69,12 @@ public sealed class QrViewModel : ViewModelBase
     public ICommand ShowTroubleCommand { get; }
     public ICommand ShowQrAgainCommand { get; }
     public ICommand MakePrivateCommand { get; }
+    public ICommand ShowConnectionQrCommand { get; }
+    public ICommand HideQrCommand { get; }
+    public ICommand CopyLinkCommand { get; }
+
+    /// <summary>Puts text on the clipboard; replaced in tests. Returns false when the clipboard is busy.</summary>
+    public Func<string, bool> CopyToClipboard { get; set; } = ClipboardText.TrySet;
 
     public bool[,]? Matrix { get => _matrix; private set => Set(ref _matrix, value); }
     public string Origin { get => _origin; private set => Set(ref _origin, value); }
@@ -71,7 +83,13 @@ public sealed class QrViewModel : ViewModelBase
     public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
     public string NotListeningText { get => _notListeningText; private set => Set(ref _notListeningText, value); }
     public bool ShowHelp { get => _showHelp; private set { if (Set(ref _showHelp, value)) Raise(nameof(ShowQr)); } }
-    public bool ShowQr => !_showHelp;
+    public bool ShowQr => !_showHelp && !_showConnected;
+    /// <summary>A phone is connected and the QR is hidden (pairing closed).</summary>
+    public bool ShowConnected { get => _showConnected; private set { if (Set(ref _showConnected, value)) Raise(nameof(ShowQr)); } }
+    /// <summary>At least one phone is connected (the QR can then be hidden again).</summary>
+    public bool HasConnected { get => _hasConnected; private set { if (Set(ref _hasConnected, value)) Raise(nameof(NoneConnected)); } }
+    public bool NoneConnected => !_hasConnected;
+    public string CopyLinkText => Loc.Instance[_copiedAt is null ? "Btn_CopyLink" : "Btn_LinkCopied"];
     public string HelpIntro { get => _helpIntro; private set => Set(ref _helpIntro, value); }
     public IReadOnlyList<HelpItem> HelpItems { get => _helpItems; private set => Set(ref _helpItems, value); }
     public bool CanMakePrivate { get => _canMakePrivate; private set => Set(ref _canMakePrivate, value); }
@@ -120,9 +138,23 @@ public sealed class QrViewModel : ViewModelBase
         _wasPublicStop = publicStop;
         if (!_helpDismissed && _app.Help.ShouldShowHelp && _app.ConnectedCount == 0) ShowHelp = true; // a connected phone proves it can reach us
 
+        HasConnected = _app.ConnectedCount > 0;
+        if (HasConnected && !publicStop) ShowHelp = false; // a connected phone proves it can reach us
+        ShowConnected = !ShowHelp && HasConnected && !_app.PairingOpen;
+        if (_copiedAt is { } at && now - at > TimeSpan.FromSeconds(2)) { _copiedAt = null; Raise(nameof(CopyLinkText)); }
+
         CanMakePrivate = _app.Category == NetCategory.Public && _app.ChosenAdapter is not null;
         HelpIntro = Loc.Instance[publicStop ? "Help_IntroPublic" : "Help_Intro"];
         RebuildHelp(force);
+    }
+
+    private void CopyLink()
+    {
+        // The origin only: never the pairing secret. A paired phone needs just the address; new phones need the QR.
+        var origin = _app.Origin();
+        if (origin.Length == 0 || !CopyToClipboard(origin)) return;
+        _copiedAt = _app.Core.Time.GetUtcNow();
+        Raise(nameof(CopyLinkText));
     }
 
     private void RebuildHelp(bool force)

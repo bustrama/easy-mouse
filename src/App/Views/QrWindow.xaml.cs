@@ -6,7 +6,7 @@ using EasyMouse.App.ViewModels;
 
 namespace EasyMouse.App.Views;
 
-/// <summary>The QR window. Closing it hides it (the app stays in the tray) and closes the pairing window.</summary>
+/// <summary>The QR window. Closing it hides it (the app stays in the tray) and closes the pairing window (pairing is open only while the QR is shown).</summary>
 public partial class QrWindow : AppWindow
 {
     private readonly AppController _app;
@@ -33,14 +33,14 @@ public partial class QrWindow : AppWindow
     {
         if (IsVisible)
         {
-            _app.OpenPairing();
+            _app.SetQrWindowVisible(true);
             _vm.Refresh(force: true);
             _timer.Start();
         }
         else
         {
             _timer.Stop();
-            _app.ClosePairing();
+            _app.SetQrWindowVisible(false);
         }
     }
 

@@ -43,6 +43,11 @@
   <data name="Hint_NoNet_Title" xml:space="preserve"><value>This PC is not connected to a network</value></data>
   <data name="Hint_NoNet_Body" xml:space="preserve"><value>Connect to your Wi-Fi or plug in a cable, then try again.</value></data>
   <data name="Btn_ShowQr" xml:space="preserve"><value>Show QR again</value></data>
+  <data name="Connected_Body" xml:space="preserve"><value>Easy Mouse is ready to use. The connection code is hidden and pairing is closed, so no new phone can join.</value></data>
+  <data name="Btn_ShowConnectionQr" xml:space="preserve"><value>Show connection QR</value></data>
+  <data name="Btn_HideQr" xml:space="preserve"><value>Hide QR</value></data>
+  <data name="Btn_CopyLink" xml:space="preserve"><value>Copy link</value></data>
+  <data name="Btn_LinkCopied" xml:space="preserve"><value>Link copied</value></data>
   <data name="Btn_MakePrivate" xml:space="preserve"><value>Make network Private</value></data>
   <data name="Help_PrivateFailed" xml:space="preserve"><value>The network was not changed. Windows needs your permission for this.</value></data>
   <data name="Ap_Title" xml:space="preserve"><value>Allow this phone?</value></data>

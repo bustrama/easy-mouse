@@ -87,6 +87,11 @@ public class ScreenshotHarness
         Await(Task.Run(() => connected.AuthenticateAsync(credentials)));
         Pump(500);
         Save(qr, dir, "05-qr-en-connected");
+        controller.ShowQr(); // "Show connection QR"
+        Pump(300);
+        Save(qr, dir, "05b-qr-en-connected-qr-requested");
+        controller.HideQr();
+        Pump(200);
 
         foreach (var page in new[] { SettingsPage.General, SettingsPage.Network, SettingsPage.Security, SettingsPage.Devices, SettingsPage.About })
         {
@@ -111,6 +116,11 @@ public class ScreenshotHarness
         qrHe.ShowAndActivate();
         Pump(500);
         Save(qrHe, dir, "08-qr-he");
+        controller.ShowQr();
+        Pump(300);
+        Save(qrHe, dir, "08b-qr-he-qr-requested");
+        controller.HideQr();
+        Pump(200);
         foreach (var page in new[] { SettingsPage.General, SettingsPage.Devices })
         {
             settings.ShowPage(page);

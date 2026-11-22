@@ -127,6 +127,8 @@ A client `ping` is answered with a server `ping`.
 
 ### 0x10 json (remote action invocation)
 
+> **DEPRECATED: disabled for 0.1** (docs/remotes.md). The PC answers every `invoke` with `{"t":"result","rid":…,"ok":false,"err":"unsupported"}` and pushes no layouts.
+
 The phone names an item of a remote; it never sends the action itself. The PC looks the action up in its
 own remote definitions (so dangerous actions stay pinned to the remote file hash).
 
@@ -248,6 +250,8 @@ snapshot, so the client replaces its copy.
 ```
 
 ### 0x10 json, remote layouts
+
+> **DEPRECATED: disabled for 0.1** (docs/remotes.md). Nothing is pushed.
 
 The phone has to know what to draw. With no remote available nothing is sent and the phone shows
 "no remotes". After the device becomes the controller, and again whenever the remote set or a remote's

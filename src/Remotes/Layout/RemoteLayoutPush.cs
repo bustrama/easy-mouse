@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 using System.Text;
 using System.Text.Json;
 using EasyMouse.Remotes.Catalog;

@@ -2,6 +2,7 @@ using System.Net.NetworkInformation;
 using EasyMouse.App.Logic;
 using EasyMouse.App.Platform;
 using EasyMouse.App.Updates;
+using EasyMouse.Core;
 using EasyMouse.Core.Devices;
 using EasyMouse.Core.Pairing;
 using EasyMouse.Core.Sessions;
@@ -28,6 +29,8 @@ public sealed record AppEnvironment
     public HttpMessageHandler? UpdateHandler { get; init; }
     public IInstallerLauncher? UpdateLauncher { get; init; }
     public SemVer? CurrentVersion { get; init; }
+    /// <summary>DEPRECATED (docs/remotes.md): follows <see cref="FeatureFlags.Remotes"/>; tests of the disabled remote engine turn it on.</summary>
+    public bool RemotesEnabled { get; init; } = FeatureFlags.Remotes;
 }
 
 public enum HotkeyResult { Ok, Invalid, InUse }
@@ -66,17 +69,28 @@ public sealed class AppController : IAsyncDisposable
         var store = new FileDeviceStore(paths.Devices, _env.Protector);
         var (input, media) = PlatformFactory.Create(_env.SystemIntegration);
 
-        // The remote engine: the catalog reads the built-in and the user folder; the handler runs what the phone names.
-        Directory.CreateDirectory(paths.UserRemotes);
+        // DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md). With FeatureFlags.Remotes off nothing is read from
+        // the built-in or user remotes folders, no folder is created, the phone gets no layouts and every invoke is refused.
+        // The catalog stays as an empty object (no folders) so the properties below keep their types.
+        var remotesOn = _env.RemotesEnabled;
+        if (remotesOn) Directory.CreateDirectory(paths.UserRemotes);
         RemoteApprovalStore = new FileRemoteApprovalStore(paths.Root);
         Secrets = new FileSecretStore(paths.Secrets, _env.RemoteProtector);
-        Remotes = new RemoteCatalog(paths.BuiltInRemotes, paths.UserRemotes, RemoteApprovalStore, _env.Time);
+        Remotes = new RemoteCatalog(remotesOn ? paths.BuiltInRemotes : null, remotesOn ? paths.UserRemotes : null, RemoteApprovalStore, _env.Time);
         LayoutSource = new CatalogLayoutSource(Remotes);
-        var executors = PlatformFactory.CreateExecutors(input, media, _env.SystemIntegration, out var recorded);
-        RecordedActions = recorded;
-        var actions = new RemoteActionHandler(Remotes, executors, Secrets, time: _env.Time);
-        Core = CoreServices.Create(store, input, media, actions, LayoutSource, time: _env.Time);
-        _remotesWatcher = _env.SystemIntegration ? WatchUserRemotes(paths.UserRemotes) : null;
+        if (remotesOn)
+        {
+            var executors = PlatformFactory.CreateExecutors(input, media, _env.SystemIntegration, out var recorded);
+            RecordedActions = recorded;
+            var actions = new RemoteActionHandler(Remotes, executors, Secrets, time: _env.Time);
+            Core = CoreServices.Create(store, input, media, actions, LayoutSource, time: _env.Time);
+            _remotesWatcher = _env.SystemIntegration ? WatchUserRemotes(paths.UserRemotes) : null;
+        }
+        else
+        {
+            // NoRemoteActions: invoke -> {ok:false, err:"unsupported"}; NoRemoteLayouts: nothing is pushed.
+            Core = CoreServices.Create(store, input, media, time: _env.Time);
+        }
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();
         Help = new HelpAdvisor(_env.Time);

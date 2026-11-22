@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 using System.Collections.Concurrent;
 using EasyMouse.Core.Abstractions;
 using EasyMouse.Core.Sessions;

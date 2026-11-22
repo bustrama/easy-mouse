@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 import { useState } from 'preact/hooks';
 import { client } from '../client.ts';
 import { useT } from '../i18n/useT.ts';

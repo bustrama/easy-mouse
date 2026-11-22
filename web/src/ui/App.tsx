@@ -12,7 +12,9 @@ import { Remotes } from './Remotes.tsx';
 import { Settings } from './Settings.tsx';
 import { Touchpad } from './Touchpad.tsx';
 
-const TABS: Tab[] = ['mouse', 'keyboard', 'media', 'remotes'];
+import { REMOTES_ENABLED } from '../features.ts';
+
+const TABS: Tab[] = REMOTES_ENABLED ? ['mouse', 'keyboard', 'media', 'remotes'] : ['mouse', 'keyboard', 'media'];
 
 export function App() {
   const s = useStore(client.store);
@@ -63,7 +65,7 @@ function Shell() {
         {s.tab === 'mouse' && <Touchpad />}
         {s.tab === 'keyboard' && <Keyboard />}
         {s.tab === 'media' && <Media />}
-        {s.tab === 'remotes' && <Remotes />}
+        {REMOTES_ENABLED && s.tab === 'remotes' && <Remotes />}
       </main>
       <nav class="tabbar" aria-label="Main">
         {TABS.map((tab) => (

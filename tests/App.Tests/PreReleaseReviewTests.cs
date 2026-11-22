@@ -152,6 +152,7 @@ public class ControllerReviewFixTests : IAsyncDisposable
             SystemIntegration = false,
             Protector = new XorProtector(),
             RemoteProtector = new XorProtector(),
+            RemotesEnabled = true,
             Probe = probe ?? PrivateLan,
         });
         _controllers.Add(app);

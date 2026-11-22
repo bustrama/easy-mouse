@@ -1,3 +1,4 @@
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md).
 using System.ComponentModel;
 using System.Windows;
 using EasyMouse.App.ViewModels;

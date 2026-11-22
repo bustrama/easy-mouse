@@ -35,7 +35,7 @@ dotnet run --project src/App
 
 Web client checks (from `web/`): `npm run typecheck`, `npm run lint`, `npm test`.
 
-Remote definitions are linted with:
+Remote definitions (DEPRECATED: Remotes is disabled for 0.1 and scheduled for removal, see docs/remotes.md) are still linted with:
 
 ```powershell
 dotnet run --project tools/RemoteLint -- remotes

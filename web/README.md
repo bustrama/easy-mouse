@@ -11,7 +11,7 @@ src/protocol/   b64, crypto (HKDF/HMAC/ChaCha20-Poly1305, frame counters), ops (
                 encoders), fragment (#k= parsing), session (handshake state machine)
 src/touch/      gesture recogniser and per-frame delta batching (pure, no DOM)
 src/client.ts   app controller: pairing, reconnect, visibilitychange, input API
-src/ui/         screens: Pair/Scan/Offline/Busy, Touchpad, Keyboard, Media, Remotes
+src/ui/         screens: Pair/Scan/Offline/Busy, Touchpad, Keyboard, Media (Remotes.tsx: disabled for 0.1, docs/remotes.md)
 src/i18n/       English and Hebrew strings, RTL via <html dir>
 dev/            mock server
 ```

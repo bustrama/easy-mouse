@@ -74,9 +74,9 @@ SmartScreen shows "Windows protected your PC" for unsigned apps. Only choose
   prompt" is shown disabled ("Not available in this version"); it is planned, not built.
   Easy Mouse never unlocks the PC and never stores your Windows password.
 - **Windows 10 is untested.** It may work; nobody has checked.
-- **Remotes are limited.** The phone has a Remotes tab and the remote format and built-in
-  definitions (Plex, Stremio, VLC, browser video) exist in this repository, but the PC app does not
-  load them yet, so the tab is mostly empty. There is no phone-side remote editor yet.
+- **No custom remotes.** The Remotes feature (JSON remotes for Plex, Stremio, VLC, browser video) is
+  disabled in 0.1 and scheduled for removal or a redo, see [docs/remotes.md](docs/remotes.md). The phone
+  has only Mouse, Keyboard and Media.
 - **Unsigned build.** SmartScreen warns, see above.
 - **Local network only, plain HTTP.** Traffic is end-to-end encrypted by the pairing
   protocol, but this is not a substitute for a trusted network. See [docs/security.md](docs/security.md).

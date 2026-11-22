@@ -14,7 +14,7 @@ design requirement, not a later phase.
 | Malicious web page in the PC's or phone's browser | DNS rebinding, CSRF, cross-origin WebSocket | Host header allow-list (own IP and `.local` name only), strict Origin check on WebSocket and POST, no cookies, no CORS headers |
 | Someone photographing the QR | Pairs their own phone | Secret is single-use, expires in 2 minutes, and still needs approval on the PC |
 | Racing attacker or shoulder-surfer | Gets their own request approved | Dialog shows device name and a 4-digit code that must match the phone; one pending request at a time; Deny is the default button; Allow enables after one second |
-| Malicious remote file | Launches programs, calls local services | Per-remote approval of dangerous actions, pinned to the file hash |
+| Malicious remote file | Launches programs, calls local services | Not applicable in 0.1: Remotes is disabled and no remote file is read (docs/remotes.md). Design if re-enabled: per-remote approval of dangerous actions, pinned to the file hash |
 | URL leakage | Secret ends up in history or logs | Secret is in the URL fragment, removed with `history.replaceState`; `Referrer-Policy: no-referrer` |
 
 Every response carries a strict CSP (`default-src 'self'`, no inline script),
@@ -53,7 +53,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 - The tray icon changes while a device is connected, with a toast on each connect.
 - A global hotkey and a tray item close all sockets and stop the listener until re-enabled.
 - On session lock, input stops and the phone is told. Easy Mouse never unlocks the PC and never stores the Windows password.
-- Remote actions by class:
+- Remote actions by class (DEPRECATED: Remotes is disabled for 0.1 and scheduled for removal, docs/remotes.md; none of this is reachable in 0.1):
   - Safe: `key`, `media`, `mouse`, `smtc`, `volume`, `focus`. Exception: an item that presses more than three keys in a row or uses Ctrl+Escape (which opens the Start menu or Task Manager) is Sensitive, because a chain of key presses can type a command.
   - Sensitive: `text` macros, `openUrl` (http/https only).
   - Dangerous: `launch`, `http`. They prompt on the PC per remote, pinned to the file hash, so any edit prompts again.

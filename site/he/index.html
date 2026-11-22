@@ -98,7 +98,7 @@
         <li class="card feat reveal"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/></svg><h3>משטח מגע</h3><p>הזזה, לחיצה, גלילה וגרירה במחוות טבעיות, עם השהיה נמוכה.</p></li>
         <li class="card feat reveal" style="--d:.08s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v10H3zM7 11h.01M11 11h.01M15 11h.01M8 14h8"/></svg><h3>מקלדת</h3><p>הקלדה בכל שפה, כולל עברית, וגם Ctrl, Alt, Win וקיצורי מקשים.</p></li>
         <li class="card feat reveal" style="--d:.16s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><h3>מדיה</h3><p>הפעלה, השהיה, דילוג ועוצמת שמע לכל מה שמתנגן, עם שם היצירה על המסך.</p></li>
-        <li class="card feat reveal"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><h3>שלטים מותאמים</h3><p>שלטים מוכנים ל-Plex ול-Stremio, ועורך פשוט לשלט משלך.</p></li>
+        <li class="card feat reveal"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><h3>מוצפן ברשת שלכם</h3><p>כל מה שעובר בין הטלפון למחשב מוצפן ונשאר ברשת המקומית שלכם.</p></li>
         <li class="card feat reveal" style="--d:.08s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0M8.5 12a3.5 3.5 0 0 1 7 0M12 12h.01"/></svg><h3>מתחבר מחדש לבד</h3><p>סורקים פעם אחת. אחר כך הטלפון מוצא את המחשב בלי קוד.</p></li>
         <li class="card feat reveal" style="--d:.16s"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><h3>חלונות מנהל</h3><p>עדיין לא נתמך. חלונות מנהל, הודעת UAC ומסך הנעילה אינם ניתנים לשליטה בגרסה הזו.</p></li>
       </ul>
@@ -118,22 +118,6 @@
         <li class="reveal" style="--d:.24s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>ביטול בלחיצה אחת</b><span>מסירים טלפון בכל רגע, או מנתקים הכול עם קיצור מקשים.</span></div></li>
         <li class="reveal" style="--d:.32s"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><div><b>קוד פתוח</b><span>קראו כל שורה. הגרסאות נבנות בפומבי וחתומות.</span></div></li>
       </ul>
-    </div>
-  </section>
-
-  <section aria-labelledby="remote-h">
-    <div class="wrap row">
-      <div class="reveal">
-        <h2 id="remote-h">בנו שלט משלכם.</h2>
-        <p class="lead">שלט הוא קובץ טקסט קטן: כפתורים, מחוונים ופעולות. אפשר ליצור אחד ל-Plex או ל-Stremio תוך דקות, או לשתף אותו ב-pull request. שום קוד לא רץ, וכל דבר מסוכן מבקש אישור קודם.</p>
-      </div>
-      <pre class="reveal" style="--d:.12s" aria-label="דוגמה לקובץ שלט" dir="ltr"><code><span class="k">"name"</span>: "Stremio",
-<span class="k">"target"</span>: { "process": "stremio*.exe" },
-<span class="k">"layout"</span>: [
-  { "type": "button", "icon": "play",
-    <span class="k">"action"</span>: { "do": "smtc", "cmd": "toggle" } },
-  { "type": "slider", "bind": "volume" }
-]</code></pre>
     </div>
   </section>
 

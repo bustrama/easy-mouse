@@ -5,6 +5,7 @@ using EasyMouse.Remotes.Validation;
 
 namespace EasyMouse.Remotes.Catalog;
 
+// DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md); see EasyMouse.Core.FeatureFlags.Remotes.
 public enum RemoteSource { BuiltIn, User }
 
 /// <summary>Ready: can run (only safe actions, or approved for this exact file hash). NeedsReview: has sensitive or dangerous actions and no matching approval. Invalid: failed validation.</summary>

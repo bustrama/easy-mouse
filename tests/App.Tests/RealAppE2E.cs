@@ -22,6 +22,7 @@ public class RealAppE2E
     {
         var exe = Environment.GetEnvironmentVariable("EASYMOUSE_E2E_EXE");
         if (string.IsNullOrEmpty(exe)) return;
+        if (!EasyMouse.Core.FeatureFlags.Remotes) return; // DEPRECATED: Remotes is disabled for 0.1 (docs/remotes.md); the real exe pushes none
         var report = new List<string>();
         var dir = Path.Combine(Path.GetTempPath(), "em-e2e-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);

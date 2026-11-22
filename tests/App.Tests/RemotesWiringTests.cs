@@ -42,6 +42,7 @@ public class RemotesWiringTests : IAsyncDisposable
             SystemIntegration = false,
             Protector = new NoopProtector(),
             RemoteProtector = new NoopProtector(),
+            RemotesEnabled = true,
         });
         _controllers.Add(app);
         return app;

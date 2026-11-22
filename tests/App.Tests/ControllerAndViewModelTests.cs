@@ -149,22 +149,22 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         Assert.False(vm.ShowHelp);
         Assert.Equal($"http://{app.Listener.EndPoint!.Address}:{app.Settings.Port}", vm.Origin);
         Assert.StartsWith($"http://{app.Listener.EndPoint!.Address}:{app.Settings.Port}/#k=", app.QrUrl());
-        Assert.Equal("Code is valid for 2:00", vm.CountdownText);
+        Assert.Equal("Code is valid for 5:00", vm.CountdownText);
         Assert.Equal(QrStatusKind.Waiting, vm.StatusKind);
 
         _time.Advance(TimeSpan.FromSeconds(72));
         vm.Refresh();
-        Assert.Equal("Code is valid for 0:48", vm.CountdownText);
+        Assert.Equal("Code is valid for 3:48", vm.CountdownText);
         Assert.False(vm.IsExpired);
 
-        _time.Advance(TimeSpan.FromSeconds(49));
+        _time.Advance(TimeSpan.FromSeconds(229));
         vm.Refresh();
         Assert.True(vm.IsExpired);
         Assert.True(vm.ShowExpiredOverlay);
 
         vm.NewCodeCommand.Execute(null);
         Assert.False(vm.IsExpired);
-        Assert.Equal("Code is valid for 2:00", vm.CountdownText);
+        Assert.Equal("Code is valid for 5:00", vm.CountdownText);
     }
 
     [Fact]

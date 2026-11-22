@@ -30,12 +30,13 @@ public static partial class RemoteValidator
     public const int DefaultHttpTimeoutMs = 5_000;
     public const int MaxHttpTimeoutMs = 10_000;
 
-    /// <summary>Icons the phone can draw (web/src/ui/iconPaths.ts). A test keeps this in sync.</summary>
+    /// <summary>Icons the phone can draw (web/src/ui/iconPaths.ts). The web client's icon set is the single source of truth; a test keeps this and remote.schema.json in sync.</summary>
     public static readonly IReadOnlySet<string> Icons = new HashSet<string>(
     [
         "mouse", "keyboard", "media", "remotes", "play", "pause", "next", "prev", "fullscreen", "subtitles", "skip",
         "back", "up", "down", "left", "right", "volume", "mute", "plus", "minus", "home", "power", "settings",
         "check", "rewind", "forward",
+        "enter", "backspace", "delete", "tab", "shift", "win", "arrow-left", "arrow-right", "arrow-up", "arrow-down", "space",
     ]);
 
     public static readonly IReadOnlyList<string> Bindings = ["smtc.title", "smtc.artist", "volume", "volume.master", "volume.app"];

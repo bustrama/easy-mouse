@@ -16,6 +16,8 @@ namespace EasyMouse.Platform.Windows;
 public sealed class WindowsMediaController : IMediaController, IDisposable
 {
     private readonly MasterVolume? _volume;
+    private readonly StremioNameLookup _stremio = new();
+    private readonly MediaTitleResolver _titles;
     private readonly object _gate = new();
     private readonly List<GlobalSystemMediaTransportControlsSession> _tracked = [];
     private readonly TypedEventHandler<GlobalSystemMediaTransportControlsSession, MediaPropertiesChangedEventArgs> _onProps;
@@ -43,6 +45,7 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
 
     public WindowsMediaController()
     {
+        _titles = new MediaTitleResolver(_stremio, RequestRefresh);
         _onProps = (_, _) => RequestRefresh();
         _onPlayback = (_, _) => RequestRefresh();
         _onTimeline = (_, _) => RequestRefresh();
@@ -154,6 +157,7 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
                 var title = Blank(props?.Title);
                 var artist = Blank(props?.Artist);
                 var artwork = await GetArtworkAsync($"{candidates[idx].Id}\n{title}\n{artist}", props);
+                (title, artist) = _titles.Resolve(candidates[idx].Id, title, artist); // after the artwork key: that one uses the raw SMTC text
                 result = new Playing(
                     candidates[idx].Status,
                     title, artist,
@@ -243,5 +247,6 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
             _tracked.Clear();
         }
         _volume?.Dispose();
+        _stremio.Dispose();
     }
 }

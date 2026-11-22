@@ -247,13 +247,12 @@ public class ControllerAndViewModelTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Admin_toggle_is_only_persisted()
+    public async Task Admin_setting_is_unavailable_but_the_persisted_field_is_kept()
     {
-        var app = await StartAsync(needsAdapter: false);
+        var app = await StartAsync(needsAdapter: false, new AppSettings { ControlAdminWindows = true });
         var settings = new SettingsViewModel(app!);
-        settings.ControlAdmin = true;
-        for (int i = 0; i < 100 && !app!.Settings.ControlAdminWindows; i++) await Task.Delay(10);
-        Assert.True(new SettingsStore(Path.Combine(_dir, "settings.json")).Load().ControlAdminWindows);
+        Assert.False(settings.ControlAdminAvailable);
+        Assert.True(app!.Settings.ControlAdminWindows); // kept for the future, nothing acts on it
     }
 
     [Fact]

@@ -16,7 +16,7 @@ public sealed record AppSettings
     public int Port { get; init; } = DefaultPort;
     /// <summary>Network interface id; null or empty means automatic.</summary>
     public string? NetworkAdapterId { get; init; }
-    /// <summary>Persisted only: the SYSTEM broker that acts on it is a later piece of work.</summary>
+    /// <summary>Reserved for a later version (SYSTEM broker). Nothing reads it, and the Settings window shows it disabled.</summary>
     public bool ControlAdminWindows { get; init; }
     public string Hotkey { get; init; } = DefaultHotkey;
 

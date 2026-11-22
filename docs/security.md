@@ -58,12 +58,14 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 - `launch` runs only executables the user picked on the PC, with fixed arguments shown in the prompt. `http` allows loopback plus approved hosts, no redirects, with a timeout; secrets stay on the PC and are referenced as `${secret.name}`.
 - Remote labels are rendered as text nodes and icons come from a built-in set, so a remote cannot inject script or load external URLs.
 
-## Elevated windows and UAC (phase 2)
+## Elevated windows and UAC (planned, phase 2, not in 0.1)
+
+**Not available in 0.1.** The Settings option "Control admin windows and the UAC prompt" is shown disabled with "Not available in this version", and nothing in the app acts on it. A phone cannot type into admin windows, approve UAC prompts or use the lock screen. What follows is the design for a later version.
 
 Input to admin windows and the UAC secure desktop requires a SYSTEM component.
 
 - The network-facing App never runs elevated. A small `Easy Mouse.Broker` service does only input injection, listens on no socket, and accepts only the App over a named pipe with a restricted ACL.
-- The capability is a setting: "Allow control of admin windows and the UAC prompt", with a clear warning that a paired phone can then approve UAC prompts. The installer offers it on by default.
+- The capability would be a setting with a clear warning that a paired phone can then approve UAC prompts.
 - Consequence to state plainly: with this on, a paired phone is effectively an administrator on the PC. Keep the broker small, audited and free of parsing logic.
 
 ## Supply chain

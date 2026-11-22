@@ -87,8 +87,8 @@
   <data name="Cat_Unknown" xml:space="preserve"><value>unknown profile</value></data>
   <data name="Set_Status" xml:space="preserve"><value>Status</value></data>
   <data name="Set_Admin" xml:space="preserve"><value>Control admin windows and the UAC prompt</value></data>
-  <data name="Set_AdminDesc" xml:space="preserve"><value>A paired phone can then approve UAC prompts. It is effectively an administrator on this PC.</value></data>
-  <data name="Set_AdminPending" xml:space="preserve"><value>Saved, but it does nothing yet: it needs a separate component that is not in this version.</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>Planned for a later version: it would let a paired phone approve UAC prompts.</value></data>
+  <data name="Set_AdminPending" xml:space="preserve"><value>Not available in this version.</value></data>
   <data name="Set_Hotkey" xml:space="preserve"><value>Emergency disconnect hotkey</value></data>
   <data name="Set_HotkeyDesc" xml:space="preserve"><value>Closes every connection and stops listening until you start it again from the tray.</value></data>
   <data name="Set_HotkeyPress" xml:space="preserve"><value>Press the new keys</value></data>

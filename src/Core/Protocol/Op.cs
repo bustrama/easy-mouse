@@ -11,8 +11,12 @@ public enum Op : byte
     Media = 0x06,
     Json = 0x10,
     State = 0x11,
+    Art = 0x12,
     Ping = 0x7F,
 }
+
+/// <summary>Image format of an 0x12 art frame.</summary>
+public enum ArtworkType : byte { Jpeg = 0, Png = 1 }
 
 public enum MouseButton : byte { Left = 0, Right = 1, Middle = 2 }
 

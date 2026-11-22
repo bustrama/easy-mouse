@@ -26,7 +26,12 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
     private int _refreshState; // 0 idle, 1 running, 2 running with another refresh requested
     private volatile bool _disposed;
 
-    private sealed record Playing(PlaybackStatus Status, string? Title, string? Artist, Timeline? Timeline);
+    private sealed record Playing(PlaybackStatus Status, string? Title, string? Artist, Timeline? Timeline, Artwork? Artwork);
+
+    private const int ArtworkAttempts = 3; // a player may publish the thumbnail a moment after the title
+    private string? _artKey;               // app + title + artist the cached artwork belongs to (refresh loop only)
+    private Artwork? _artCached;
+    private int _artTries;
 
     public event EventHandler? Changed;
 
@@ -65,7 +70,7 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
                 p.Timeline is { } t ? TimelineMath.PositionMs(t, p.Status, now) : null,
                 p.Timeline is { } t2 ? TimelineMath.DurationMs(t2) : null);
         }
-        return new MediaSnapshot(np, _volume?.Read());
+        return new MediaSnapshot(np, _volume?.Read(), p?.Artwork);
     }
 
     /// <summary>Sets the master volume (0-100) of the default playback device.</summary>
@@ -146,12 +151,16 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
                 var props = await session.TryGetMediaPropertiesAsync();
                 var timeline = session.GetTimelineProperties();
                 var rate = session.GetPlaybackInfo().PlaybackRate ?? 1.0;
+                var title = Blank(props?.Title);
+                var artist = Blank(props?.Artist);
+                var artwork = await GetArtworkAsync($"{candidates[idx].Id}\n{title}\n{artist}", props);
                 result = new Playing(
                     candidates[idx].Status,
-                    Blank(props?.Title), Blank(props?.Artist),
+                    title, artist,
                     timeline is null ? null : new Timeline(
                         (long)timeline.Position.TotalMilliseconds, (long)timeline.StartTime.TotalMilliseconds,
-                        (long)timeline.EndTime.TotalMilliseconds, timeline.LastUpdatedTime, rate));
+                        (long)timeline.EndTime.TotalMilliseconds, timeline.LastUpdatedTime, rate),
+                    artwork);
             }
             catch (COMException)
             {
@@ -161,6 +170,23 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
 
         lock (_gate) _playing = result;
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Reads the thumbnail once per track (retrying a few times while it is still missing); refresh events then reuse the cached JPEG.</summary>
+    private async Task<Artwork?> GetArtworkAsync(string key, GlobalSystemMediaTransportControlsSessionMediaProperties? props)
+    {
+        if (key != _artKey)
+        {
+            _artKey = key;
+            _artCached = null;
+            _artTries = 0;
+        }
+        if (_artCached is null && _artTries < ArtworkAttempts && props is not null)
+        {
+            _artTries++;
+            _artCached = await ArtworkReader.ReadAsync(Safe(() => props.Thumbnail));
+        }
+        return _artCached;
     }
 
     private void SyncSubscriptions(IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions)

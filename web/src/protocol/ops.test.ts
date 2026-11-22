@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUTTON, decodeOp, encButton, encJson, encKey, encMedia, encMove, encText, encWheel, MAX_TEXT_BYTES, splitText } from './ops.ts';
+import { BUTTON, decodeOp, encArt, encButton, encJson, encKey, encMedia, encMove, encText, encWheel, MAX_ART_BYTES, MAX_TEXT_BYTES, splitText } from './ops.ts';
 
 describe('op encoding', () => {
   it('move is op, i16 dx, i16 dy big-endian, clamped', () => {
@@ -20,6 +20,26 @@ describe('op encoding', () => {
     expect(decodeOp(Uint8Array.of(0x01, 0))).toBeNull();
     expect(decodeOp(Uint8Array.of(0x99))).toBeNull();
     expect(decodeOp(Uint8Array.of(0x10, 0x7b))).toBeNull();
+  });
+});
+
+describe('art (0x12)', () => {
+  const img = Uint8Array.of(0xff, 0xd8, 0xff, 0xd9);
+  it('round-trips and matches the documented layout', () => {
+    expect(encArt('a1', 'jpeg', img)).toEqual(Uint8Array.of(0x12, 2, 0x61, 0x31, 0, 0xff, 0xd8, 0xff, 0xd9));
+    expect(decodeOp(encArt('a1b2c3', 'png', img))).toEqual({ op: 'art', id: 'a1b2c3', type: 'png', data: img });
+  });
+  it('accepts exactly 128 KiB and rejects one byte more', () => {
+    expect(decodeOp(encArt('x', 'jpeg', new Uint8Array(MAX_ART_BYTES)))?.op).toBe('art');
+    expect(decodeOp(encArt('x', 'jpeg', new Uint8Array(MAX_ART_BYTES + 1)))).toBeNull();
+  });
+  it('rejects bad ids, types and truncated payloads', () => {
+    expect(decodeOp(Uint8Array.of(0x12))).toBeNull();
+    expect(decodeOp(Uint8Array.of(0x12, 0, 0, 1))).toBeNull(); // empty id
+    expect(decodeOp(Uint8Array.of(0x12, 1, 0x41, 0, 1))).toBeNull(); // uppercase id
+    expect(decodeOp(Uint8Array.of(0x12, 1, 0x61, 2, 1))).toBeNull(); // unknown type
+    expect(decodeOp(Uint8Array.of(0x12, 1, 0x61, 0))).toBeNull(); // no image
+    expect(decodeOp(Uint8Array.of(0x12, 40, ...new Uint8Array(45).fill(0x61)))).toBeNull(); // id too long
   });
 });
 

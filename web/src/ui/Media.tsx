@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { coverFor } from '../art.ts';
 import { client } from '../client.ts';
 import { useT } from '../i18n/useT.ts';
 import { formatTime } from '../pcstate.ts';
@@ -9,7 +10,8 @@ import { Slider } from './Slider.tsx';
 
 export function Media() {
   const t = useT();
-  const { pc } = useStore(client.store);
+  const { pc, art } = useStore(client.store);
+  const cover = coverFor(art, pc.artId); // the image for the current track only
   const m = pc.media;
   const [now, setNow] = useState(Date.now());
   const stamp = useRef(Date.now());
@@ -34,8 +36,8 @@ export function Media() {
 
   return (
     <div class="media">
-      <div class="art">
-        <Icon name="media" size={64} stroke={1.4} />
+      <div class={`art${cover ? ' has' : ''}`}>
+        {cover ? <img src={cover} alt="" draggable={false} /> : <Icon name="media" size={64} stroke={1.4} />}
       </div>
       <div class="meta">
         <div class="title" dir="auto">

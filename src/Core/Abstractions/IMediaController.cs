@@ -8,7 +8,10 @@ public sealed record NowPlaying(PlaybackStatus Status, string? Title, string? Ar
 
 public sealed record VolumeState(int Level, bool Muted);
 
-public sealed record MediaSnapshot(NowPlaying? NowPlaying, VolumeState? Volume);
+/// <summary>Cover image of the current track. <c>Id</c> changes whenever the image changes (lowercase hex/base36, 1-32 chars).</summary>
+public sealed record Artwork(string Id, ArtworkType Type, byte[] Data);
+
+public sealed record MediaSnapshot(NowPlaying? NowPlaying, VolumeState? Volume, Artwork? Artwork = null);
 
 /// <summary>Media keys, volume and now-playing. The Windows implementation (SMTC, Core Audio) lives in the App.</summary>
 public interface IMediaController

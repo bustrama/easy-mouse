@@ -129,7 +129,9 @@ h2 { margin: 0; font-size: 20px; font-weight: 800; }
 
 /* ---- media ---- */
 .media { display: flex; flex-direction: column; flex: 1; }
-.art { height: min(230px, 28dvh); border-radius: 28px; background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--dim); flex: none; }
+.art { height: min(230px, 28dvh); border-radius: 20px; background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--dim); flex: none; overflow: hidden; }
+.art.has { background: none; }
+.art img { height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 20px; display: block; }
 .meta { margin-top: 22px; }
 .title { font-size: 24px; font-weight: 800; letter-spacing: -0.4px; overflow-wrap: anywhere; }
 .sub { margin-top: 2px; font-size: 15px; color: var(--muted); }

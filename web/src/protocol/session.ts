@@ -6,6 +6,7 @@ import {
   FrameReceiver,
   FrameSender,
   macEqual,
+  MAX_FRAME,
   NONCE_LEN,
   pairHelloMac,
   pairingCode,
@@ -14,7 +15,7 @@ import {
   sessionKeys,
   unwrapSecret,
 } from './crypto.ts';
-import { decodeOp, encPing } from './ops.ts';
+import { decodeOp, encPing, OP } from './ops.ts';
 
 export interface Credentials {
   /** b64 device id */
@@ -40,6 +41,7 @@ export interface Handlers {
   onCode?(code: string): void;
   onPaired?(creds: Credentials): void;
   onState?(state: unknown): void;
+  onArt?(id: string, type: 'jpeg' | 'png', data: Uint8Array): void;
   onJson?(msg: unknown): void;
   onTakeoverDenied?(): void;
   onClose?(info: CloseInfo): void;
@@ -209,8 +211,14 @@ export class Session {
     if (this.phase !== 'online' || !this.receiver) return;
     const plain = this.receiver.open(frame);
     if (!plain) return; // forged, replayed or reordered: dropped
+    // Only art may exceed the normal frame limit (docs/protocol.md, 0x12).
+    if (frame.length > MAX_FRAME + 64 && plain[0] !== OP.art) return;
     const op = decodeOp(plain);
     if (!op) return;
+    if (op.op === 'art') {
+      this.h.onArt?.(op.id, op.type, op.data);
+      return;
+    }
     if (op.op === 'state') this.h.onState?.(op.value);
     else if (op.op === 'json') this.h.onJson?.(op.value);
     // A server ping is only keepalive traffic (it answers ours). Never reply: that would loop.

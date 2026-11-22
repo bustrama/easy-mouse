@@ -24,6 +24,9 @@ public enum FrameError
 public static class FrameCodec
 {
     public const int MaxTextBytes = 1024;
+    /// <summary>Largest image in an 0x12 art frame (server to client only). Client-to-server frames stay under 4 KiB.</summary>
+    public const int MaxArtworkBytes = 128 * 1024;
+    public const int MaxArtworkIdLength = 32;
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, throwOnInvalidBytes: true);
 
@@ -72,6 +75,8 @@ public static class FrameCodec
                 if (!TryDecode(payload, out var state)) return FrameError.BadUtf8;
                 message = new StateMessage(state);
                 return FrameError.None;
+            case Op.Art when !c2s:
+                return TryParseArt(payload, out message);
             case Op.Ping:
                 if (payload.Length != 0) return FrameError.BadLength;
                 message = new PingMessage();
@@ -96,9 +101,42 @@ public static class FrameCodec
             case TextMessage m: return WithBody(Op.Text, StrictUtf8.GetBytes(m.Text));
             case JsonMessage m: return WithBody(Op.Json, StrictUtf8.GetBytes(m.Json));
             case StateMessage m: return WithBody(Op.State, StrictUtf8.GetBytes(m.Json));
+            case ArtMessage m: return EncodeArt(m);
             case PingMessage: return [(byte)Op.Ping];
             default: throw new ArgumentException("Unsupported message type", nameof(message));
         }
+    }
+
+    // 0x12 art: u8 idLen (1..32) | id (lowercase a-z0-9) | u8 type (0 jpeg, 1 png) | image bytes (1..MaxArtworkBytes)
+    private static FrameError TryParseArt(ReadOnlySpan<byte> payload, out Message? message)
+    {
+        message = null;
+        if (payload.Length < 3) return FrameError.BadLength;
+        int idLen = payload[0];
+        if (idLen is < 1 or > MaxArtworkIdLength || payload.Length < 1 + idLen + 2) return FrameError.BadLength;
+        var idBytes = payload.Slice(1, idLen);
+        foreach (var b in idBytes)
+            if (!(b is >= (byte)'0' and <= (byte)'9' || b is >= (byte)'a' and <= (byte)'z')) return FrameError.BadValue;
+        var type = payload[1 + idLen];
+        if (type > (byte)ArtworkType.Png) return FrameError.BadValue;
+        var data = payload[(2 + idLen)..];
+        if (data.Length > MaxArtworkBytes) return FrameError.TooLong;
+        message = new ArtMessage(Encoding.ASCII.GetString(idBytes), (ArtworkType)type, data.ToArray());
+        return FrameError.None;
+    }
+
+    private static byte[] EncodeArt(ArtMessage m)
+    {
+        var id = Encoding.ASCII.GetBytes(m.Id);
+        if (id.Length is < 1 or > MaxArtworkIdLength) throw new ArgumentException("Invalid artwork id", nameof(m));
+        if (m.Data.Length is < 1 or > MaxArtworkBytes) throw new ArgumentException("Artwork size out of range", nameof(m));
+        var result = new byte[1 + 1 + id.Length + 1 + m.Data.Length];
+        result[0] = (byte)Op.Art;
+        result[1] = (byte)id.Length;
+        id.CopyTo(result, 2);
+        result[2 + id.Length] = (byte)m.Type;
+        m.Data.CopyTo(result, 3 + id.Length);
+        return result;
     }
 
     private static bool TryDecode(ReadOnlySpan<byte> bytes, out string text)

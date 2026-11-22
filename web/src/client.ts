@@ -12,6 +12,7 @@ import {
   encWheel,
 } from './protocol/ops.ts';
 import { type CloseInfo, Session, type Credentials, type WsLike } from './protocol/session.ts';
+import { type Art, makeArt } from './art.ts';
 import { EMPTY_STATE, type PcState, parseState } from './pcstate.ts';
 import { type Remote, sanitizeRemotes } from './remotes.ts';
 import { clearCredentials, loadCredentials, saveCredentials, storageGet, storageSet } from './storage.ts';
@@ -34,6 +35,8 @@ export interface AppState {
   pcName: string | null;
   code: string;
   pc: PcState;
+  /** the latest album art received (a data: URL); shown only while it matches `pc.artId` */
+  art: Art | null;
   remotes: Remote[];
   tab: Tab;
   langPref: LangPref;
@@ -89,6 +92,7 @@ class Client {
     pcName: storageGet(PC_KEY),
     code: '',
     pc: EMPTY_STATE,
+    art: null,
     remotes: [],
     tab: 'mouse',
     langPref: loadLangPref(),
@@ -205,12 +209,18 @@ class Client {
           this.assumedVolume = null; // a fresh snapshot replaces our estimate
           this.store.set({ pc: parseState(v) });
         },
+        onArt: (id, type, data) => current() && this.setArt(id, type, data),
         onTakeoverDenied: () => current() && this.store.set({ takeoverAsked: false, takeoverDenied: true }),
         onJson: (v) => current() && this.onJson(v),
         onClose: (info) => current() && this.onClose(info),
       },
     });
     this.session = self;
+  }
+
+  /** Keeps only the latest album image; it is shown while its id matches the state's artId. */
+  private setArt(id: string, type: 'jpeg' | 'png', data: Uint8Array): void {
+    this.store.set({ art: makeArt(id, type, data) });
   }
 
   /** Detach first so the old session's close event is ignored as stale. */

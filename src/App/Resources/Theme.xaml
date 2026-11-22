@@ -20,12 +20,12 @@
     <SolidColorBrush x:Key="Warn" Color="#FBBF24"/>
     <SolidColorBrush x:Key="Outline" Color="#3A4452"/>
     <SolidColorBrush x:Key="Hover" Color="#202734"/>
-    <SolidColorBrush x:Key="ChipBlueBg" Color="#E3ECFF"/>
-    <SolidColorBrush x:Key="ChipBlueFg" Color="#1747B8"/>
-    <SolidColorBrush x:Key="ChipGreenBg" Color="#DCFCE7"/>
-    <SolidColorBrush x:Key="ChipGreenFg" Color="#14532D"/>
-    <SolidColorBrush x:Key="ChipAmberBg" Color="#FEF3C7"/>
-    <SolidColorBrush x:Key="ChipAmberFg" Color="#78350F"/>
+    <SolidColorBrush x:Key="ChipBlueBg" Color="#172033"/>
+    <SolidColorBrush x:Key="ChipBlueFg" Color="#9DB8FF"/>
+    <SolidColorBrush x:Key="ChipGreenBg" Color="#12261A"/>
+    <SolidColorBrush x:Key="ChipGreenFg" Color="#86EFAC"/>
+    <SolidColorBrush x:Key="ChipAmberBg" Color="#2A2112"/>
+    <SolidColorBrush x:Key="ChipAmberFg" Color="#FCD34D"/>
     <SolidColorBrush x:Key="ChipGreyBg" Color="#2A323E"/>
     <SolidColorBrush x:Key="ChipGreyFg" Color="#C9D1DC"/>
 

@@ -35,7 +35,7 @@
                     </Border>
                 </Grid>
 
-                <Border Margin="0,22,0,0" HorizontalAlignment="Center" CornerRadius="999" Padding="16,8" Background="{Binding ChipBackground}">
+                <Border Margin="0,22,0,0" HorizontalAlignment="Center" CornerRadius="999" Padding="16,8" Background="{Binding ChipBackground}" BorderThickness="1" BorderBrush="{StaticResource Border}">
                     <StackPanel Orientation="Horizontal">
                         <Ellipse Width="8" Height="8" Fill="{Binding ChipDot}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding StatusText}" Margin="8,0,0,0" FontSize="14" FontWeight="Bold" Foreground="{Binding ChipForeground}" TextWrapping="NoWrap"/>

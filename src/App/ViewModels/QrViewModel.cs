@@ -12,9 +12,9 @@ public sealed record HelpItem(string Title, string Body, string Tag, bool Found)
 /// <summary>State of the QR window: the code, its countdown, the status pill and the "phone cannot connect" help.</summary>
 public sealed class QrViewModel : ViewModelBase
 {
-    private static readonly Brush BlueBg = Frozen("#E3ECFF"), BlueFg = Frozen("#1747B8"), BlueDot = Frozen("#2563EB");
-    private static readonly Brush GreenBg = Frozen("#DCFCE7"), GreenFg = Frozen("#14532D"), GreenDot = Frozen("#16A34A");
-    private static readonly Brush AmberBg = Frozen("#FEF3C7"), AmberFg = Frozen("#78350F"), AmberDot = Frozen("#D97706");
+    private static readonly Brush BlueBg = Frozen("#172033"), BlueFg = Frozen("#9DB8FF"), BlueDot = Frozen("#5B8CFF");
+    private static readonly Brush GreenBg = Frozen("#12261A"), GreenFg = Frozen("#86EFAC"), GreenDot = Frozen("#4ADE80");
+    private static readonly Brush AmberBg = Frozen("#2A2112"), AmberFg = Frozen("#FCD34D"), AmberDot = Frozen("#F59E0B");
 
     private readonly AppController _app;
     private string? _lastUrl;

@@ -117,6 +117,7 @@ class Client {
     document.addEventListener('visibilitychange', () => this.onVisibility());
     window.addEventListener('online', () => this.retryNow());
     window.addEventListener('pagehide', () => this.releaseInputs());
+    window.addEventListener('blur', () => this.releaseInputs());
     void this.fetchInfo();
     if (k) {
       this.startPair(k);

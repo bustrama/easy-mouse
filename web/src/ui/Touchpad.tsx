@@ -5,6 +5,7 @@ import { useT } from '../i18n/useT.ts';
 import { BUTTON } from '../protocol/ops.ts';
 import { useStore } from '../store.ts';
 import { Gestures } from '../touch/gestures.ts';
+import { ButtonHold } from '../touch/hold.ts';
 import { Icon } from './icons.tsx';
 
 export function Touchpad() {
@@ -81,7 +82,7 @@ export function Touchpad() {
 
   return (
     <div class="touch">
-      <div class="padrow">
+      <div class="padrow" dir="ltr">
         <div
           ref={pad}
           class="pad"
@@ -111,7 +112,7 @@ export function Touchpad() {
           <Icon name="down" size={18} stroke={2.2} />
         </div>
       </div>
-      <div class="clicks">
+      <div class="clicks" dir="ltr">
         <ClickButton label={t('touch.left')} button={BUTTON.left} />
         <ClickButton label={t('touch.right')} button={BUTTON.right} />
       </div>
@@ -120,33 +121,36 @@ export function Touchpad() {
 }
 
 function ClickButton({ label, button }: { label: string; button: number }) {
-  const held = useRef(false);
-  const release = () => {
-    if (held.current) {
-      held.current = false;
-      client.button(button, false);
-    }
-  };
+  const hold = useRef<ButtonHold | null>(null);
+  if (!hold.current) hold.current = new ButtonHold(client);
+  const h = hold.current;
   useEffect(() => {
-    const stop = client.onRelease(release);
+    const stop = client.onRelease(() => h.releaseAll());
     return () => {
       stop();
-      release();
+      h.releaseAll();
     };
   }, []);
+  // Holding the button holds the mouse button down, which gives a drag when combined with the pad.
   return (
     <button
       class="clickbtn"
       onPointerDown={(e) => {
         capture(e);
-        if (!held.current) {
-          held.current = true;
-          client.button(button, true);
+        h.down(e.pointerId, button);
+      }}
+      onPointerUp={(e) => h.release(e.pointerId)}
+      onPointerCancel={(e) => h.release(e.pointerId)}
+      onLostPointerCapture={(e) => h.release(e.pointerId)}
+      onBlur={() => h.releaseAll()}
+      onContextMenu={(e) => e.preventDefault()}
+      // assistive technology and keyboard activation: a click without a pointer
+      onClick={(e) => {
+        if (e.detail === 0) {
+          h.down('a11y', button);
+          h.release('a11y');
         }
       }}
-      onPointerUp={release}
-      onPointerCancel={release}
-      onContextMenu={(e) => e.preventDefault()}
     >
       {label}
     </button>

@@ -1,0 +1,221 @@
+name: release
+
+# Cut a release by pushing a tag: git tag vX.Y.Z && git push origin vX.Y.Z   (see docs/releasing.md)
+# Result: a DRAFT GitHub Release with the installer, a portable zip, SHA256SUMS, a detached Ed25519 signature
+# of SHA256SUMS (the in-app updater checks it) and a GitHub build attestation. Publishing the draft is a manual step.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+# No permissions by default; each job asks for exactly what it needs.
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout the tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH[-prerelease] tag"; exit 1
+          fi
+          # Only commits that are on main can be released.
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::The tagged commit is not on main"; exit 1
+          fi
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the phone web client
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Set up .NET (version from global.json)
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode)
+        run: dotnet restore --locked-mode
+
+      - name: Test
+        run: dotnet test --no-restore --configuration Release
+
+      - name: Publish the app (self-contained, win-x64, version from the tag)
+        run: >
+          dotnet publish src/App --configuration Release --runtime win-x64 --self-contained true
+          -p:RestoreLockedMode=true -p:Version=${{ steps.version.outputs.version }}
+          --output publish/win-x64
+
+      # ---------------------------------------------------------------------------------------------------------
+      # HOOK: code signing with SignPath Foundation (not enabled; needs an approved SignPath project first).
+      # When it is approved, sign here, BEFORE the installer is built, the files that go into it:
+      #   publish/win-x64/EasyMouse.exe and the EasyMouse*.dll files.
+      # Typical shape (pin the action by full commit SHA when you add it, and keep every value out of this file):
+      #   - uses: signpath/github-action-submit-signing-request@<full-commit-sha>
+      #     with:
+      #       api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #       organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+      #       project-slug: easy-mouse
+      #       signing-policy-slug: release-signing
+      #       artifact-configuration-slug: app-files
+      #       github-artifact-id: <id of an artifact you upload with the unsigned files>
+      #       wait-for-completion: true
+      #       output-artifact-directory: publish/win-x64
+      # Until then the binaries are unsigned. The in-app updater does not depend on Authenticode: it verifies the
+      # Ed25519 signature of SHA256SUMS (below). Windows SmartScreen will warn about unsigned downloads.
+      # ---------------------------------------------------------------------------------------------------------
+
+      - name: Find Inno Setup
+        id: inno
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --version=6.4.3 --no-progress -y
+          }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup 6 is not available on this runner" }
+          "path=$iscc" >> $env:GITHUB_OUTPUT
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          & "${{ steps.inno.outputs.path }}" "/DAppVersion=${{ steps.version.outputs.version }}" "/DSourceDir=$PWD\publish\win-x64" installer\EasyMouse.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      # HOOK: sign dist\EasyMouse-Setup-<version>.exe with SignPath here too (same shape as above, artifact-configuration for the installer).
+
+      - name: Portable zip
+        shell: pwsh
+        run: Compress-Archive -Path publish\win-x64\* -DestinationPath "dist\EasyMouse-${{ steps.version.outputs.version }}-win-x64-portable.zip" -CompressionLevel Optimal
+
+      - name: List what was built
+        shell: pwsh
+        run: Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Keep the files for the release job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: |
+            dist/EasyMouse-Setup-${{ steps.version.outputs.version }}.exe
+            dist/EasyMouse-${{ steps.version.outputs.version }}-win-x64-portable.zip
+          if-no-files-found: error
+          retention-days: 3
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The signing key lives in this environment's secrets; protect the environment with required reviewers (docs/releasing.md).
+    environment: release
+    permissions:
+      contents: write       # create the draft release
+      id-token: write       # build attestation
+      attestations: write   # build attestation
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      # The repository is checked out only to read the embedded public key; nothing from it is executed.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download the build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: dist
+
+      - name: SHA256SUMS
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          sha256sum "EasyMouse-Setup-${VERSION}.exe" "EasyMouse-${VERSION}-win-x64-portable.zip" > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Sign SHA256SUMS (Ed25519)
+        working-directory: dist
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${UPDATE_SIGNING_KEY}" ]; then echo "::error::The UPDATE_SIGNING_KEY secret is not set (docs/releasing.md)"; exit 1; fi
+          umask 077
+          key="$(mktemp)"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "${UPDATE_SIGNING_KEY}" > "$key"
+          openssl pkeyutl -sign -rawin -inkey "$key" -in SHA256SUMS -out SHA256SUMS.sig
+          test "$(stat -c %s SHA256SUMS.sig)" = 64
+
+      - name: Check the signature against the public key embedded in the app
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          hex="$(grep -o 'FromHexString("[0-9a-f]\{64\}")' ../src/App/Updates/UpdateTrust.cs | grep -o '[0-9a-f]\{64\}')"
+          test -n "$hex"
+          # DER header of an Ed25519 SubjectPublicKeyInfo + the 32 raw key bytes
+          { printf '302a300506032b6570032100' ; printf '%s' "$hex"; } | xxd -r -p > pub.der
+          openssl pkey -pubin -inform DER -in pub.der -out pub.pem
+          openssl pkeyutl -verify -pubin -inkey pub.pem -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig
+          rm -f pub.der pub.pem
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/EasyMouse-Setup-${{ env.VERSION }}.exe
+            dist/EasyMouse-${{ env.VERSION }}-win-x64-portable.zip
+            dist/SHA256SUMS
+            dist/SHA256SUMS.sig
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          pre=()
+          if [[ "$VERSION" == *-* ]]; then pre=(--prerelease); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag "${pre[@]}" \
+            --title "Easy Mouse $VERSION" --generate-notes \
+            "dist/EasyMouse-Setup-${VERSION}.exe" \
+            "dist/EasyMouse-${VERSION}-win-x64-portable.zip" \
+            dist/SHA256SUMS dist/SHA256SUMS.sig

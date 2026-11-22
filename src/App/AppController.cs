@@ -31,6 +31,7 @@ public sealed class AppController : IAsyncDisposable
     private readonly AppEnvironment _env;
     private readonly SettingsStore _settingsStore;
     private readonly HotkeyService? _hotkey;
+    private readonly IDisposable? _monitor;
     private readonly SemaphoreSlim _evalGate = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlySet<string> _connected = new HashSet<string>();
@@ -46,7 +47,7 @@ public sealed class AppController : IAsyncDisposable
         Loc.Instance.SetLanguage(Settings.Language);
 
         var store = new FileDeviceStore(paths.Devices, _env.Protector);
-        var (input, media) = PlatformFactory.Create();
+        var (input, media) = PlatformFactory.Create(_env.SystemIntegration);
         Core = CoreServices.Create(store, input, media, time: _env.Time);
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();
@@ -58,6 +59,7 @@ public sealed class AppController : IAsyncDisposable
         Core.Pairing.Changed += (_, _) => RaiseStateChanged();
         Core.Hub.Changed += OnHubChanged;
         Approvals.CurrentChanged += (_, _) => RaiseStateChanged();
+        _monitor = PlatformFactory.StartHostStatusMonitor(Core.Status, _env.SystemIntegration);
         if (_env.SystemIntegration)
         {
             _hotkey = new HotkeyService();
@@ -216,6 +218,7 @@ public sealed class AppController : IAsyncDisposable
         EmergencyStopped = true;
         Core.Pairing.CloseWindow();
         Approvals.DenyAll();
+        (Core.Input as global::EasyMouse.Platform.Windows.SendInputSink)?.ReleaseAll(); // no key or button left held down
         await ApplyNetworkAsync(Network).ConfigureAwait(false);
         await Listener.DisconnectAllAsync().ConfigureAwait(false);
         UiThread.Post(() => EmergencyStopRan?.Invoke(this, EventArgs.Empty));
@@ -312,6 +315,9 @@ public sealed class AppController : IAsyncDisposable
         NetworkChange.NetworkAddressChanged -= OnNetworkChanged;
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkChanged;
         _hotkey?.Dispose();
+        _monitor?.Dispose();
+        (Core.Input as IDisposable)?.Dispose();
+        (Core.Media as IDisposable)?.Dispose();
         Approvals.DenyAll();
         await Listener.DisposeAsync().ConfigureAwait(false);
     }

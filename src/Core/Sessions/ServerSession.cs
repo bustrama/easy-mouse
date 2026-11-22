@@ -41,6 +41,9 @@ public sealed class ServerSession
     private EventHandler? _mediaHandler;
     private string? _sentArtId; // guarded by _gate: the artwork id this device already has
     private EventHandler? _statusHandler;
+    private EventHandler? _layoutHandler;
+    private readonly SemaphoreSlim _layoutLock = new(1, 1);
+    private string? _lastLayoutJson;
 
     public ServerSession(CoreServices services, ISessionTransport transport)
     {
@@ -348,14 +351,18 @@ public sealed class ServerSession
         _statusHandler = (_, _) => _ = PushStateAsync();
         _svc.Media.Changed += _mediaHandler;
         _svc.Status.Changed += _statusHandler;
+        _layoutHandler = (_, _) => _ = PushLayoutAsync(initial: false);
+        _svc.Layouts.Changed += _layoutHandler;
         if (IsClosed) Unsubscribe(); // closed while subscribing
         await PushStateAsync().ConfigureAwait(false);
+        await PushLayoutAsync(initial: true).ConfigureAwait(false);
     }
 
     private void Unsubscribe()
     {
         if (_mediaHandler is not null) _svc.Media.Changed -= _mediaHandler;
         if (_statusHandler is not null) _svc.Status.Changed -= _statusHandler;
+        if (_layoutHandler is not null) _svc.Layouts.Changed -= _layoutHandler;
     }
 
     // ---------------------------------------------------------------- state and JSON messages
@@ -376,6 +383,36 @@ public sealed class ServerSession
                 _sentArtId = art?.Id;
             }
             if (sendArt) await SendFrameAsync(new ArtMessage(art!.Id, art.Type, art.Data)).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
+        {
+            await CloseAsync(CloseCode.InternalError, "send failed").ConfigureAwait(false);
+        }
+    }
+
+    private const string EmptyLayoutJson = "{\"t\":\"remotes\",\"remotes\":[]}";
+
+    /// <summary>
+    /// The 0x10 remote layouts, to the controller only. Nothing is sent at connect when there is nothing to show; afterwards
+    /// a change is sent even when it empties the list (the phone replaces its list), but never twice with identical text.
+    /// Serialised so a slow send cannot overtake a newer one.
+    /// </summary>
+    private async Task PushLayoutAsync(bool initial)
+    {
+        try
+        {
+            await _layoutLock.WaitAsync(_cts.Token).ConfigureAwait(false);
+            try
+            {
+                if (IsClosed || !_svc.Hub.IsController(this)) return;
+                var json = _svc.Layouts.CurrentJson;
+                if (initial && json is null) return;
+                json ??= EmptyLayoutJson;
+                if (json == _lastLayoutJson) return;
+                _lastLayoutJson = json;
+                await SendFrameAsync(new JsonMessage(json)).ConfigureAwait(false);
+            }
+            finally { _layoutLock.Release(); }
         }
         catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
         {

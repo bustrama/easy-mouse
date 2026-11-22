@@ -4,6 +4,10 @@ using EasyMouse.App.Platform;
 using EasyMouse.Core.Devices;
 using EasyMouse.Core.Pairing;
 using EasyMouse.Core.Sessions;
+using EasyMouse.Remotes.Approvals;
+using EasyMouse.Remotes.Catalog;
+using EasyMouse.Remotes.Execution;
+using EasyMouse.Remotes.Layout;
 
 namespace EasyMouse.App;
 
@@ -12,6 +16,8 @@ public sealed record AppEnvironment
 {
     public Func<NetworkSnapshot> Probe { get; init; } = NetworkProbe.Collect;
     public ISecretProtector Protector { get; init; } = new DpapiSecretProtector();
+    /// <summary>Protects the values of <c>${secret.name}</c> for remotes (its own DPAPI purpose, so it cannot unprotect device secrets).</summary>
+    public ISecretProtector RemoteProtector { get; init; } = new DpapiSecretProtector("EasyMouse.RemoteSecrets.v1");
     /// <summary>Real autostart registry value, global hotkey and the elevated "make Private" command.</summary>
     public bool SystemIntegration { get; init; } = true;
     /// <summary>The DNS host name (what mDNS answers for), not the 15-character NetBIOS name.</summary>
@@ -33,6 +39,7 @@ public sealed class AppController : IAsyncDisposable
     private readonly SettingsStore _settingsStore;
     private readonly HotkeyService? _hotkey;
     private readonly IDisposable? _monitor;
+    private readonly FileSystemWatcher? _remotesWatcher;
     private readonly SemaphoreSlim _evalGate = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlySet<string> _connected = new HashSet<string>();
@@ -51,7 +58,18 @@ public sealed class AppController : IAsyncDisposable
 
         var store = new FileDeviceStore(paths.Devices, _env.Protector);
         var (input, media) = PlatformFactory.Create(_env.SystemIntegration);
-        Core = CoreServices.Create(store, input, media, time: _env.Time);
+
+        // The remote engine: the catalog reads the built-in and the user folder; the handler runs what the phone names.
+        Directory.CreateDirectory(paths.UserRemotes);
+        RemoteApprovalStore = new FileRemoteApprovalStore(paths.Root);
+        Secrets = new FileSecretStore(paths.Secrets, _env.RemoteProtector);
+        Remotes = new RemoteCatalog(paths.BuiltInRemotes, paths.UserRemotes, RemoteApprovalStore, _env.Time);
+        LayoutSource = new CatalogLayoutSource(Remotes);
+        var executors = PlatformFactory.CreateExecutors(input, media, _env.SystemIntegration, out var recorded);
+        RecordedActions = recorded;
+        var actions = new RemoteActionHandler(Remotes, executors, Secrets, time: _env.Time);
+        Core = CoreServices.Create(store, input, media, actions, LayoutSource, time: _env.Time);
+        _remotesWatcher = _env.SystemIntegration ? WatchUserRemotes(paths.UserRemotes) : null;
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();
         Help = new HelpAdvisor(_env.Time);
@@ -73,6 +91,12 @@ public sealed class AppController : IAsyncDisposable
     public AppPaths Paths { get; }
     public AppSettings Settings { get; private set; }
     public CoreServices Core { get; }
+    public IRemoteCatalog Remotes { get; }
+    public FileRemoteApprovalStore RemoteApprovalStore { get; }
+    public FileSecretStore Secrets { get; }
+    public CatalogLayoutSource LayoutSource { get; }
+    /// <summary>The recorders standing in for the Windows executors when not running for real (tests); null in the real app.</summary>
+    public RecordingActionExecutors? RecordedActions { get; }
     public ListenerController Listener { get; }
     public ApprovalCoordinator Approvals { get; }
     public HelpAdvisor Help { get; }
@@ -150,6 +174,31 @@ public sealed class AppController : IAsyncDisposable
         }
         await RefreshNetworkAsync().ConfigureAwait(false);
         _ = Core.Devices.PurgeExpiredAsync();
+    }
+
+    /// <summary>A file dropped into (or edited in) the user's remotes folder shows up without a restart.</summary>
+    private FileSystemWatcher WatchUserRemotes(string folder)
+    {
+        var watcher = new FileSystemWatcher(folder, "*.json") { EnableRaisingEvents = true, IncludeSubdirectories = false };
+        FileSystemEventHandler changed = (_, _) => ScheduleRemotesReload();
+        watcher.Changed += changed;
+        watcher.Created += changed;
+        watcher.Deleted += changed;
+        watcher.Renamed += (_, _) => ScheduleRemotesReload();
+        return watcher;
+    }
+
+    private int _reloadPending;
+
+    private void ScheduleRemotesReload()
+    {
+        if (Interlocked.Exchange(ref _reloadPending, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(400).ConfigureAwait(false); // an editor writes a file in several steps
+            Interlocked.Exchange(ref _reloadPending, 0);
+            Remotes.Reload();
+        });
     }
 
     private void OnNetworkChanged(object? sender, EventArgs e) => _ = RefreshNetworkAsync();
@@ -379,6 +428,8 @@ public sealed class AppController : IAsyncDisposable
         NetworkChange.NetworkAddressChanged -= OnNetworkChanged;
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkChanged;
         _hotkey?.Dispose();
+        _remotesWatcher?.Dispose();
+        LayoutSource.Dispose();
         _monitor?.Dispose();
         (Core.Input as IDisposable)?.Dispose();
         (Core.Media as IDisposable)?.Dispose();

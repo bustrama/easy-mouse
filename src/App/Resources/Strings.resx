@@ -135,4 +135,51 @@
 
 Easy Mouse does not start with an empty list, because that would silently unpair every phone. Move or delete that file to start over.</value></data>
   <data name="Err_HotkeyTitle" xml:space="preserve"><value>Emergency hotkey not active</value></data>
+  <data name="Tray_Remotes" xml:space="preserve"><value>Remotes…</value></data>
+  <data name="Rm_Title" xml:space="preserve"><value>Remotes</value></data>
+  <data name="Rm_Intro" xml:space="preserve"><value>Remotes are button layouts for your phone. Remotes that only press keys or control media run as they are. A remote that types text, opens websites, starts programs or contacts other devices stays off until you approve exactly what it does.</value></data>
+  <data name="Rm_Import" xml:space="preserve"><value>Import remote…</value></data>
+  <data name="Rm_OpenFolder" xml:space="preserve"><value>Open remotes folder</value></data>
+  <data name="Rm_BuiltIn" xml:space="preserve"><value>Built in</value></data>
+  <data name="Rm_User" xml:space="preserve"><value>Yours</value></data>
+  <data name="Rm_StateReady" xml:space="preserve"><value>On</value></data>
+  <data name="Rm_StateReview" xml:space="preserve"><value>Needs your approval</value></data>
+  <data name="Rm_StateRejected" xml:space="preserve"><value>Not approved</value></data>
+  <data name="Rm_StateInvalid" xml:space="preserve"><value>Invalid file</value></data>
+  <data name="Rm_Approve" xml:space="preserve"><value>Approve</value></data>
+  <data name="Rm_Reject" xml:space="preserve"><value>Reject</value></data>
+  <data name="Rm_Revoke" xml:space="preserve"><value>Turn off</value></data>
+  <data name="Rm_ReviewAgain" xml:space="preserve"><value>Review again</value></data>
+  <data name="Rm_Hash" xml:space="preserve"><value>Your approval applies to this exact file (fingerprint {0}). If the file changes in any way, you are asked again.</value></data>
+  <data name="Rm_ApprovedHash" xml:space="preserve"><value>Approved for file fingerprint {0}.</value></data>
+  <data name="Rm_ItemWhere" xml:space="preserve"><value>Button “{0}”</value></data>
+  <data name="Rm_ItemUnnamed" xml:space="preserve"><value>Button {0}</value></data>
+  <data name="Rm_Act_Text" xml:space="preserve"><value>types this text into the program in front ({0} characters): “{1}”</value></data>
+  <data name="Rm_Act_OpenUrl" xml:space="preserve"><value>opens {0} in your default browser</value></data>
+  <data name="Rm_Act_Launch" xml:space="preserve"><value>starts the program you choose for “{0}”</value></data>
+  <data name="Rm_Act_LaunchArgs" xml:space="preserve"><value>, with the arguments: {0}</value></data>
+  <data name="Rm_Act_Http" xml:space="preserve"><value>sends a {0} request to {1}</value></data>
+  <data name="Rm_Act_HttpOutside" xml:space="preserve"><value>a device or site outside this PC</value></data>
+  <data name="Rm_Act_Secrets" xml:space="preserve"><value>Uses your saved secrets: {0}.</value></data>
+  <data name="Rm_Act_Other" xml:space="preserve"><value>does something that needs review</value></data>
+  <data name="Rm_Dangerous" xml:space="preserve"><value>Can start programs or contact other devices</value></data>
+  <data name="Rm_Sensitive" xml:space="preserve"><value>Sensitive</value></data>
+  <data name="Rm_Slot" xml:space="preserve"><value>Program for “{0}”</value></data>
+  <data name="Rm_Choose" xml:space="preserve"><value>Choose program…</value></data>
+  <data name="Rm_NoneChosen" xml:space="preserve"><value>No program chosen yet</value></data>
+  <data name="Rm_Hosts" xml:space="preserve"><value>It will be allowed to contact: {0}</value></data>
+  <data name="Rm_ImportOk" xml:space="preserve"><value>Imported “{0}”.</value></data>
+  <data name="Rm_ImportReplaced" xml:space="preserve"><value>Updated “{0}”. Because the file changed, it needs your approval again if it has sensitive actions.</value></data>
+  <data name="Rm_ImportSame" xml:space="preserve"><value>This exact remote is already imported.</value></data>
+  <data name="Rm_ImportFailed" xml:space="preserve"><value>This file cannot be used as a remote:</value></data>
+  <data name="Rm_ImportBuiltIn" xml:space="preserve"><value>A built-in remote already uses the id “{0}”. Change the id in the file and try again.</value></data>
+  <data name="Rm_ImportOtherFile" xml:space="preserve"><value>The remote file {0} already uses the id “{1}”. Remove it or change the id.</value></data>
+  <data name="Rm_ImportReadFail" xml:space="preserve"><value>The file could not be read: {0}</value></data>
+  <data name="Rm_ImportFilter" xml:space="preserve"><value>Remote files (*.json)|*.json</value></data>
+  <data name="Rm_ProgramFilter" xml:space="preserve"><value>Programs (*.exe)|*.exe</value></data>
+  <data name="Rm_Omitted" xml:space="preserve"><value>These remotes do not fit on the phone screen yet, so the phone does not show them: {0}.</value></data>
+  <data name="Rm_Empty" xml:space="preserve"><value>No remotes found.</value></data>
+  <data name="Rm_ApprovalsError" xml:space="preserve"><value>Saved approvals could not be read, so every remote that needs approval is off: {0}</value></data>
+  <data name="Rm_Errors" xml:space="preserve"><value>Problems in this file:</value></data>
+  <data name="Rm_Close" xml:space="preserve"><value>Close</value></data>
 </root>

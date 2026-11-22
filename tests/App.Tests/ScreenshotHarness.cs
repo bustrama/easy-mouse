@@ -42,6 +42,18 @@ public class ScreenshotHarness
         var temp = Path.Combine(Path.GetTempPath(), "em-shots-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
         new SettingsStore(Path.Combine(temp, "settings.json")).Save(new AppSettings { Port = 18765, StartWithWindows = true, ControlAdminWindows = true });
+        // User remotes for the Remotes window: one that needs review (text, link, program, lamp), one invalid.
+        Directory.CreateDirectory(Path.Combine(temp, "remotes"));
+        File.WriteAllText(Path.Combine(temp, "remotes", "living-room.json"), """
+            { "schema": 1, "id": "living-room", "name": "Living room", "description": "Lamp and a quick link to the family calendar.",
+              "layout": { "cols": 2, "items": [
+                { "type": "button", "label": "Sign in", "action": { "do": "text", "text": "hunter2 and a long line of text that is cut short when it is shown to you in the review list" } },
+                { "type": "button", "label": "Calendar", "action": { "do": "openUrl", "url": "https://calendar.example.com/family" } },
+                { "type": "button", "label": "Start player", "action": { "do": "launch", "exe": "player", "args": ["--fullscreen"] } },
+                { "type": "button", "label": "Lamp on", "action": { "do": "http", "method": "POST", "url": "http://192.168.1.20/api/on?token=${secret.hue}" } },
+                { "type": "button", "label": "Mute", "action": { "do": "media", "cmd": "mute" } } ] } }
+            """);
+        File.WriteAllText(Path.Combine(temp, "remotes", "broken.json"), """{ "schema": 1, "id": "Broken One", "name": "Broken", "layout": { "cols": 2, "items": [ { "type": "button", "action": { "do": "shell" } } ] } }""");
 
         NetCategory category = NetCategory.Private;
         var controller = new AppController(new AppPaths(temp), new AppEnvironment
@@ -100,6 +112,16 @@ public class ScreenshotHarness
             Save(settings, dir, $"06-settings-en-{page.ToString().ToLowerInvariant()}");
         }
 
+        // ---- Remotes window: needs review, then approved, then Hebrew
+        var remotes = new RemotesWindow(controller);
+        remotes.ShowAndActivate();
+        Pump(500);
+        Save(remotes, dir, "11-remotes-en-review");
+        remotes.Height = 1000;
+        Pump(300);
+        Save(remotes, dir, "12-remotes-en-review-tall");
+        remotes.Height = 680;
+
         // ---- Help screen: this network turns Public
         category = NetCategory.Public;
         Await(controller.RefreshNetworkAsync());
@@ -127,6 +149,11 @@ public class ScreenshotHarness
             Pump(300);
             Save(settings, dir, $"09-settings-he-{page.ToString().ToLowerInvariant()}");
         }
+        remotes.Height = 1000;
+        remotes.ShowAndActivate();
+        Pump(500);
+        Save(remotes, dir, "13-remotes-he");
+        remotes.AllowClose = true; remotes.Close();
         category = NetCategory.Public;
         Await(controller.RefreshNetworkAsync());
         Pump(300);

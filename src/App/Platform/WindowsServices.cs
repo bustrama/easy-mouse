@@ -12,7 +12,9 @@ namespace EasyMouse.App.Platform;
 /// <summary>Device secrets at rest: DPAPI, current user scope.</summary>
 public sealed class DpapiSecretProtector : ISecretProtector
 {
-    private static readonly byte[] Entropy = "EasyMouse.DeviceStore.v1"u8.ToArray();
+    private readonly byte[] Entropy;
+
+    public DpapiSecretProtector(string purpose = "EasyMouse.DeviceStore.v1") => Entropy = System.Text.Encoding.UTF8.GetBytes(purpose);
 
     public byte[] Protect(byte[] plain) => ProtectedData.Protect(plain, Entropy, DataProtectionScope.CurrentUser);
 

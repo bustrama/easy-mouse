@@ -13,7 +13,7 @@ namespace EasyMouse.Platform.Windows;
 /// Windows volume OSD appears and the focused media app reacts exactly as it does for a keyboard.
 /// Now-playing is cached and refreshed from SMTC events; <see cref="GetSnapshot"/> never blocks and extrapolates the position.
 /// </summary>
-public sealed class WindowsMediaController : IMediaController, IDisposable
+public sealed class WindowsMediaController : IMediaController, Remotes.ISmtcControl, Remotes.IVolumeControl, IDisposable
 {
     private readonly MasterVolume? _volume;
     private readonly StremioNameLookup _stremio = new();
@@ -80,6 +80,47 @@ public sealed class WindowsMediaController : IMediaController, IDisposable
     public void SetVolume(int percent) => _volume!.SetLevel(percent);
 
     public void SetMuted(bool muted) => _volume!.SetMuted(muted);
+
+    VolumeState? Remotes.IVolumeControl.GetVolume() => _volume?.Read();
+
+    void Remotes.IVolumeControl.SetVolume(int percent) => _volume?.SetLevel(percent);
+
+    void Remotes.IVolumeControl.SetMuted(bool muted) => _volume?.SetMuted(muted);
+
+    /// <summary>Sends a transport command to the current SMTC session (what the Windows media overlay controls).</summary>
+    public async Task<bool> SendAsync(Remotes.SmtcTransport command, int seconds, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Initialization.WaitAsync(cancellationToken).ConfigureAwait(false);
+            var manager = _manager;
+            var session = manager?.GetCurrentSession() ?? manager?.GetSessions().FirstOrDefault();
+            if (session is null) return false;
+            switch (command)
+            {
+                case Remotes.SmtcTransport.Toggle: return await session.TryTogglePlayPauseAsync();
+                case Remotes.SmtcTransport.Play: return await session.TryPlayAsync();
+                case Remotes.SmtcTransport.Pause: return await session.TryPauseAsync();
+                case Remotes.SmtcTransport.Next: return await session.TrySkipNextAsync();
+                case Remotes.SmtcTransport.Previous: return await session.TrySkipPreviousAsync();
+                case Remotes.SmtcTransport.Stop: return await session.TryStopAsync();
+                default:
+                {
+                    var t = session.GetTimelineProperties();
+                    if (t is null) return false;
+                    var timeline = new Timeline((long)t.Position.TotalMilliseconds, (long)t.StartTime.TotalMilliseconds,
+                        (long)t.EndTime.TotalMilliseconds, t.LastUpdatedTime, session.GetPlaybackInfo().PlaybackRate ?? 1.0);
+                    var status = MapStatus(session.GetPlaybackInfo().PlaybackStatus);
+                    if (TimelineMath.PositionMs(timeline, status, DateTimeOffset.UtcNow) is not { } pos) return false;
+                    var target = pos + (command == Remotes.SmtcTransport.SeekForward ? 1 : -1) * seconds * 1000L;
+                    if (TimelineMath.DurationMs(timeline) is { } d) target = Math.Min(target, d);
+                    target = Math.Max(0, target) + timeline.StartMs;
+                    return await session.TryChangePlaybackPositionAsync(target * TimeSpan.TicksPerMillisecond);
+                }
+            }
+        }
+        catch (COMException) { return false; } // the session went away mid-command
+    }
 
     private async Task InitializeSmtcAsync()
     {

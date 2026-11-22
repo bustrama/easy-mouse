@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
+    <ProjectReference Include="..\Remotes\EasyMouse.Remotes.csproj" />
     <InternalsVisibleTo Include="EasyMouse.Platform.Windows.Tests" />
     <InternalsVisibleTo Include="EasyMouse.Platform.SmokeTest" />
   </ItemGroup>

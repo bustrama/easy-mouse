@@ -18,6 +18,10 @@ public sealed class RecordingInputSink : IInputSink
     public void Wheel(int dx, int dy) => Record($"wheel {dx} {dy}");
     public void Text(string text) => Record($"text {text}");
     public void Key(ushort virtualKey, KeyAction action) => Record($"key {virtualKey} {action}");
+    private int _releaseAllCount;
+    /// <summary>How often <see cref="ReleaseAll"/> ran (kept apart from <see cref="Calls"/> so call lists stay input-only).</summary>
+    public int ReleaseAllCount => Volatile.Read(ref _releaseAllCount);
+    public void ReleaseAll() => Interlocked.Increment(ref _releaseAllCount);
 }
 
 public sealed class RecordingMediaController : IMediaController

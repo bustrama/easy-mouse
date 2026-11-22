@@ -535,16 +535,26 @@ public sealed class ServerSession
 
     private bool Terminate()
     {
+        bool wasController;
         lock (_gate)
         {
             if (_phase == Phase.Closed) return false;
+            wasController = _phase == Phase.Controlling;
             _phase = Phase.Closed;
         }
         _pairRequest?.Deny();
         _cts.Cancel();
         Unsubscribe();
         _svc.Hub.Leave(this);
+        // The phone may have held a key or button when it vanished; nothing else will ever lift it.
+        if (wasController) ReleaseHeldInput();
         return true;
+    }
+
+    private void ReleaseHeldInput()
+    {
+        try { _svc.Input.ReleaseAll(); }
+        catch (Exception) { /* injection can be blocked (secure desktop); nothing more can be done */ }
     }
 
     private static bool TryParseFlat(string text, out Dictionary<string, string> fields)

@@ -84,7 +84,7 @@ internal static partial class NativeInput
 
 /// <summary>SendInput injected fewer events than requested (typically UIPI blocking an elevated window).</summary>
 public sealed class InputInjectionException(int requested, int injected, int win32Error)
-    : Exception($"SendInput injected {injected} of {requested} events (Win32 error {win32Error}).")
+    : EasyMouse.Core.Abstractions.InputBlockedException($"SendInput injected {injected} of {requested} events (Win32 error {win32Error}).")
 {
     public int Requested { get; } = requested;
     public int Injected { get; } = injected;

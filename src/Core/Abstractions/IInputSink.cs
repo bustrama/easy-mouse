@@ -16,5 +16,5 @@ public interface IInputSink
     /// Lifts every key and mouse button this sink is still holding down. The session calls it when the controlling
     /// phone goes away, so a dropped connection never leaves Ctrl or a mouse button pressed on the PC.
     /// </summary>
-    void ReleaseAll() { }
+    void ReleaseAll();
 }

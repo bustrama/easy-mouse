@@ -11,7 +11,14 @@ public sealed class RecordingInputSink : IInputSink
 
     public IReadOnlyList<string> Calls { get { lock (_gate) return [.. _calls]; } }
 
-    private void Record(string call) { lock (_gate) _calls.Add(call); }
+    /// <summary>When true every input call throws <see cref="InputBlockedException"/>, like SendInput against an elevated window.</summary>
+    public bool Blocked { get; set; }
+
+    private void Record(string call)
+    {
+        if (Blocked) throw new InputBlockedException("input blocked");
+        lock (_gate) _calls.Add(call);
+    }
 
     public void MoveRelative(int dx, int dy) => Record($"move {dx} {dy}");
     public void Button(MouseButton button, bool down) => Record($"button {button} {(down ? "down" : "up")}");

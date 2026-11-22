@@ -60,3 +60,28 @@ public class HeldInputTests
     }
 
 }
+
+public class BlockedInputTests
+{
+    // SR-06: an elevated foreground window makes SendInput fail (UIPI); that must not tear the session down.
+    [Fact]
+    public async Task Blocked_input_is_dropped_and_the_session_stays_up()
+    {
+        await using var host = await TestHost.StartAsync();
+        var device = await host.PairAsync();
+        await using var client = await host.ConnectDeviceAsync(device);
+        while (await client.ReceiveFrameAsync() is not StateMessage) { }
+
+        host.Input.Blocked = true;
+        await client.SendFrameAsync(new MoveMessage(5, 5));
+        await client.SendFrameAsync(new KeyMessage(0x41, KeyAction.Press));
+        await client.SendFrameAsync(new PingMessage());
+        while (await client.ReceiveFrameAsync() is not PingMessage) { } // both blocked frames were processed and the session answered
+
+        host.Input.Blocked = false;
+        await client.SendFrameAsync(new MoveMessage(1, 1));
+        await client.SendFrameAsync(new PingMessage());
+        while (await client.ReceiveFrameAsync() is not PingMessage) { }
+        Assert.Equal(["move 1 1"], host.Input.Calls);
+    }
+}

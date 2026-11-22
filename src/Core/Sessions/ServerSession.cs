@@ -137,17 +137,25 @@ public sealed class ServerSession
     private async Task DispatchAsync(Message message)
     {
         bool locked = _svc.Status.Locked;
-        switch (message)
+        try
         {
-            case MoveMessage m when !locked: _svc.Input.MoveRelative(m.Dx, m.Dy); break;
-            case ButtonMessage m when !locked: _svc.Input.Button(m.Button, m.Down); break;
-            case WheelMessage m when !locked: _svc.Input.Wheel(m.Dx, m.Dy); break;
-            case TextMessage m when !locked: _svc.Input.Text(m.Text); break;
-            case KeyMessage m when !locked: _svc.Input.Key(m.VirtualKey, m.Action); break;
-            case MediaMessage m when !locked: _svc.Media.Execute(m.Command); break;
-            case JsonMessage m: await OnJsonAsync(m.Json).ConfigureAwait(false); break;
-            case PingMessage: await SendFrameAsync(new PingMessage()).ConfigureAwait(false); break;
-            // Locked: input is dropped; the phone already knows from the state message.
+            switch (message)
+            {
+                case MoveMessage m when !locked: _svc.Input.MoveRelative(m.Dx, m.Dy); break;
+                case ButtonMessage m when !locked: _svc.Input.Button(m.Button, m.Down); break;
+                case WheelMessage m when !locked: _svc.Input.Wheel(m.Dx, m.Dy); break;
+                case TextMessage m when !locked: _svc.Input.Text(m.Text); break;
+                case KeyMessage m when !locked: _svc.Input.Key(m.VirtualKey, m.Action); break;
+                case MediaMessage m when !locked: _svc.Media.Execute(m.Command); break;
+                case JsonMessage m: await OnJsonAsync(m.Json).ConfigureAwait(false); break;
+                case PingMessage: await SendFrameAsync(new PingMessage()).ConfigureAwait(false); break;
+                // Locked: input is dropped; the phone already knows from the state message.
+            }
+        }
+        catch (InputBlockedException)
+        {
+            // The PC refuses input right now (elevated foreground window, UAC, lock screen). That is a normal condition,
+            // not a protocol error: drop this input and stay connected; host.elevated/locked in the state frame tells the phone.
         }
     }
 
@@ -583,7 +591,7 @@ public sealed class ServerSession
     private void ReleaseHeldInput()
     {
         try { _svc.Input.ReleaseAll(); }
-        catch (Exception) { /* injection can be blocked (secure desktop); nothing more can be done */ }
+        catch (InputBlockedException) { /* injection is blocked right now (secure desktop); the keys cannot be lifted from here */ }
     }
 
     private static bool TryParseFlat(string text, out Dictionary<string, string> fields)

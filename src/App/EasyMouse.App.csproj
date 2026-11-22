@@ -6,6 +6,7 @@
     <UseWindowsForms>true</UseWindowsForms> <!-- only for the tray NotifyIcon -->
     <RootNamespace>EasyMouse.App</RootNamespace>
     <AssemblyName>EasyMouse</AssemblyName>
+    <ApplicationIcon>../../assets/icon/icon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en;he</SatelliteResourceLanguages>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>

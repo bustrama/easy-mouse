@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>EasyMouse.Platform.Windows</RootNamespace>
+    <AssemblyName>EasyMouse.Platform.Windows</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
+    <InternalsVisibleTo Include="EasyMouse.Platform.Windows.Tests" />
+    <InternalsVisibleTo Include="EasyMouse.Platform.SmokeTest" />
+  </ItemGroup>
+</Project>

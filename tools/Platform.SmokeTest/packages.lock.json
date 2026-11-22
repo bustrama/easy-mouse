@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows10.0.19041": {
+      "easymouse.core": {
+        "type": "Project"
+      },
+      "easymouse.platform.windows": {
+        "type": "Project",
+        "dependencies": {
+          "EasyMouse.Core": "[0.1.0, )"
+        }
+      }
+    }
+  }
+}

@@ -50,7 +50,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 - A global hotkey and a tray item close all sockets and stop the listener until re-enabled.
 - On session lock, input stops and the phone is told. Easy Mouse never unlocks the PC and never stores the Windows password.
 - Remote actions by class:
-  - Safe: `key`, `media`, `mouse`, `smtc`, `volume`, `focus`.
+  - Safe: `key`, `media`, `mouse`, `smtc`, `volume`, `focus`. Exception: an item that presses more than three keys in a row or uses Ctrl+Escape (which opens the Start menu or Task Manager) is Sensitive, because a chain of key presses can type a command.
   - Sensitive: `text` macros, `openUrl` (http/https only).
   - Dangerous: `launch`, `http`. They prompt on the PC per remote, pinned to the file hash, so any edit prompts again.
   - There is no `shell` action.

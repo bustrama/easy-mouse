@@ -62,3 +62,18 @@ public class ArtworkReaderTests
         Assert.Null(await ArtworkReader.ReadAsync(RandomAccessStreamReference.CreateFromStream(junk)));
     }
 }
+
+public class ArtworkSourceLimitTests
+{
+    // SR-05: a hostile page can publish an enormous (or decompression-bomb) thumbnail through its media session.
+    [Theory]
+    [InlineData(100_000UL, 600u, 600u, true)]
+    [InlineData(8UL * 1024 * 1024, 8192u, 8192u, true)]
+    [InlineData(8UL * 1024 * 1024 + 1, 600u, 600u, false)]  // too many bytes
+    [InlineData(1_000_000UL, 40_000u, 40_000u, false)]      // tiny file, 1.6 gigapixels
+    [InlineData(1_000_000UL, uint.MaxValue, uint.MaxValue, false)] // multiplication must not overflow
+    [InlineData(1_000UL, 0u, 100u, false)]
+    [InlineData(0UL, 100u, 100u, false)]
+    public void Source_limits(ulong bytes, uint width, uint height, bool accepted)
+        => Assert.Equal(accepted, ArtworkReader.Accepts(bytes, width, height));
+}

@@ -205,6 +205,64 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Updates -->
+                <StackPanel Visibility="{Binding IsUpdates, Converter={StaticResource B2V}}">
+                    <TextBlock Style="{StaticResource Group}" Text="{app:T Upd_Group}"/>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Upd_Check}" Tag="{app:T Upd_CheckDesc}">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Updates.CheckEnabled, Mode=TwoWay}"/>
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Upd_Pre}" Tag="{app:T Upd_PreDesc}">
+                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Updates.IncludePrereleases, Mode=TwoWay}"/>
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Upd_Current}" Tag="{Binding Updates.CurrentVersionText}">
+                                <Button Style="{StaticResource SmallButton}" Content="{app:T Upd_CheckNow}" Command="{Binding Updates.CheckNowCommand}" MinWidth="110"/>
+                            </HeaderedContentControl>
+                            <HeaderedContentControl Style="{StaticResource Row}" Header="{app:T Upd_LastChecked}" Tag="{Binding Updates.LastCheckedText}">
+                                <Grid/>
+                            </HeaderedContentControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border CornerRadius="10" Padding="16,12" Margin="0,14,0,0" Visibility="{Binding Updates.HasStatus, Converter={StaticResource B2V}}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource ChipGreyBg}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Updates.StatusIsProblem}" Value="True"><Setter Property="Background" Value="{StaticResource ChipAmberBg}"/></DataTrigger>
+                                    <DataTrigger Binding="{Binding Updates.StatusIsUpdate}" Value="True"><Setter Property="Background" Value="{StaticResource ChipBlueBg}"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Updates.StatusText}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource ChipGreyFg}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Updates.StatusIsProblem}" Value="True"><Setter Property="Foreground" Value="{StaticResource ChipAmberFg}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Updates.StatusIsUpdate}" Value="True"><Setter Property="Foreground" Value="{StaticResource ChipBlueFg}"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Button Grid.Column="1" Style="{StaticResource SmallPrimaryButton}" Margin="16,0,0,0" Content="{Binding Updates.InstallLabel}"
+                                    Command="{Binding Updates.InstallCommand}" Visibility="{Binding Updates.HasUpdate, Converter={StaticResource B2V}}"/>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Margin="0,14,0,0" Visibility="{Binding Updates.HasNotes, Converter={StaticResource B2V}}">
+                        <StackPanel Margin="18,14">
+                            <TextBlock Text="{Binding Updates.NotesTitle}" FontSize="15" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding Updates.Notes}" Margin="0,8,0,0" FontSize="13" LineHeight="19" TextWrapping="Wrap" Foreground="{StaticResource TextSoft}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="{app:T Upd_Disclosure}" Margin="2,16,0,0" FontSize="13" LineHeight="19" TextWrapping="Wrap" Foreground="{StaticResource Muted}"/>
+                </StackPanel>
+
                 <!-- About -->
                 <StackPanel Visibility="{Binding IsAbout, Converter={StaticResource B2V}}">
                     <TextBlock Text="{app:T App_Name}" FontSize="26" FontWeight="ExtraBold"/>

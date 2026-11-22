@@ -138,23 +138,45 @@ public sealed class SingleInstance : IDisposable
 {
     private readonly Mutex _mutex;
     private readonly EventWaitHandle _show;
+    private readonly EventWaitHandle _quit;
     private readonly CancellationTokenSource _cts = new();
 
-    private SingleInstance(Mutex mutex, EventWaitHandle show)
+    private SingleInstance(Mutex mutex, EventWaitHandle show, EventWaitHandle quit)
     {
         _mutex = mutex;
         _show = show;
+        _quit = quit;
     }
 
     public static SingleInstance? TryAcquire(string name)
     {
         var mutex = new Mutex(initiallyOwned: true, $@"Local\{name}", out bool created);
         var show = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{name}.Show");
-        if (created) return new SingleInstance(mutex, show);
+        var quit = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\{name}.Quit");
+        if (created) return new SingleInstance(mutex, show, quit);
         show.Set(); // tell the running copy
         mutex.Dispose();
         show.Dispose();
+        quit.Dispose();
         return null;
+    }
+
+    /// <summary>Asks a running copy to exit (the installer and uninstaller do this before touching files). False if none is running.</summary>
+    public static bool RequestQuit(string name)
+    {
+        if (!EventWaitHandle.TryOpenExisting($@"Local\{name}.Quit", out var quit)) return false;
+        using (quit) return quit.Set();
+    }
+
+    /// <summary>Calls <paramref name="onQuitRequested"/> (on a pool thread) when <see cref="RequestQuit"/> was called by another process.</summary>
+    public void ListenForQuit(Action onQuitRequested)
+    {
+        var token = _cts.Token;
+        _ = Task.Run(() =>
+        {
+            var handles = new[] { _quit, token.WaitHandle };
+            if (WaitHandle.WaitAny(handles) == 0) onQuitRequested();
+        });
     }
 
     /// <summary>Calls <paramref name="onShowRequested"/> (on a pool thread) each time another copy was started.</summary>
@@ -174,6 +196,7 @@ public sealed class SingleInstance : IDisposable
         _mutex.ReleaseMutex();
         _mutex.Dispose();
         _show.Dispose();
+        _quit.Dispose();
         _cts.Dispose();
     }
 }

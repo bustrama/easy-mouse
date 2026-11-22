@@ -17,12 +17,14 @@
     <Using Remove="System.Drawing" />
     <Using Include="System.IO" />
     <Using Include="System.Threading" />
+    <Using Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
     <ProjectReference Include="..\Server\EasyMouse.Server.csproj" />
     <ProjectReference Include="..\Platform.Windows\EasyMouse.Platform.Windows.csproj" />
     <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="[3.2.1]" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="[2.7.0]" /> <!-- Ed25519 verification of release signatures; .NET has no built-in Ed25519 -->
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\Fonts\*.ttf" />

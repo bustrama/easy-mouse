@@ -50,9 +50,11 @@ public class ScreenshotHarness
             MachineName = "OFFICE-PC",
             Protector = new XorProtector(),
             Probe = () => new NetworkSnapshot([real], new Dictionary<string, NetCategory> { [real.Id] = category }),
+            UpdateHandler = new FakeGitHub { Respond = _ => FakeGitHub.Ok(FakeGitHub.ReleaseJson("v1.2.0", body: "- Faster pointer response on Wi-Fi\n- Hebrew labels in the QR window\n- Fixes the tray icon after sleep")) },
         });
         Await(controller.StartAsync());
         Pump(300);
+        Await(controller.Updates.CheckAsync(manual: true));
 
         var qr = new QrWindow(controller, () => { });
         var settings = new SettingsWindow(controller);
@@ -88,7 +90,7 @@ public class ScreenshotHarness
         Pump(500);
         Save(qr, dir, "05-qr-en-connected");
 
-        foreach (var page in new[] { SettingsPage.General, SettingsPage.Network, SettingsPage.Security, SettingsPage.Devices, SettingsPage.About })
+        foreach (var page in new[] { SettingsPage.General, SettingsPage.Network, SettingsPage.Security, SettingsPage.Devices, SettingsPage.Updates, SettingsPage.About })
         {
             settings.ShowPage(page);
             Pump(300);
@@ -111,7 +113,7 @@ public class ScreenshotHarness
         qrHe.ShowAndActivate();
         Pump(500);
         Save(qrHe, dir, "08-qr-he");
-        foreach (var page in new[] { SettingsPage.General, SettingsPage.Devices })
+        foreach (var page in new[] { SettingsPage.General, SettingsPage.Devices, SettingsPage.Updates })
         {
             settings.ShowPage(page);
             Pump(300);

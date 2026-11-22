@@ -130,4 +130,39 @@
 
 Easy Mouse does not start with an empty list, because that would silently unpair every phone. Move or delete that file to start over.</value></data>
   <data name="Err_HotkeyTitle" xml:space="preserve"><value>Emergency hotkey not active</value></data>
+  <data name="Nav_Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Upd_Group" xml:space="preserve"><value>Updates</value></data>
+  <data name="Upd_Check" xml:space="preserve"><value>Check for updates</value></data>
+  <data name="Upd_CheckDesc" xml:space="preserve"><value>Once a day Easy Mouse asks GitHub whether a newer version exists. Nothing is downloaded or installed without your confirmation.</value></data>
+  <data name="Upd_Pre" xml:space="preserve"><value>Include pre-releases</value></data>
+  <data name="Upd_PreDesc" xml:space="preserve"><value>Also offer early test versions. They may be less stable.</value></data>
+  <data name="Upd_Current" xml:space="preserve"><value>Current version</value></data>
+  <data name="Upd_LastChecked" xml:space="preserve"><value>Last checked</value></data>
+  <data name="Upd_Never" xml:space="preserve"><value>Never</value></data>
+  <data name="Upd_CheckNow" xml:space="preserve"><value>Check now</value></data>
+  <data name="Upd_Checking" xml:space="preserve"><value>Checking…</value></data>
+  <data name="Upd_UpToDate" xml:space="preserve"><value>You have the latest version.</value></data>
+  <data name="Upd_Available" xml:space="preserve"><value>Update available: version {0}</value></data>
+  <data name="Upd_Install" xml:space="preserve"><value>Update to {0}</value></data>
+  <data name="Upd_Downloading" xml:space="preserve"><value>Downloading… {0}%</value></data>
+  <data name="Upd_Verifying" xml:space="preserve"><value>Verifying the download…</value></data>
+  <data name="Upd_Launching" xml:space="preserve"><value>The installer is running. Easy Mouse will restart when it finishes.</value></data>
+  <data name="Upd_Notes" xml:space="preserve"><value>What's new in {0}</value></data>
+  <data name="Upd_Confirm" xml:space="preserve"><value>Download and install Easy Mouse {0}?
+
+The installer is downloaded from GitHub and verified (signature and checksum) before it runs. Windows will ask for your permission, and Easy Mouse restarts when it is done.</value></data>
+  <data name="Upd_Disclosure" xml:space="preserve"><value>Checking for updates is the only thing Easy Mouse does over the internet: a request to api.github.com and, only when you choose to update, a download from github.com. The requests carry no account, device or version information.</value></data>
+  <data name="Upd_Err_Offline" xml:space="preserve"><value>Couldn't reach GitHub. Check your internet connection and try again.</value></data>
+  <data name="Upd_Err_RateLimited" xml:space="preserve"><value>GitHub asked for a pause. Try again after {0}.</value></data>
+  <data name="Upd_Err_Http" xml:space="preserve"><value>GitHub gave an unexpected answer. Try again later.</value></data>
+  <data name="Upd_Err_Malformed" xml:space="preserve"><value>The release information was not understood. Nothing was changed.</value></data>
+  <data name="Upd_Err_Untrusted" xml:space="preserve"><value>The update was refused because it pointed somewhere that is not trusted. Nothing was changed.</value></data>
+  <data name="Upd_Err_TooLarge" xml:space="preserve"><value>The update was refused because it is larger than expected. Nothing was changed.</value></data>
+  <data name="Upd_Err_Signature" xml:space="preserve"><value>The update's signature is not valid, so it was not installed.</value></data>
+  <data name="Upd_Err_Hash" xml:space="preserve"><value>The downloaded installer does not match its signed checksum, so it was not installed.</value></data>
+  <data name="Upd_Err_Downgrade" xml:space="preserve"><value>The update was refused because it is not newer than this version.</value></data>
+  <data name="Upd_Err_Installer" xml:space="preserve"><value>The installer could not be started. Nothing was changed.</value></data>
+  <data name="Tray_Update" xml:space="preserve"><value>Update available ({0})</value></data>
+  <data name="Toast_Update" xml:space="preserve"><value>Update available</value></data>
+  <data name="Toast_UpdateBody" xml:space="preserve"><value>Easy Mouse {0} is ready. Open Settings, Updates, to install it.</value></data>
 </root>

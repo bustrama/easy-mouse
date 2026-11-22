@@ -1,6 +1,7 @@
 using System.Net.NetworkInformation;
 using EasyMouse.App.Logic;
 using EasyMouse.App.Platform;
+using EasyMouse.App.Updates;
 using EasyMouse.Core.Devices;
 using EasyMouse.Core.Sessions;
 
@@ -16,6 +17,10 @@ public sealed record AppEnvironment
     /// <summary>The DNS host name (what mDNS answers for), not the 15-character NetBIOS name.</summary>
     public string MachineName { get; init; } = System.Net.Dns.GetHostName();
     public TimeProvider Time { get; init; } = TimeProvider.System;
+    /// <summary>Update checks: tests pass a fake HTTP handler, installer launcher and version; null means the real ones.</summary>
+    public HttpMessageHandler? UpdateHandler { get; init; }
+    public IInstallerLauncher? UpdateLauncher { get; init; }
+    public SemVer? CurrentVersion { get; init; }
 }
 
 public enum HotkeyResult { Ok, Invalid, InUse }
@@ -52,6 +57,10 @@ public sealed class AppController : IAsyncDisposable
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();
         Help = new HelpAdvisor(_env.Time);
+        Updates = new UpdateService(new GitHubHttp(_env.UpdateHandler), new UpdateVerifier(), _env.UpdateLauncher ?? new InstallerLauncher(),
+            _env.SystemIntegration ? new FileUpdateCache(Path.Combine(paths.Root, "update-cache.json")) : new NullUpdateCache(),
+            () => Settings, UpdateSettingsAsync, _env.CurrentVersion ?? AppVersion.Current, _env.Time);
+        Updates.Changed += (_, _) => RaiseStateChanged();
 
         Approvals.Attach(Core.Pairing, Core.Hub);
         Listener.RequestReceived += Help.RequestSeen;
@@ -73,6 +82,7 @@ public sealed class AppController : IAsyncDisposable
     public ListenerController Listener { get; }
     public ApprovalCoordinator Approvals { get; }
     public HelpAdvisor Help { get; }
+    public UpdateService Updates { get; }
     public string MachineName => _env.MachineName;
 
     public NetworkSnapshot Network { get; private set; } = NetworkSnapshot.Empty;
@@ -144,6 +154,8 @@ public sealed class AppController : IAsyncDisposable
             NetworkChange.NetworkAddressChanged += OnNetworkChanged;
             NetworkChange.NetworkAvailabilityChanged += OnNetworkChanged;
             _ = PollNetworkAsync(_cts.Token);
+            Updates.CleanOldDownloads();
+            _ = Updates.RunSchedulerAsync(_cts.Token);
         }
         await RefreshNetworkAsync().ConfigureAwait(false);
         _ = Core.Devices.PurgeExpiredAsync();
@@ -268,6 +280,7 @@ public sealed class AppController : IAsyncDisposable
             }
         }
         if (next.Language != old.Language) Loc.Instance.SetLanguage(next.Language);
+        if (next.IncludePrereleases != old.IncludePrereleases) Updates.Reevaluate();
         _settingsStore.Save(Settings);
 
         if (next.Port != old.Port || next.NetworkAdapterId != old.NetworkAdapterId) await ApplyNetworkAsync(Network).ConfigureAwait(false);

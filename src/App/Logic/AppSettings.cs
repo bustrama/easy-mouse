@@ -19,6 +19,10 @@ public sealed record AppSettings
     /// <summary>Reserved for a later version (SYSTEM broker). Nothing reads it, and the Settings window shows it disabled.</summary>
     public bool ControlAdminWindows { get; init; }
     public string Hotkey { get; init; } = DefaultHotkey;
+    /// <summary>Ask GitHub for a newer release at most once a day. Never downloads or installs without the user's confirmation.</summary>
+    public bool CheckForUpdates { get; init; } = true;
+    public bool IncludePrereleases { get; init; }
+    public DateTimeOffset? LastUpdateCheckUtc { get; init; }
 
     public static bool IsValidPort(int port) => port is >= 1024 and <= 65535;
 

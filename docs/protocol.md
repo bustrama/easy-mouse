@@ -152,14 +152,16 @@ S->C, once per invocation:
     "t": { "const": "result" },
     "rid": { "type": "integer", "minimum": 0 },
     "ok": { "type": "boolean" },
-    "err": { "type": "string", "description": "short code: unsupported, busy (too many in flight), locked (PC is locked), denied" }
+    "err": { "type": "string", "description": "short code: unsupported (unknown remote or item, missing slider value, no executor), busy (too many in flight, or the remote's rate limit), locked (PC is locked), denied (remote not approved for its current file hash, host or program not approved), failed (the action ran and failed or timed out)" }
   }
 }
 ```
 
 Invalid JSON, any other `t`, a negative `rid`, a non-numeric `value` or too-long strings close the
 socket (4400). At most 4 invocations run at once per socket; more get `{ok:false, err:"busy"}`. Until the
-remote engine exists (phase 2) every invocation gets `{ok:false, err:"unsupported"}`.
+remote engine is wired in (`RemoteActionHandler`, `src/Remotes`) every invocation gets
+`{ok:false, err:"unsupported"}`. A slider sends `value` (0-100, clamped by the PC); a button sends none.
+Each remote also has its own rate limit (default 20 per second, burst 40), answered with `busy`.
 
 ### 0x11 state
 
@@ -213,18 +215,35 @@ snapshot, so the client replaces its copy.
 }
 ```
 
-### 0x10 json, remote layouts (provisional)
+### 0x10 json, remote layouts
 
-The phone has to know what to draw. Until the remote engine exists nothing is sent and the phone shows
-"no remotes". Provisional design (the web client already implements it; the Core implementer may revise
-it here): after the device becomes the controller, and again whenever the remote set changes, the server
-pushes the layouts. The phone never requests them (an unknown C->S `t` would close the socket).
+The phone has to know what to draw. With no remote available nothing is sent and the phone shows
+"no remotes". After the device becomes the controller, and again whenever the remote set or a remote's
+state changes (file edited, approved, revoked), the server pushes the layouts. The phone never requests
+them (an unknown C->S `t` would close the socket). The provider is `RemoteLayoutPush` in `src/Remotes`.
 
-S->C: `{ "t":"remotes", "remotes":[ <remote JSON, schema 1, as in architecture.md>, ... ] }` (at most 32
-remotes, 64 items each). Every item may carry an `"id"` (string, at most 64); an item without one has the
-id `String(index)`, its zero-based position in `layout.items`. `invoke.item` uses that id. The pushed
-layouts do not need to include the `action` objects, the phone ignores them. Label and slider `bind`
-names the web client understands: `smtc.title`, `smtc.artist`, `volume` (or `volume.master`).
+S->C: `{ "t":"remotes", "remotes":[ <layout>, ... ] }` where each `<layout>` is
+`{ "schema":1, "id", "name", "layout":{ "cols", "items":[ ... ] } }` and an item is
+`{ "type", "id"?, "icon"?, "label"?, "text"?, "bind"? }`. At most 32 remotes and 64 items each.
+
+- **Projection, not the file.** The message MUST NOT contain `action`, `target` or `description`. The phone
+  only learns what to draw and which item ids exist; what an item does stays on the PC (security.md).
+- **Only runnable remotes.** A remote that is invalid or needs review (sensitive or dangerous actions not
+  approved for its current file hash) is not sent; it appears once approved.
+- **Item ids.** An item without `"id"` has the id `String(index)`, its zero-based position in
+  `layout.items`; the server omits `"id"` when it equals the position. `invoke.item` uses that id. Effective
+  ids are unique within a remote (the validator enforces it, so an explicit id cannot collide with a
+  position).
+- **One message.** The phone replaces its whole list on every `remotes` message, and the web client rejects
+  a frame longer than 4096 + 64 bytes (`web/src/protocol/crypto.ts`; the Core itself sets no cap on what it
+  sends). A frame adds 25 bytes (8 header, 1 op, 16 tag), so the JSON can be at most 4135 bytes and the
+  server budgets 4000 (Hebrew is sent as UTF-8, not `\u` escapes). "32 remotes, 64 items each" are upper
+  bounds, not a promise that they fit: about four ordinary remotes do. Remotes that do not fit are left out
+  whole, in catalog order (built-in first), and the host should tell the user. Splitting a larger set over
+  several messages needs a client change (an append or `more` flag) and is not defined yet.
+- `bind` names the web client renders: `smtc.title`, `smtc.artist`, `volume` (or `volume.master`).
+  `volume.app` is valid in a remote file but has no value in the state frame yet.
+- A `pad` item is valid in a remote file and in the push; the web client ignores types it does not know.
 
 ### Client conventions
 

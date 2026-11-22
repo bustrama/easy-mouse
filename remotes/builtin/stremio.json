@@ -1,0 +1,27 @@
+{
+  "$schema": "../remote.schema.json",
+  "schema": 1,
+  "id": "stremio",
+  "name": "Stremio",
+  "description": "Keys from Stremio's own shortcut table (stremio-web src/common/Shortcuts/shortcuts.json): Space play/pause, Left/Right seek 10 s, Up/Down volume, M mute, F fullscreen, C subtitles on/off, S subtitles menu, A audio menu, Shift+N next episode, Escape exit. Seek and volume steps are Stremio settings. UNVERIFIED: whether Stremio publishes SMTC, so the title label may stay empty.",
+  "target": { "process": "stremio*.exe" },
+  "layout": {
+    "cols": 4,
+    "items": [
+      { "type": "button", "icon": "rewind", "label": "-10 s", "action": [{ "do": "focus" }, { "do": "key", "keys": "Left" }] },
+      { "type": "button", "icon": "play", "label": "Play / Pause", "action": [{ "do": "focus" }, { "do": "key", "keys": "Space" }] },
+      { "type": "button", "icon": "forward", "label": "+10 s", "action": [{ "do": "focus" }, { "do": "key", "keys": "Right" }] },
+      { "type": "button", "icon": "fullscreen", "label": "Fullscreen", "action": [{ "do": "focus" }, { "do": "key", "keys": "F" }] },
+      { "type": "button", "icon": "subtitles", "label": "Subtitles", "action": [{ "do": "focus" }, { "do": "key", "keys": "C" }] },
+      { "type": "button", "label": "Subtitle menu", "action": [{ "do": "focus" }, { "do": "key", "keys": "S" }] },
+      { "type": "button", "label": "Audio menu", "action": [{ "do": "focus" }, { "do": "key", "keys": "A" }] },
+      { "type": "button", "icon": "next", "label": "Next episode", "action": [{ "do": "focus" }, { "do": "key", "keys": "Shift+N" }] },
+      { "type": "button", "icon": "minus", "label": "Volume -", "action": [{ "do": "focus" }, { "do": "key", "keys": "Down" }] },
+      { "type": "button", "icon": "mute", "label": "Mute", "action": [{ "do": "focus" }, { "do": "key", "keys": "M" }] },
+      { "type": "button", "icon": "plus", "label": "Volume +", "action": [{ "do": "focus" }, { "do": "key", "keys": "Up" }] },
+      { "type": "button", "icon": "back", "label": "Exit", "action": [{ "do": "focus" }, { "do": "key", "keys": "Escape" }] },
+      { "type": "label", "bind": "smtc.title" },
+      { "type": "slider", "label": "PC volume", "bind": "volume", "action": { "do": "volume", "scope": "master" } }
+    ]
+  }
+}

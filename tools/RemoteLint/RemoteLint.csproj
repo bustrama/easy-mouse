@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>EasyMouse.RemoteLint</RootNamespace>
+    <AssemblyName>RemoteLint</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Remotes\EasyMouse.Remotes.csproj" />
+  </ItemGroup>
+</Project>

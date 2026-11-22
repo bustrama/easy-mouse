@@ -54,6 +54,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
   - Sensitive: `text` macros, `openUrl` (http/https only).
   - Dangerous: `launch`, `http`. They prompt on the PC per remote, pinned to the file hash, so any edit prompts again.
   - There is no `shell` action.
+  - Implementation (`src/Remotes`): a remote with any Sensitive or Dangerous action is "needs review" and none of its actions run until the user approves it; the approval is pinned to the SHA-256 of the exact file bytes and the executor re-checks the hash on every invocation. Safe-only remotes run without a prompt. `http` hosts other than loopback and each `launch` program are recorded in the approval; the phone only names an item.
 - `launch` runs only executables the user picked on the PC, with fixed arguments shown in the prompt. `http` allows loopback plus approved hosts, no redirects, with a timeout; secrets stay on the PC and are referenced as `${secret.name}`.
 - Remote labels are rendered as text nodes and icons come from a built-in set, so a remote cannot inject script or load external URLs.
 

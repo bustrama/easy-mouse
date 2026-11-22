@@ -1,0 +1,23 @@
+{
+  "$schema": "../remote.schema.json",
+  "schema": 1,
+  "id": "browser-video",
+  "name": "Browser video",
+  "description": "Play, previous and next use SMTC, which browsers register. The other buttons send YouTube's documented player shortcuts (support.google.com/youtube/answer/7631406): J/L back and forward 10 s, F fullscreen, M mute, C captions. Other sites use different keys and the player must have focus, so click the video once on the PC.",
+  "layout": {
+    "cols": 3,
+    "items": [
+      { "type": "button", "icon": "prev", "label": "Previous", "action": { "do": "smtc", "cmd": "prev" } },
+      { "type": "button", "icon": "play", "label": "Play / Pause", "action": { "do": "smtc", "cmd": "toggle" } },
+      { "type": "button", "icon": "next", "label": "Next", "action": { "do": "smtc", "cmd": "next" } },
+      { "type": "button", "icon": "rewind", "label": "-10 s", "action": { "do": "key", "keys": "J" } },
+      { "type": "button", "icon": "fullscreen", "label": "Fullscreen", "action": { "do": "key", "keys": "F" } },
+      { "type": "button", "icon": "forward", "label": "+10 s", "action": { "do": "key", "keys": "L" } },
+      { "type": "button", "icon": "subtitles", "label": "Captions", "action": { "do": "key", "keys": "C" } },
+      { "type": "button", "icon": "mute", "label": "Mute", "action": { "do": "key", "keys": "M" } },
+      { "type": "label", "bind": "smtc.title" },
+      { "type": "label", "bind": "smtc.artist" },
+      { "type": "slider", "label": "PC volume", "bind": "volume", "action": { "do": "volume", "scope": "master" } }
+    ]
+  }
+}

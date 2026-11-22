@@ -9,8 +9,15 @@
   <Folder Name="/src/Platform.Windows/">
     <Project Path="src/Platform.Windows/EasyMouse.Platform.Windows.csproj" />
   </Folder>
+  <Folder Name="/src/Remotes/">
+    <Project Path="src/Remotes/EasyMouse.Remotes.csproj" />
+  </Folder>
+  <Folder Name="/tools/" />
   <Folder Name="/tools/Platform.SmokeTest/">
     <Project Path="tools/Platform.SmokeTest/EasyMouse.Platform.SmokeTest.csproj" />
+  </Folder>
+  <Folder Name="/tools/RemoteLint/">
+    <Project Path="tools/RemoteLint/RemoteLint.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Core.Tests/">
@@ -18,5 +25,8 @@
   </Folder>
   <Folder Name="/tests/Platform.Windows.Tests/">
     <Project Path="tests/Platform.Windows.Tests/EasyMouse.Platform.Windows.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Remotes.Tests/">
+    <Project Path="tests/Remotes.Tests/EasyMouse.Remotes.Tests.csproj" />
   </Folder>
 </Solution>

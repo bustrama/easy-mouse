@@ -199,15 +199,22 @@ end;
 function LockDownAppFolder: Boolean;
 var
   Code: Integer;
+  Dir: String;
 begin
+  Dir := ExpandConstant('{app}');
+  { 1. The folder itself: no inheritance, SYSTEM and Administrators full, Users read and run, all passed on to what is created inside.
+    (Not with /T: an entry meant for folders, put on a file, does not apply to the file and would lock everybody out of it.) }
   Result := Exec(ExpandConstant('{sys}\icacls.exe'),
-    '"' + ExpandConstant('{app}') + '" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" /T /C /Q',
+    '"' + Dir + '" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" /C /Q',
     '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  { 2. Everything already inside: back to "inherit from the folder", which is exactly that list. }
   if Result then
-    Result := Exec(ExpandConstant('{sys}\icacls.exe'), '"' + ExpandConstant('{app}') + '" /setowner "*S-1-5-32-544" /T /C /Q', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+    Result := Exec(ExpandConstant('{sys}\icacls.exe'), '"' + Dir + '\*" /reset /T /C /Q', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  { 3. Owned by Administrators, not by whichever account ran Setup. }
+  if Result then
+    Result := Exec(ExpandConstant('{sys}\icacls.exe'), '"' + Dir + '" /setowner "*S-1-5-32-544" /T /C /Q', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
   if not Result then Log('icacls on the app folder failed with code ' + IntToStr(Code));
 end;
-
 procedure RegisterBrokerService;
 var
   Start: Cardinal;

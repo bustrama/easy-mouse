@@ -38,7 +38,7 @@ public static class UpdateTrust
     public static readonly TimeSpan RetryAfterFailure = TimeSpan.FromHours(1);
 
     /// <summary>Raw Ed25519 public key (32 bytes) of the release signing key.</summary>
-    public static readonly byte[] PublicKey = Convert.FromHexString("1e670cf73bb94d7e6e04db780bb3e93ec613e74ad78391322e7367d1d520234f");
+    public static readonly byte[] PublicKey = Convert.FromHexString("0896dc86a12ac7375bdadb6dfd08e694bb0186485fd37883b917fc41ea6ca890");
 
     public static string InstallerName(SemVer version) => $"EasyMouse-Setup-{version}.exe";
     public const string ChecksumsName = "SHA256SUMS";

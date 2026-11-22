@@ -48,6 +48,25 @@ public class PreReleaseReviewTests
     }
 
     [Fact]
+    public void Invisible_tag_characters_outside_the_basic_plane_are_refused_too()
+    {
+        var tag = char.ConvertFromUtf32(0xE0041); // a "tag" format character: invisible, and two UTF-16 units
+        Assert.False(V(Json.Remote(Json.Button("{\"do\":\"text\",\"text\":\"ab" + tag + "c\"}"))).IsValid);
+        Assert.False(V(Json.Remote(Json.Button("{\"do\":\"key\",\"keys\":\"F\"}", label: "x" + tag))).IsValid);
+        Assert.True(V(Json.Remote(Json.Button("{\"do\":\"text\",\"text\":\"smile " + char.ConvertFromUtf32(0x1F600) + "\"}"))).IsValid); // ordinary astral text is fine
+    }
+
+    [Fact]
+    public void A_failed_revoke_is_reported()
+    {
+        using var dir = new TempDir();
+        dir.Write("t.json", Json.Remote(Json.Button("{\"do\":\"text\",\"text\":\"hi\"}"), id: "t"));
+        var catalog = new RemoteCatalog(null, dir.Path, new FailingStore());
+        Assert.Contains("disk full", catalog.Revoke("t"));
+        Assert.Null(new RemoteCatalog(null, dir.Path, new FailingStore { Fail = false }).Revoke("t"));
+    }
+
+    [Fact]
     public void Every_built_in_remote_still_validates()
     {
         foreach (var file in Directory.EnumerateFiles(Repo.BuiltIn, "*.json"))
@@ -79,7 +98,7 @@ public class PreReleaseReviewTests
         Assert.Equal(ApproveFailure.SaveFailed, result.Failure);
         Assert.Contains("disk full", result.Detail);
         Assert.Equal(RemoteState.NeedsReview, catalog.Entries.Single().State);
-        catalog.Revoke("t"); // must not throw either
+        Assert.NotNull(catalog.Revoke("t")); // reported, never thrown
     }
 
     [Fact]

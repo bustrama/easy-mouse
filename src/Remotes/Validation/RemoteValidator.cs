@@ -348,7 +348,7 @@ public static partial class RemoteValidator
     }
 
     /// <summary>Format characters (bidi overrides such as U+202E, zero-width and invisible marks) can make an approval prompt read differently from what runs, so reviewed fields may not hold them.</summary>
-    internal static bool HasFormatChar(string s) => s.Any(c => char.GetUnicodeCategory(c) == UnicodeCategory.Format);
+    internal static bool HasFormatChar(string s) => s.EnumerateRunes().Any(r => Rune.GetUnicodeCategory(r) == UnicodeCategory.Format); // runes: the invisible tag characters U+E0000.. are outside the BMP
 
     private static void NoFormat(string? s, string path, ErrorList errors)
     {

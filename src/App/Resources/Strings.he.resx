@@ -206,6 +206,7 @@ Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק �
   <data name="Rm_ApproveSlot" xml:space="preserve"><value>בחרו את התוכנה עבור “{0}” לפני האישור.</value></data>
   <data name="Rm_ApproveSaveFail" xml:space="preserve"><value>את האישור אי אפשר היה לשמור, ולכן השלט נשאר כבוי: {0}</value></data>
   <data name="Rm_ImportWriteFail" xml:space="preserve"><value>אי אפשר לשמור את השלט בתיקיית השלטים שלכם: {0}</value></data>
+  <data name="Rm_RevokeSaveFail" xml:space="preserve"><value>השלט כבוי כרגע, אבל את השינוי אי אפשר היה לשמור, ולכן הוא עלול לחזור אחרי הפעלה מחדש: {0}</value></data>
   <data name="Rm_Dangerous" xml:space="preserve"><value>יכול להפעיל תוכנות או לפנות למכשירים אחרים</value></data>
   <data name="Rm_Sensitive" xml:space="preserve"><value>רגיש</value></data>
   <data name="Rm_Slot" xml:space="preserve"><value>תוכנה עבור “{0}”</value></data>

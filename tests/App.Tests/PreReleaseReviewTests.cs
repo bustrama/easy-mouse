@@ -108,6 +108,8 @@ public class ReviewTextTests : IDisposable
         Assert.Equal("x⏎y⏎z⇥", ReviewText.Clean("x\r\ny\nz\t"));
         Assert.Equal("שלום ok", ReviewText.Clean("שלום ok"));
         Assert.Equal("⟨U+2028⟩", ReviewText.Clean(LineSep.ToString()));
+        Assert.Equal("a⟨U+E0041⟩b", ReviewText.Clean("a" + char.ConvertFromUtf32(0xE0041) + "b"));
+        Assert.Equal("😀", ReviewText.Clean(char.ConvertFromUtf32(0x1F600)));
     }
 
     [Fact]

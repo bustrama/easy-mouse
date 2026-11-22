@@ -147,7 +147,7 @@ public sealed class UpdateService
             Fail(ex, manual);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             // Not the network's fault (settings file not writable, a string that is not valid Unicode, ...): record it and carry on.
             // An unobserved exception here would take the process down (async void commands) or silently stop the scheduler.
@@ -166,7 +166,7 @@ public sealed class UpdateService
             while (!ct.IsCancellationRequested)
             {
                 try { if (IsDue()) await CheckAsync(manual: false, ct).ConfigureAwait(false); }
-                catch (Exception ex) when (ex is not OperationCanceledException) { AppLog.Error("scheduled update check failed", ex); } // the loop itself must survive
+                catch (Exception ex) when (!ct.IsCancellationRequested) { AppLog.Error("scheduled update check failed", ex); } // the loop itself must survive
                 await Task.Delay(TimeSpan.FromMinutes(15), ct).ConfigureAwait(false);
             }
         }
@@ -261,6 +261,11 @@ public sealed class UpdateService
             Fail(new UpdateException(UpdateErrorKind.InstallerFailed, "Could not prepare the installer: " + ex.Message, ex), manual: true);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            AppLog.Error("installing the update failed", ex);
+            Fail(new UpdateException(UpdateErrorKind.InstallerFailed, "Unexpected failure while installing: " + ex.Message, ex), manual: true);
+        }
         finally
         {
             held?.Dispose();

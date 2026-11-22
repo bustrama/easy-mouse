@@ -83,21 +83,20 @@ public static partial class ReviewText
     public static string Clean(string text)
     {
         var sb = new StringBuilder(text.Length);
-        for (var i = 0; i < text.Length; i++)
+        var prevCr = false;
+        foreach (var rune in text.EnumerateRunes()) // runes, not chars: format characters also exist outside the BMP (U+E0000 tags)
         {
-            var c = text[i];
-            if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n') { sb.Append('⏎'); i++; continue; }
-            switch (c)
-            {
-                case '\n' or '\r': sb.Append('⏎'); continue;
-                case '\t': sb.Append('⇥'); continue;
-            }
-            if (char.IsSurrogate(c)) { sb.Append(c); continue; }
-            var cat = char.GetUnicodeCategory(c);
+            var value = rune.Value;
+            if (prevCr && value == '\n') { prevCr = false; continue; } // CR LF is one line break
+            prevCr = value == '\r';
+            if (value is '\n' or '\r') { sb.Append('⏎'); continue; }
+            if (value == '\t') { sb.Append('⇥'); continue; }
+            var cat = Rune.GetUnicodeCategory(rune);
             if (cat is UnicodeCategory.Format or UnicodeCategory.Control or UnicodeCategory.LineSeparator
-                or UnicodeCategory.ParagraphSeparator or UnicodeCategory.PrivateUse or UnicodeCategory.OtherNotAssigned)
-                sb.Append("⟨U+").Append(((int)c).ToString("X4", CultureInfo.InvariantCulture)).Append('⟩');
-            else sb.Append(c);
+                or UnicodeCategory.ParagraphSeparator or UnicodeCategory.PrivateUse
+                or UnicodeCategory.Surrogate)
+                sb.Append("⟨U+").Append(value.ToString("X4", CultureInfo.InvariantCulture)).Append('⟩');
+            else sb.Append(rune.ToString());
         }
         return sb.ToString();
     }

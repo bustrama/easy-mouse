@@ -237,7 +237,11 @@ public sealed class RemotesViewModel : ViewModelBase, IDisposable
         Rebuild();
     }
 
-    internal void Revoke(RemoteRowViewModel row) => _app.Remotes.Revoke(row.Id); // Changed rebuilds the list
+    internal void Revoke(RemoteRowViewModel row)
+    {
+        var error = _app.Remotes.Revoke(row.Id); // Changed rebuilds the list
+        if (error is not null) SetNotice(Loc.Format("Rm_RevokeSaveFail", error), true);
+    }
 
     private void Import()
     {

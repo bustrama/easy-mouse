@@ -299,7 +299,9 @@ public sealed class AppController : IAsyncDisposable
     /// <summary>
     /// Pairing is accepted only while the QR is actually shown: the window is visible, no emergency stop is active, and
     /// either no phone is connected or the user asked for the QR. Hiding it closes the pairing window, which discards the
-    /// one-time secret (and denies a pending request); showing it again creates a new secret.
+    /// one-time secret (and denies a pending request); showing it again creates a new secret. The one exception: a request that is
+    /// already waiting for the user keeps the window open when only the "a phone is connected" condition turns false, and the window
+    /// closes when that request is answered (see CloseIfPendingEnded).
     /// </summary>
     private void SyncPairingLocked()
     {

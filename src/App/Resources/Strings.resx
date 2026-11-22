@@ -206,6 +206,7 @@ The installer is downloaded from GitHub and verified (signature and checksum) be
   <data name="Rm_ApproveSlot" xml:space="preserve"><value>Choose the program for “{0}” before approving.</value></data>
   <data name="Rm_ApproveSaveFail" xml:space="preserve"><value>The approval could not be saved, so the remote stays off: {0}</value></data>
   <data name="Rm_ImportWriteFail" xml:space="preserve"><value>The remote could not be saved to your remotes folder: {0}</value></data>
+  <data name="Rm_RevokeSaveFail" xml:space="preserve"><value>The remote is off for now, but the change could not be saved, so it may come back after a restart: {0}</value></data>
   <data name="Rm_Dangerous" xml:space="preserve"><value>Can start programs or contact other devices</value></data>
   <data name="Rm_Sensitive" xml:space="preserve"><value>Sensitive</value></data>
   <data name="Rm_Slot" xml:space="preserve"><value>Program for “{0}”</value></data>

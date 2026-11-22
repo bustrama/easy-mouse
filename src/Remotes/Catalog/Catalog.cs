@@ -57,7 +57,8 @@ public interface IRemoteCatalog
     /// <summary>English error text of <see cref="TryApprove"/>, or null on success.</summary>
     string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null)
         => TryApprove(remoteId, reviewedHash, launchTargets).Message;
-    void Revoke(string remoteId);
+    /// <summary>Withdraws the approval. Returns an error text when the change could not be saved (it then applies to this session only), else null.</summary>
+    string? Revoke(string remoteId);
 }
 
 public sealed class RemoteCatalog : IRemoteCatalog
@@ -149,12 +150,15 @@ public sealed class RemoteCatalog : IRemoteCatalog
         return new(ApproveFailure.None);
     }
 
-    public void Revoke(string remoteId)
+    public string? Revoke(string remoteId)
     {
-        // If the file cannot be written the approval is still gone for this session (fail closed).
+        // If the file cannot be written the approval is still gone for this session (fail closed), but a restart would bring it
+        // back, so the caller must tell the user.
+        string? error = null;
         try { _approvals.Revoke(remoteId); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { error = ex.Message; }
         Reload();
+        return error;
     }
 
     private RemoteEntry Load(string file, RemoteSource source)

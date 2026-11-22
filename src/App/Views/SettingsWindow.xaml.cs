@@ -18,7 +18,8 @@ public partial class SettingsWindow : AppWindow
         InitializeComponent();
         _app = app;
         _vm = new SettingsViewModel(app, row => MessageBox.Show(this, Loc.Format("Dev_ConfirmRemove", row.Name), Loc.Instance["App_Name"],
-            MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK);
+            MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK,
+            text => MessageBox.Show(this, text, Loc.Instance["App_Name"], MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK);
         DataContext = _vm;
         app.StateChanged += (_, _) => { if (IsVisible) _vm.Refresh(); };
     }

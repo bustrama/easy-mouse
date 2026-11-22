@@ -27,6 +27,7 @@ local network only. No cloud, no relay, no accounts, no telemetry.
 | Extensibility | Declarative JSON remotes only. No plugin SDK, no registry, no trust tiers in v1 |
 | Media | Windows SMTC as generic layer, media virtual keys as fallback |
 | Installer | Inno Setup, per-machine, installed as administrator; adds the firewall rule |
+| Updates | Opt-in check against GitHub Releases, verified (Ed25519 + SHA-256) and confirmed by the user; see "Updates" below |
 | Autostart | Setting (and installer checkbox). Starts minimised to tray |
 | Elevated windows and UAC | **Not in 0.1.** Planned for phase 2: a separate small SYSTEM broker service behind a setting with a clear warning. Settings shows the option disabled ("Not available in this version") |
 | Controllers | One controlling device at a time |
@@ -163,8 +164,35 @@ docs/             architecture.md, security.md, protocol.md, remotes.md
 3. **Phase 3:** phone-side remote editor, import/export, signing, winget, landing page polish.
 4. **Phase 4, on demand:** provider processes for deep integrations, opt-in secure mode.
 
-Out of scope: plugin SDK, registry, trust tiers, auto-update, screen mirroring,
+Out of scope: plugin SDK, registry, trust tiers, silent or automatic installation of updates, screen mirroring,
 file transfer, gamepad, non-Windows hosts, anything over the internet.
+
+## Updates
+
+The only outbound internet use. Code in `src/App/Updates`, logic separate from the windows so it is unit-tested with a fake HTTP handler.
+
+```
+Settings > Updates (check on, once a day)          tray: "Update available"
+        |
+  UpdateService.CheckAsync  --GET api.github.com/repos/bustrama/easy-mouse/releases/latest (or /releases with "include pre-releases")
+        |   ReleaseParser: drafts and pre-releases skipped, tag must be vX.Y.Z, asset URLs must be the exact
+        |   github.com/bustrama/easy-mouse/releases/download/<tag>/<name> addresses; newer than the running version only
+        v
+  "Update available" (shown, never installed by itself)
+        |  user clicks Update and confirms
+        v
+  InstallAsync: download SHA256SUMS, SHA256SUMS.sig, EasyMouse-Setup-X.Y.Z.exe to a temp folder (size limits, timeouts)
+        -> Ed25519 signature of SHA256SUMS against the key embedded in the app        (fail closed)
+        -> SHA-256 of the installer against the signed list                           (fail closed)
+        -> installer version must equal the release version, and be newer than ours  (no downgrade)
+        -> installer started like a double-click (it asks Windows for elevation itself, the UAC prompt): /SILENT /RELAUNCH=1
+        -> after the prompt is accepted the installer asks the running app to exit (EasyMouse.exe --quit), replaces the files, adds the firewall rule and starts the new version with normal user rights (declining the prompt leaves the running app untouched)
+```
+
+- `GitHubHttp` is the only class that opens a connection: HTTPS and the default port only, no credentials or cookies, hosts on an allow-list (`api.github.com` for the API; `github.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` for assets), redirects followed by hand and checked on every hop, response size caps, timeouts.
+- Default: checking is **on**, at most once a day (24 h after the last successful check; an offline or failed automatic check retries after one hour without any message). The last release answer is cached in `%APPDATA%asyMousePdate-cache.json` and re-validated on load.
+- GitHub rate limits (`403`/`429` with `X-RateLimit-*` or `Retry-After`) pause all requests until the reset time; the Settings page says so.
+- The installer is `installer/EasyMouse.iss` (see `docs/releasing.md`). `EasyMouse.exe --quit` asks a running copy to exit, which the installer uses before replacing files.
 
 ## Later: secure mode (PWA)
 

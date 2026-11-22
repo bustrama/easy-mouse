@@ -15,10 +15,17 @@ public partial class App : Application
     private SettingsWindow? _settings;
     private RemotesWindow? _remotes;
     private ApproveWindow? _approve;
+    private string? _toastedUpdate;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase))
+        {
+            SingleInstance.RequestQuit("EasyMouse.App"); // used by the installer before it replaces files
+            Shutdown();
+            return;
+        }
         _instance = SingleInstance.TryAcquire("EasyMouse.App");
         if (_instance is null)
         {
@@ -45,6 +52,7 @@ public partial class App : Application
         _tray.ResumeClicked += () => _ = _controller.ResumeAsync();
         _tray.RemotesClicked += () => _remotes?.ShowAndActivate();
         _tray.QuitClicked += Quit;
+        _tray.UpdateClicked += () => ShowSettings(SettingsPage.Updates);
         Loc.Instance.LanguageChanged += (_, _) => RefreshTray();
 
         _qr = new QrWindow(_controller, () => ShowSettings(SettingsPage.Network));
@@ -55,6 +63,7 @@ public partial class App : Application
         _controller.DeviceConnected += name => _tray.Toast(Loc.Format("Toast_Connected", name), Loc.Instance["Toast_ConnectedBody"]);
         _controller.EmergencyStopRan += (_, _) => _tray.Toast(Loc.Instance["Toast_Emergency"], Loc.Instance["Toast_EmergencyBody"]);
         _instance.ListenForShow(() => Dispatcher.BeginInvoke(ShowQr));
+        _instance.ListenForQuit(() => Dispatcher.BeginInvoke(Quit));
 
         RefreshTray();
         await _controller.StartAsync();
@@ -77,6 +86,13 @@ public partial class App : Application
             Loc.Instance["Tray_DisconnectAll"], Loc.Instance["Tray_Resume"], Loc.Instance["Tray_Quit"], Loc.Instance.FlowDirection == FlowDirection.RightToLeft);
         _tray.SetRemotesText(Loc.Instance["Tray_Remotes"]);
         _tray.SetResumeVisible(_controller.EmergencyStopped);
+        var available = _controller.Updates.Available;
+        _tray.SetUpdate(available is null ? null : Loc.Format("Tray_Update", available.Version));
+        if (available is not null && _toastedUpdate != available.Version.ToString())
+        {
+            _toastedUpdate = available.Version.ToString();
+            _tray.Toast(Loc.Instance["Toast_Update"], Loc.Format("Toast_UpdateBody", available.Version));
+        }
         var (state, tip) = _controller.ConnectedCount > 0 ? (TrayState.Connected, Loc.Instance["Tray_TipConnected"])
             : !_controller.IsListening ? (TrayState.Stopped, Loc.Instance["Tray_TipStopped"])
             : (TrayState.Idle, Loc.Instance["Tray_Tip"]);

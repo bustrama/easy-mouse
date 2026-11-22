@@ -67,6 +67,7 @@ public sealed class ListenerController : IAsyncDisposable
                 AllowedHosts = plan.AllowedHosts,
                 PeerPrefixLength = plan.PrefixLength,
                 PcName = _pcName,
+                Version = Updates.AppVersion.Current.ToString(),
             }, _core);
             server.RequestReceived += OnRequest;
             await server.StartAsync().ConfigureAwait(false);

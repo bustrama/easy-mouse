@@ -6,7 +6,7 @@ using EasyMouse.App.Logic;
 
 namespace EasyMouse.App.ViewModels;
 
-public enum SettingsPage { General, Network, Security, Devices, About }
+public enum SettingsPage { General, Network, Security, Devices, Updates, About }
 
 public sealed record NavItem(SettingsPage Page, string Label, bool Selected);
 
@@ -72,9 +72,10 @@ public sealed class SettingsViewModel : ViewModelBase
     private bool _capturing;
     private string _signature = "";
 
-    public SettingsViewModel(AppController app, Func<DeviceRowViewModel, bool>? confirmRemove = null)
+    public SettingsViewModel(AppController app, Func<DeviceRowViewModel, bool>? confirmRemove = null, Func<string, bool>? confirmUpdate = null)
     {
         _app = app;
+        Updates = new UpdatesViewModel(app, confirmUpdate ?? (_ => true));
         _confirmRemove = confirmRemove ?? (_ => true);
         _portText = app.Settings.Port.ToString();
         _hotkeyText = app.Settings.Hotkey;
@@ -93,6 +94,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public ICommand DisconnectAllCommand { get; }
     public ICommand RemoveCommand { get; }
     public ICommand SelectPageCommand { get; }
+    public UpdatesViewModel Updates { get; }
 
     public IReadOnlyList<LanguageChoice> Languages { get; private set; } = [];
     public IReadOnlyList<NavItem> Nav { get; private set; } = [];
@@ -105,7 +107,7 @@ public sealed class SettingsViewModel : ViewModelBase
         set
         {
             if (!Set(ref _page, value)) return;
-            Raise(nameof(IsGeneral)); Raise(nameof(IsNetwork)); Raise(nameof(IsSecurity)); Raise(nameof(IsDevices)); Raise(nameof(IsAbout));
+            Raise(nameof(IsGeneral)); Raise(nameof(IsNetwork)); Raise(nameof(IsSecurity)); Raise(nameof(IsDevices)); Raise(nameof(IsUpdates)); Raise(nameof(IsAbout));
             Refresh(force: true);
         }
     }
@@ -114,6 +116,7 @@ public sealed class SettingsViewModel : ViewModelBase
     public bool IsNetwork => _page == SettingsPage.Network;
     public bool IsSecurity => _page == SettingsPage.Security;
     public bool IsDevices => _page == SettingsPage.Devices;
+    public bool IsUpdates => _page == SettingsPage.Updates;
     public bool IsAbout => _page == SettingsPage.About;
 
     // ---- General
@@ -188,7 +191,7 @@ public sealed class SettingsViewModel : ViewModelBase
     /// <summary>Re-read everything that depends on app state or language.</summary>
     public void Refresh(bool force = false)
     {
-        Nav = [.. new[] { SettingsPage.General, SettingsPage.Network, SettingsPage.Security, SettingsPage.Devices, SettingsPage.About }
+        Nav = [.. new[] { SettingsPage.General, SettingsPage.Network, SettingsPage.Security, SettingsPage.Devices, SettingsPage.Updates, SettingsPage.About }
             .Select(p => new NavItem(p, Loc.Instance["Nav_" + p], p == _page))];
         Raise(nameof(Nav));
         Raise(nameof(WindowTitle));
@@ -198,6 +201,7 @@ public sealed class SettingsViewModel : ViewModelBase
         Raise(nameof(StatusIsProblem));
         Raise(nameof(VersionLine));
         Raise(nameof(HotkeyText));
+        Updates.Refresh();
 
         var rows = _app.Core.Devices.List()
             .OrderBy(d => d.CreatedUtc)

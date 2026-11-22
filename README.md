@@ -1,7 +1,8 @@
 # Easy Mouse
 
 Turn your phone's browser into a mouse, keyboard and media remote for your Windows PC.
-Nothing to install on the phone, and nothing leaves your local network.
+Nothing to install on the phone, and nothing leaves your local network (apart from an optional
+once-a-day update check, see [Privacy](#privacy)).
 
 > **Early release (0.1).** It works, but it is young. Please read [Limitations](#limitations).
 
@@ -55,7 +56,7 @@ If the phone cannot connect, the QR window shows the address it is listening on
 Releases are not code-signed yet. Before running a file:
 
 - Download it only from this repository's Releases page.
-- Compare its SHA-256 with the value published on the release page (if the release lists one):
+- Compare its SHA-256 with `SHA256SUMS` on the release page, which is signed (`SHA256SUMS.sig`, Ed25519, see [docs/releasing.md](docs/releasing.md#verifying-a-release-you-or-a-user-who-wants-to)):
 
   ```powershell
   Get-FileHash .\<downloaded file> -Algorithm SHA256
@@ -87,11 +88,22 @@ No cloud, no accounts, no telemetry, no analytics. Easy Mouse listens only on yo
 network and talks only to phones you approved. The phone web app is served by the PC itself;
 nothing is loaded from a CDN. Paired devices and settings are stored on your PC.
 
+### Updates
+
+Easy Mouse can check for updates, and this is the **only** thing it does over the internet. Once a day
+(and when you click **Check now**) it asks `api.github.com` whether a newer release exists. The request
+is a plain GET with the generic user agent `EasyMouse-Updater`; it carries no account, device or version
+information. If there is a newer version, the tray and Settings say "Update available". Nothing is
+downloaded or installed without you clicking **Update** and confirming. The download comes from
+`github.com`, its signature (Ed25519) and SHA-256 are verified before the installer runs, a version that
+is not newer is refused, and Windows asks for your permission. Switch it off in Settings, Updates.
+Details and the threat model: [docs/security.md](docs/security.md#updates).
 ## Docs
 
 - [Architecture](docs/architecture.md)
 - [Security and threat model](docs/security.md)
 - [Wire protocol](docs/protocol.md)
+- [Releasing](docs/releasing.md) (how a release is cut and signed)
 - [Contributing](CONTRIBUTING.md)
 - [Design source](design/)
 

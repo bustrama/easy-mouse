@@ -135,6 +135,41 @@
 
 Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק מהצמדה כל טלפון בלי שתדעו. העבירו או מחקו את הקובץ כדי להתחיל מחדש.</value></data>
   <data name="Err_HotkeyTitle" xml:space="preserve"><value>מקש החירום אינו פעיל</value></data>
+  <data name="Nav_Updates" xml:space="preserve"><value>עדכונים</value></data>
+  <data name="Upd_Group" xml:space="preserve"><value>עדכונים</value></data>
+  <data name="Upd_Check" xml:space="preserve"><value>בדיקת עדכונים</value></data>
+  <data name="Upd_CheckDesc" xml:space="preserve"><value>פעם ביום Easy Mouse שואל את GitHub אם יצאה גרסה חדשה. שום דבר לא יורד ולא מותקן בלי האישור שלכם.</value></data>
+  <data name="Upd_Pre" xml:space="preserve"><value>כולל גרסאות ניסיוניות</value></data>
+  <data name="Upd_PreDesc" xml:space="preserve"><value>מציע גם גרסאות בדיקה מוקדמות. הן עלולות להיות פחות יציבות.</value></data>
+  <data name="Upd_Current" xml:space="preserve"><value>הגרסה הנוכחית</value></data>
+  <data name="Upd_LastChecked" xml:space="preserve"><value>נבדק לאחרונה</value></data>
+  <data name="Upd_Never" xml:space="preserve"><value>אף פעם</value></data>
+  <data name="Upd_CheckNow" xml:space="preserve"><value>בדיקה עכשיו</value></data>
+  <data name="Upd_Checking" xml:space="preserve"><value>בודק…</value></data>
+  <data name="Upd_UpToDate" xml:space="preserve"><value>הגרסה שלכם עדכנית.</value></data>
+  <data name="Upd_Available" xml:space="preserve"><value>יש עדכון: גרסה {0}</value></data>
+  <data name="Upd_Install" xml:space="preserve"><value>עדכון לגרסה {0}</value></data>
+  <data name="Upd_Downloading" xml:space="preserve"><value>מוריד… {0}%</value></data>
+  <data name="Upd_Verifying" xml:space="preserve"><value>מאמת את ההורדה…</value></data>
+  <data name="Upd_Launching" xml:space="preserve"><value>ההתקנה רצה. Easy Mouse יופעל מחדש בסיומה.</value></data>
+  <data name="Upd_Notes" xml:space="preserve"><value>מה חדש בגרסה {0}</value></data>
+  <data name="Upd_Confirm" xml:space="preserve"><value>להוריד ולהתקין את Easy Mouse {0}?
+
+ההתקנה יורדת מ-GitHub ועוברת אימות (חתימה וסכום ביקורת) לפני שהיא רצה. Windows תבקש את אישורכם, ו-Easy Mouse יופעל מחדש בסיום.</value></data>
+  <data name="Upd_Disclosure" xml:space="preserve"><value>בדיקת עדכונים היא הדבר היחיד ש-Easy Mouse עושה דרך האינטרנט: בקשה אל api.github.com ורק כשתבחרו לעדכן, הורדה מ-github.com. הבקשות לא כוללות פרטי חשבון, מכשיר או גרסה.</value></data>
+  <data name="Upd_Err_Offline" xml:space="preserve"><value>לא ניתן להגיע אל GitHub. בדקו את החיבור לאינטרנט ונסו שוב.</value></data>
+  <data name="Upd_Err_RateLimited" xml:space="preserve"><value>GitHub ביקש להמתין. נסו שוב אחרי {0}.</value></data>
+  <data name="Upd_Err_Http" xml:space="preserve"><value>GitHub החזיר תשובה לא צפויה. נסו שוב מאוחר יותר.</value></data>
+  <data name="Upd_Err_Malformed" xml:space="preserve"><value>פרטי הגרסה לא הובנו. שום דבר לא שונה.</value></data>
+  <data name="Upd_Err_Untrusted" xml:space="preserve"><value>העדכון נדחה כי הוא הפנה למקום שאינו מהימן. שום דבר לא שונה.</value></data>
+  <data name="Upd_Err_TooLarge" xml:space="preserve"><value>העדכון נדחה כי הוא גדול מהצפוי. שום דבר לא שונה.</value></data>
+  <data name="Upd_Err_Signature" xml:space="preserve"><value>החתימה של העדכון אינה תקינה, ולכן הוא לא הותקן.</value></data>
+  <data name="Upd_Err_Hash" xml:space="preserve"><value>קובץ ההתקנה שהורד אינו תואם לסכום הביקורת החתום, ולכן הוא לא הותקן.</value></data>
+  <data name="Upd_Err_Downgrade" xml:space="preserve"><value>העדכון נדחה כי הוא אינו חדש יותר מהגרסה הנוכחית.</value></data>
+  <data name="Upd_Err_Installer" xml:space="preserve"><value>לא ניתן היה להפעיל את ההתקנה. שום דבר לא שונה.</value></data>
+  <data name="Tray_Update" xml:space="preserve"><value>יש עדכון ({0})</value></data>
+  <data name="Toast_Update" xml:space="preserve"><value>יש עדכון</value></data>
+  <data name="Toast_UpdateBody" xml:space="preserve"><value>Easy Mouse {0} מוכן. פתחו הגדרות, עדכונים, כדי להתקין.</value></data>
   <data name="Tray_Remotes" xml:space="preserve"><value>שלטים…</value></data>
   <data name="Rm_Title" xml:space="preserve"><value>שלטים</value></data>
   <data name="Rm_Intro" xml:space="preserve"><value>שלטים הם פריסות כפתורים לטלפון. שלט שרק לוחץ על מקשים או שולט במדיה פועל כמו שהוא. שלט שמקליד טקסט, פותח אתרים, מפעיל תוכנות או פונה למכשירים אחרים נשאר כבוי עד שתאשרו בדיוק מה הוא עושה.</value></data>

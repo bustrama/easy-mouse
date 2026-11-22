@@ -126,3 +126,18 @@ describe('wiring: press, hold and release safety through the DOM', () => {
     expect(calls).toEqual(['btn0:down', 'btn0:up']);
   });
 });
+
+describe('shapes: rounded squares, no circles or pills', () => {
+  it('only tiny status dots may be round', () => {
+    const offenders = css
+      .split('\n')
+      .filter((l) => /border-radius:\s*(50%|9{3}px)/.test(l))
+      .map((l) => l.split('{')[0]!.trim());
+    expect(offenders.sort()).toEqual(['.dot', '.key.mod.lock::after']);
+  });
+  it('big play button radius is modest', () => {
+    expect(rule('.rbtn.main')).toMatch(/border-radius:\s*20px/);
+    expect(rule('.chip')).toMatch(/border-radius:\s*14px/);
+    expect(rule('.pill')).toMatch(/border-radius:\s*14px/);
+  });
+});

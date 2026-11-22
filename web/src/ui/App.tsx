@@ -1,7 +1,9 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
+import { takeAutoOffer } from '../a2hs.ts';
 import { client, type Tab } from '../client.ts';
 import { useT } from '../i18n/useT.ts';
 import { useStore } from '../store.ts';
+import { AddToHome } from './AddToHome.tsx';
 import { Icon } from './icons.tsx';
 import { Keyboard } from './Keyboard.tsx';
 import { Media } from './Media.tsx';
@@ -26,6 +28,17 @@ function Shell() {
   const t = useT();
   const pc = s.pcName ?? t('pc.default');
   const [settings, setSettings] = useState(false);
+  // 'auto': offered by itself once after the first pairing; 'manual': opened from Settings
+  const [a2hs, setA2hs] = useState<'auto' | 'manual' | null>(null);
+  useEffect(() => {
+    // A short pause so the sheet does not pop up during the connect-and-paint of the first screen.
+    const id = setTimeout(() => {
+      const justPaired = client.store.get().justPaired;
+      if (justPaired) client.store.set({ justPaired: false });
+      if (takeAutoOffer(justPaired)) setA2hs('auto');
+    }, 900);
+    return () => clearTimeout(id);
+  }, []);
   return (
     <div class="shell">
       <header class="top">
@@ -60,7 +73,16 @@ function Shell() {
           </button>
         ))}
       </nav>
-      {settings && <Settings onClose={() => setSettings(false)} />}
+      {settings && (
+        <Settings
+          onClose={() => setSettings(false)}
+          onAddToHome={() => {
+            setSettings(false);
+            setA2hs('manual');
+          }}
+        />
+      )}
+      {a2hs && <AddToHome auto={a2hs === 'auto'} onClose={() => setA2hs(null)} />}
     </div>
   );
 }

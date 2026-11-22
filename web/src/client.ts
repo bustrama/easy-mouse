@@ -42,6 +42,8 @@ export interface AppState {
   langPref: LangPref;
   lang: Lang;
   sensitivity: number;
+  /** the device was paired during this page load (drives the one-time home-screen suggestion) */
+  justPaired: boolean;
 }
 
 const SENS_KEY = 'em.sens';
@@ -98,6 +100,7 @@ class Client {
     langPref: loadLangPref(),
     lang: resolveLang(loadLangPref()),
     sensitivity: loadSensitivity(),
+    justPaired: false,
   });
 
   private session: Session | null = null;
@@ -203,6 +206,7 @@ class Client {
           this.pairActive = false;
           this.creds = creds;
           saveCredentials(creds);
+          this.store.set({ justPaired: true });
         },
         onPhase: (phase) => current() && this.onPhase(phase),
         onState: (v) => {

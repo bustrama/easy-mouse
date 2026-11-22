@@ -1,3 +1,5 @@
+import { a2hsEn, a2hsHe } from './a2hsStrings.ts';
+
 export type Lang = 'en' | 'he';
 export type LangPref = 'auto' | Lang;
 
@@ -77,6 +79,7 @@ const en = {
   'remotes.failed': 'The action did not run.',
   'remotes.nowPlaying': 'Now playing',
   'remotes.locked': 'The PC is locked. Controls are paused.',
+  ...a2hsEn,
 } as const;
 
 export type Key = keyof typeof en;
@@ -157,6 +160,7 @@ const he: Record<Key, string> = {
   'remotes.failed': 'הפעולה לא בוצעה.',
   'remotes.nowPlaying': 'מתנגן כעת',
   'remotes.locked': 'המחשב נעול. הפקדים מושהים.',
+  ...a2hsHe,
 };
 
 export const DICTS: Record<Lang, Record<Key, string>> = { en, he };

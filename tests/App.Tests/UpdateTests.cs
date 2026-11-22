@@ -924,8 +924,9 @@ public sealed class UpdateServiceTests : IDisposable
         await svc.InstallAsync(svc.Available!);
         Assert.True(svc.InstallerRunning);
         _launcher.Exit.SetResult(5); // e.g. the user declined the permission prompt late
-        await Task.Delay(100);
+        for (var i = 0; i < 100 && svc.InstallerRunning; i++) await Task.Delay(50);
         Assert.False(svc.InstallerRunning);
+        for (var i = 0; i < 100 && svc.LastError is null; i++) await Task.Delay(50);
         Assert.Equal(UpdateErrorKind.InstallerFailed, svc.LastError!.Kind);
     }
 

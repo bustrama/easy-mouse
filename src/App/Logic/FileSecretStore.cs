@@ -30,20 +30,30 @@ public sealed class FileSecretStore : ISecretStore
 
     public IReadOnlyList<string> Names { get { lock (_gate) return [.. _values.Keys.Order(StringComparer.Ordinal)]; } }
 
-    public void Set(string name, string value)
+    /// <summary>Why the last write failed (disk full, read-only folder, ...); null after a successful write.</summary>
+    public string? SaveError { get; private set; }
+
+    /// <returns>False when the value could not be saved; it is then not kept in memory either.</returns>
+    public bool Set(string name, string value)
     {
         lock (_gate)
         {
+            var had = _values.TryGetValue(name, out var before);
             _values[name] = value;
-            Persist();
+            if (TryPersist()) return true;
+            if (had) _values[name] = before!; else _values.Remove(name);
+            return false;
         }
     }
 
-    public void Remove(string name)
+    public bool Remove(string name)
     {
         lock (_gate)
         {
-            if (_values.Remove(name)) Persist();
+            if (!_values.Remove(name, out var before)) return true;
+            if (TryPersist()) return true;
+            _values[name] = before;
+            return false;
         }
     }
 
@@ -65,13 +75,23 @@ public sealed class FileSecretStore : ISecretStore
         }
     }
 
-    private void Persist()
+    private bool TryPersist()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var raw = _values.ToDictionary(kv => kv.Key, kv => Convert.ToBase64String(_protector.Protect(Encoding.UTF8.GetBytes(kv.Value))));
-        var tmp = _path + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(tmp, _path, overwrite: true);
-        LoadError = null;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var raw = _values.ToDictionary(kv => kv.Key, kv => Convert.ToBase64String(_protector.Protect(Encoding.UTF8.GetBytes(kv.Value))));
+            var tmp = _path + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(raw, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(tmp, _path, overwrite: true);
+            LoadError = null;
+            SaveError = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SaveError = ex.Message;
+            return false;
+        }
     }
 }

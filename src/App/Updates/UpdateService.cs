@@ -147,6 +147,13 @@ public sealed class UpdateService
             Fail(ex, manual);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Not the network's fault (settings file not writable, a string that is not valid Unicode, ...): record it and carry on.
+            // An unobserved exception here would take the process down (async void commands) or silently stop the scheduler.
+            AppLog.Error("update check failed", ex);
+            Fail(new UpdateException(UpdateErrorKind.Malformed, "Unexpected failure during the update check: " + ex.Message, ex), manual);
+        }
         finally { End(); }
     }
 
@@ -158,7 +165,8 @@ public sealed class UpdateService
             await Task.Delay(TimeSpan.FromSeconds(20), ct).ConfigureAwait(false);
             while (!ct.IsCancellationRequested)
             {
-                if (IsDue()) await CheckAsync(manual: false, ct).ConfigureAwait(false);
+                try { if (IsDue()) await CheckAsync(manual: false, ct).ConfigureAwait(false); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { AppLog.Error("scheduled update check failed", ex); } // the loop itself must survive
                 await Task.Delay(TimeSpan.FromMinutes(15), ct).ConfigureAwait(false);
             }
         }
@@ -190,15 +198,16 @@ public sealed class UpdateService
     // ------------------------------------------------------------------ installing
 
     /// <summary>
-    /// Downloads, verifies and starts the installer for <see cref="Available"/>. Call only after the user confirmed.
+    /// Downloads, verifies and starts the installer for <paramref name="release"/>: the release the user confirmed, not whatever a
+    /// background check found since. Call only after the user confirmed.
     /// Any verification failure leaves nothing running and the error in <see cref="LastError"/>.
     /// </summary>
-    public async Task InstallAsync(CancellationToken ct = default)
+    public async Task InstallAsync(ReleaseInfo release, CancellationToken ct = default)
     {
-        var release = Available;
-        if (release is null || !Begin(UpdatePhase.Downloading)) return;
+        if (!Begin(UpdatePhase.Downloading)) return;
         string? dir = null;
         var launched = false;
+        FileStream? held = null;
         try
         {
             if (!(release.Version > Current))
@@ -225,7 +234,7 @@ public sealed class UpdateService
             var expected = _verifier.SignedHashFor(sums, sig, release.Installer.Name);
 
             // Hold the file open (read-only share) from hashing until the installer process exists, so it cannot be swapped in between.
-            using var held = new FileStream(installerPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            held = new FileStream(installerPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             UpdateVerifier.VerifyHash(held, expected);
             if (_installerVersion(installerPath) != release.Version.ToString())
                 throw new UpdateException(UpdateErrorKind.Downgrade, "The installer's own version does not match the release.");
@@ -236,7 +245,14 @@ public sealed class UpdateService
             Raise();
             var exit = _launcher.Launch(installerPath);
             launched = true;
-            if (exit is not null) _ = exit.ContinueWith(OnInstallerExited, TaskScheduler.Default);
+            if (exit is not null)
+            {
+                // The installer may still sit at its permission prompt (it elevates itself) long after Launch returned: keep the
+                // file locked against replacement until the installer process has ended.
+                var keep = held;
+                held = null;
+                _ = exit.ContinueWith(t => { keep.Dispose(); OnInstallerExited(t); }, TaskScheduler.Default);
+            }
             InstallerRunning = true;
         }
         catch (UpdateException ex) { Fail(ex, manual: true); }
@@ -247,6 +263,7 @@ public sealed class UpdateService
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         finally
         {
+            held?.Dispose();
             if (!launched && dir is not null) TryDelete(dir);
             End();
         }

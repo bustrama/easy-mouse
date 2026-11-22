@@ -46,11 +46,12 @@ public sealed class AppController : IAsyncDisposable
     private readonly IDisposable? _monitor;
     private readonly FileSystemWatcher? _remotesWatcher;
     private readonly SemaphoreSlim _evalGate = new(1, 1);
+    private readonly SemaphoreSlim _settingsGate = new(1, 1); // one settings change at a time: no lost updates, no two writers of the file
     private readonly CancellationTokenSource _cts = new();
     private IReadOnlySet<string> _connected = new HashSet<string>();
     private string _lastSignature = "";
     private readonly object _pairGate = new();
-    private bool _pairingOpen, _qrWindowVisible, _qrRequested;
+    private bool _pairingOpen, _qrWindowVisible, _qrRequested, _closeAfterPending;
 
     /// <summary>Throws <see cref="InvalidDataException"/> if the device file is unreadable (never starts with a silently empty list).</summary>
     public AppController(AppPaths paths, AppEnvironment? env = null)
@@ -60,6 +61,7 @@ public sealed class AppController : IAsyncDisposable
         _settingsStore = new SettingsStore(paths.Settings);
         Settings = _settingsStore.Load();
         Loc.Instance.SetLanguage(Settings.Language);
+        if (_env.SystemIntegration) AppLog.Initialize(Path.Combine(paths.Root, "easymouse.log"));
 
         var store = new FileDeviceStore(paths.Devices, _env.Protector);
         var (input, media) = PlatformFactory.Create(_env.SystemIntegration);
@@ -86,7 +88,7 @@ public sealed class AppController : IAsyncDisposable
         Approvals.Attach(Core.Pairing, Core.Hub);
         Listener.RequestReceived += Help.RequestSeen;
         Listener.Changed += (_, _) => RaiseStateChanged();
-        Core.Pairing.Changed += (_, _) => RaiseStateChanged();
+        Core.Pairing.Changed += (_, _) => { CloseIfPendingEnded(); RaiseStateChanged(); };
         Core.Hub.Changed += OnHubChanged;
         Approvals.CurrentChanged += (_, _) => RaiseStateChanged();
         _monitor = PlatformFactory.StartHostStatusMonitor(Core.Status, _env.SystemIntegration);
@@ -220,6 +222,7 @@ public sealed class AppController : IAsyncDisposable
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
         try
         {
+            // RefreshNetworkAsync handles its own failures: the polling (which notices Private -> Public) must never stop.
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false)) await RefreshNetworkAsync().ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
@@ -227,8 +230,20 @@ public sealed class AppController : IAsyncDisposable
 
     public async Task RefreshNetworkAsync()
     {
-        var snapshot = await Task.Run(_env.Probe).ConfigureAwait(false);
-        await ApplyNetworkAsync(snapshot).ConfigureAwait(false);
+        NetworkSnapshot snapshot;
+        try { snapshot = await Task.Run(_env.Probe).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Windows could not tell us (adapter enumeration failed, ...). Not being able to see the network is not proof it is
+            // Private, so stop listening until a later poll succeeds, and say why.
+            AppLog.Error("network probe failed; not listening until it works again", ex);
+            snapshot = NetworkSnapshot.Empty; // nothing known: nothing is served
+        }
+        try { await ApplyNetworkAsync(snapshot).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            AppLog.Error("applying the network state failed", ex);
+        }
     }
 
     /// <summary>Decide where to listen for this snapshot and make the listener match.</summary>
@@ -288,7 +303,12 @@ public sealed class AppController : IAsyncDisposable
     /// </summary>
     private void SyncPairingLocked()
     {
-        bool want = _qrWindowVisible && !EmergencyStopped && (ConnectedCount == 0 || _qrRequested);
+        // A request waiting for the user's answer keeps the window open: a phone that reconnects meanwhile must not deny it.
+        // The close it postponed happens when the request ends (see the Pairing.Changed handler).
+        bool waiting = _pairingOpen && Core.Pairing.State == PairingState.Pending;
+        bool wanted = _qrWindowVisible && !EmergencyStopped && (ConnectedCount == 0 || _qrRequested);
+        bool want = wanted || (waiting && _qrWindowVisible && !EmergencyStopped);
+        _closeAfterPending = want && !wanted;
         if (want == _pairingOpen) return;
         _pairingOpen = want;
         if (want) { Help.WindowOpened(); Core.Pairing.OpenWindow(); }
@@ -296,6 +316,15 @@ public sealed class AppController : IAsyncDisposable
     }
 
     private void SyncPairing() { lock (_pairGate) SyncPairingLocked(); }
+
+    /// <summary>Closes the pairing window that was kept open for a waiting request, once that request has been answered.</summary>
+    private void CloseIfPendingEnded()
+    {
+        lock (_pairGate)
+        {
+            if (_closeAfterPending && Core.Pairing.State != PairingState.Pending) SyncPairingLocked();
+        }
+    }
 
     /// <summary>Opens pairing directly (tests, and the window logic above).</summary>
     public void OpenPairing()
@@ -373,22 +402,28 @@ public sealed class AppController : IAsyncDisposable
 
     public async Task UpdateSettingsAsync(Func<AppSettings, AppSettings> change)
     {
-        var old = Settings;
-        var next = change(old).Normalize();
-        if (next == old) return;
-        Settings = next;
-
-        if (next.StartWithWindows != old.StartWithWindows && _env.SystemIntegration)
+        AppSettings old, next;
+        await _settingsGate.WaitAsync().ConfigureAwait(false);
+        try
         {
-            try { Autostart.Set(next.StartWithWindows); }
-            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            old = Settings;
+            next = change(old).Normalize();
+            if (next == old) return;
+            Settings = next;
+
+            if (next.StartWithWindows != old.StartWithWindows && _env.SystemIntegration)
             {
-                Settings = next with { StartWithWindows = Autostart.IsEnabled() }; // blocked by policy: show the truth
+                try { Autostart.Set(next.StartWithWindows); }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+                {
+                    Settings = next with { StartWithWindows = Autostart.IsEnabled() }; // blocked by policy: show the truth
+                }
             }
+            if (next.Language != old.Language) Loc.Instance.SetLanguage(next.Language);
+            if (next.IncludePrereleases != old.IncludePrereleases) Updates.Reevaluate();
+            if (!_settingsStore.Save(Settings)) AppLog.Error("settings could not be saved (kept for this session): " + _settingsStore.SaveError);
         }
-        if (next.Language != old.Language) Loc.Instance.SetLanguage(next.Language);
-        if (next.IncludePrereleases != old.IncludePrereleases) Updates.Reevaluate();
-        _settingsStore.Save(Settings);
+        finally { _settingsGate.Release(); }
 
         if (next.Port != old.Port || next.NetworkAdapterId != old.NetworkAdapterId) await ApplyNetworkAsync(Network).ConfigureAwait(false);
         RaiseStateChanged();

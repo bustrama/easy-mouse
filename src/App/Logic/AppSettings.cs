@@ -61,12 +61,27 @@ public sealed class SettingsStore
         }
     }
 
-    public void Save(AppSettings settings)
+    /// <summary>Why the last <see cref="Save"/> failed; null after a successful one.</summary>
+    public string? SaveError { get; private set; }
+
+    /// <summary>Writes the file atomically (own temp file, then replace). Returns false, with <see cref="SaveError"/> set, when the disk refuses; the caller keeps the settings in memory.</summary>
+    public bool Save(AppSettings settings)
     {
-        var dir = Path.GetDirectoryName(Path.GetFullPath(_path));
-        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-        var tmp = _path + ".tmp";
-        File.WriteAllBytes(tmp, JsonSerializer.SerializeToUtf8Bytes(settings.Normalize(), Json));
-        File.Move(tmp, _path, overwrite: true);
+        var tmp = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            var dir = Path.GetDirectoryName(Path.GetFullPath(_path));
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllBytes(tmp, JsonSerializer.SerializeToUtf8Bytes(settings.Normalize(), Json));
+            File.Move(tmp, _path, overwrite: true);
+            SaveError = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SaveError = ex.Message;
+            try { File.Delete(tmp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            return false;
+        }
     }
 }

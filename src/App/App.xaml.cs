@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using EasyMouse.App.Logic;
 using EasyMouse.App.Platform;
@@ -20,6 +21,7 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        InstallLastResortHandlers();
         if (e.Args.Contains("--quit", StringComparer.OrdinalIgnoreCase))
         {
             SingleInstance.RequestQuit("EasyMouse.App"); // used by the installer before it replaces files
@@ -73,6 +75,27 @@ public partial class App : Application
             _tray.Toast(Loc.Instance["Err_HotkeyTitle"], Loc.Instance["Set_HotkeyInUse"]);
 
         if (AutostartCommand.ShouldShowWindowAtLaunch(AutostartCommand.IsAutostart(e.Args), _controller.Settings.StartMinimised)) ShowQr();
+    }
+
+    /// <summary>
+    /// Last resort: whatever slips through (an async-void handler, a background task) is written to the log instead of vanishing,
+    /// and a UI-thread failure is reported and survived, because this is a tray app that should keep serving the phone.
+    /// </summary>
+    private void InstallLastResortHandlers()
+    {
+        AppLog.Initialize(Path.Combine(AppPaths.Default().Root, "easymouse.log"));
+        DispatcherUnhandledException += (_, args) =>
+        {
+            AppLog.Error("unhandled error on the UI thread", args.Exception);
+            args.Handled = true;
+            try { _tray?.Toast(Loc.Instance["App_Name"], Loc.Instance["Err_Unexpected"]); } catch (Exception) { }
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => AppLog.Error("fatal unhandled error", args.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            AppLog.Error("unobserved task error", args.Exception);
+            args.SetObserved();
+        };
     }
 
     private void ShowQr() => _qr?.ShowAndActivate();

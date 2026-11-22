@@ -13,7 +13,11 @@ public static class NetworkProbe
         var adapters = new List<AdapterInfo>();
         foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
         {
-            if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType is NetworkInterfaceType.Loopback) continue;
+            try
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType is NetworkInterfaceType.Loopback) continue;
+            }
+            catch (NetworkInformationException) { continue; } // an adapter that vanishes while it is being read
             IPInterfaceProperties props;
             try { props = nic.GetIPProperties(); }
             catch (NetworkInformationException) { continue; }

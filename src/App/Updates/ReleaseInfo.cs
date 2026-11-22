@@ -99,7 +99,11 @@ public static class ReleaseParser
     }
 
     private static string? Str(JsonElement e, string name)
-        => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+    {
+        if (!e.TryGetProperty(name, out var v) || v.ValueKind != JsonValueKind.String) return null;
+        try { return v.GetString(); }
+        catch (InvalidOperationException) { return null; } // an escape such as \ud800 that is not valid UTF-16: treat the field as absent
+    }
 
     private static bool? Bool(JsonElement e, string name)
         => e.TryGetProperty(name, out var v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False ? v.GetBoolean() : null;

@@ -131,6 +131,7 @@
   <data name="Toast_Public" xml:space="preserve"><value>This network is Public</value></data>
   <data name="Toast_PublicBody" xml:space="preserve"><value>Easy Mouse stopped listening. Open the QR window to fix it.</value></data>
   <data name="Err_StoreTitle" xml:space="preserve"><value>Easy Mouse cannot read its device list</value></data>
+  <data name="Err_Unexpected" xml:space="preserve"><value>Something unexpected went wrong. Details were saved to easymouse.log in the Easy Mouse data folder.</value></data>
   <data name="Err_StoreBody" xml:space="preserve"><value>{0}
 
 Easy Mouse does not start with an empty list, because that would silently unpair every phone. Move or delete that file to start over.</value></data>
@@ -197,6 +198,14 @@ The installer is downloaded from GitHub and verified (signature and checksum) be
   <data name="Rm_Act_HttpOutside" xml:space="preserve"><value>a device or site outside this PC</value></data>
   <data name="Rm_Act_Secrets" xml:space="preserve"><value>Uses your saved secrets: {0}.</value></data>
   <data name="Rm_Act_Other" xml:space="preserve"><value>does something that needs review</value></data>
+  <data name="Rm_Act_KeyChain" xml:space="preserve"><value>presses {0} keys in a row (enough to type a command): {1}</value></data>
+  <data name="Rm_Act_KeyLauncher" xml:space="preserve"><value>presses {0}, which opens the Start menu or Task Manager</value></data>
+  <data name="Rm_Act_Focus" xml:space="preserve"><value>first brings the program “{0}” to the front</value></data>
+  <data name="Rm_ApproveUnknown" xml:space="preserve"><value>This remote is unknown or invalid, so it cannot be approved.</value></data>
+  <data name="Rm_ApproveChanged" xml:space="preserve"><value>The file changed after you reviewed it. Review it again.</value></data>
+  <data name="Rm_ApproveSlot" xml:space="preserve"><value>Choose the program for “{0}” before approving.</value></data>
+  <data name="Rm_ApproveSaveFail" xml:space="preserve"><value>The approval could not be saved, so the remote stays off: {0}</value></data>
+  <data name="Rm_ImportWriteFail" xml:space="preserve"><value>The remote could not be saved to your remotes folder: {0}</value></data>
   <data name="Rm_Dangerous" xml:space="preserve"><value>Can start programs or contact other devices</value></data>
   <data name="Rm_Sensitive" xml:space="preserve"><value>Sensitive</value></data>
   <data name="Rm_Slot" xml:space="preserve"><value>Program for “{0}”</value></data>

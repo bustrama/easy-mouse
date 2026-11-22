@@ -87,9 +87,9 @@ public sealed class UpdatesViewModel : ViewModelBase
 
     private async Task InstallAsync()
     {
-        if (Service.Available is not { } release) return;
+        if (Service.Available is not { } release) return; // the one the user is asked about below is the one installed
         if (!_confirm(Loc.Format("Upd_Confirm", release.Version))) return;
-        await Service.InstallAsync();
+        await Service.InstallAsync(release);
     }
 
     /// <summary>Re-read everything from the service (it changes on background threads; call on the UI thread).</summary>

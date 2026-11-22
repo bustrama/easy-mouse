@@ -208,14 +208,21 @@ public sealed class RemotesViewModel : ViewModelBase, IDisposable
     {
         var targets = row.Slots.Where(s => s.Path is not null).ToDictionary(s => s.Slot, s => s.Path!);
         // The hash from when the row was drawn, not a fresh read: a file edited since then is refused, never approved unseen.
-        var error = _app.Remotes.Approve(row.Id, row.ReviewedHash, targets);
-        if (error is null)
+        var result = _app.Remotes.TryApprove(row.Id, row.ReviewedHash, targets);
+        if (result.Ok)
         {
             _rejected.Remove(row.Id);
             _picks.Remove(row.Id);
             SetNotice(Loc.Format("Rm_ApprovedHash", row.HashShort), false);
         }
-        else SetNotice(error, true);
+        else
+            SetNotice(result.Failure switch
+            {
+                ApproveFailure.Changed => Loc.Instance["Rm_ApproveChanged"],
+                ApproveFailure.SlotNeeded => Loc.Format("Rm_ApproveSlot", result.Detail ?? ""),
+                ApproveFailure.SaveFailed => Loc.Format("Rm_ApproveSaveFail", result.Detail ?? ""),
+                _ => Loc.Instance["Rm_ApproveUnknown"],
+            }, true);
     }
 
     internal void Reject(RemoteRowViewModel row)
@@ -243,6 +250,7 @@ public sealed class RemotesViewModel : ViewModelBase, IDisposable
             case ImportOutcome.AlreadyImported: SetNotice(Loc.Instance["Rm_ImportSame"], false); break;
             case ImportOutcome.Invalid: SetNotice(Loc.Instance["Rm_ImportFailed"], true, result.Messages); break;
             case ImportOutcome.ReadFailed: SetNotice(Loc.Format("Rm_ImportReadFail", result.Messages.FirstOrDefault() ?? ""), true); break;
+            case ImportOutcome.WriteFailed: SetNotice(Loc.Format("Rm_ImportWriteFail", result.Messages.FirstOrDefault() ?? ""), true); break;
             default:
                 SetNotice(result.OtherFile is null
                     ? Loc.Format("Rm_ImportBuiltIn", result.Id!)

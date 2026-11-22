@@ -66,8 +66,15 @@ public sealed class FileRemoteApprovalStore : IRemoteApprovalStore
     {
         lock (_gate)
         {
+            var had = _items.TryGetValue(approval.RemoteId, out var before);
             _items[approval.RemoteId] = approval;
-            Persist();
+            try { Persist(); }
+            catch
+            {
+                // not saved means not approved: never keep an approval in memory that a restart would lose
+                if (had) _items[approval.RemoteId] = before!; else _items.Remove(approval.RemoteId);
+                throw;
+            }
         }
     }
 

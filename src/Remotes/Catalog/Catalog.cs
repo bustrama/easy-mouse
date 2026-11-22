@@ -25,6 +25,22 @@ public sealed record RemoteEntry(
     public string Id => Definition?.Id ?? Path.GetFileNameWithoutExtension(FilePath);
 }
 
+public enum ApproveFailure { None, Unknown, Changed, SlotNeeded, SaveFailed }
+
+/// <param name="Detail">The slot name or the IO error text, depending on the failure.</param>
+public sealed record ApproveResult(ApproveFailure Failure, string? Detail = null)
+{
+    public bool Ok => Failure == ApproveFailure.None;
+    public string? Message => Failure switch
+    {
+        ApproveFailure.None => null,
+        ApproveFailure.Unknown => "unknown or invalid remote",
+        ApproveFailure.Changed => "the file changed after it was reviewed; review it again",
+        ApproveFailure.SlotNeeded => $"program slot \"{Detail}\" needs the full path of a program the user picked",
+        _ => $"could not save the approval ({Detail})",
+    };
+}
+
 public interface IRemoteCatalog
 {
     IReadOnlyList<RemoteEntry> Entries { get; }
@@ -37,7 +53,10 @@ public interface IRemoteCatalog
     /// </summary>
     RemoteEntry? Resolve(string remoteId);
     /// <summary>Approves the remote only if its current file hash is <paramref name="reviewedHash"/>, the hash the user saw in the prompt. Returns an error text, or null on success.</summary>
-    string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null);
+    ApproveResult TryApprove(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null);
+    /// <summary>English error text of <see cref="TryApprove"/>, or null on success.</summary>
+    string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null)
+        => TryApprove(remoteId, reviewedHash, launchTargets).Message;
     void Revoke(string remoteId);
 }
 
@@ -103,27 +122,38 @@ public sealed class RemoteCatalog : IRemoteCatalog
     }
 
     public string? Approve(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null)
+        => TryApprove(remoteId, reviewedHash, launchTargets).Message;
+
+    public ApproveResult TryApprove(string remoteId, string reviewedHash, IReadOnlyDictionary<string, string>? launchTargets = null)
     {
         var entry = Resolve(remoteId);
-        if (entry is null) return "unknown or invalid remote";
-        if (!string.Equals(entry.Hash, reviewedHash, StringComparison.Ordinal))
-            return "the file changed after it was reviewed; review it again";
+        if (entry is null) return new(ApproveFailure.Unknown);
+        if (!string.Equals(entry.Hash, reviewedHash, StringComparison.Ordinal)) return new(ApproveFailure.Changed);
         launchTargets ??= new Dictionary<string, string>();
         foreach (var slot in entry.LaunchSlots)
         {
             if (!launchTargets.TryGetValue(slot, out var path) || !Path.IsPathFullyQualified(path))
-                return $"program slot \"{slot}\" needs the full path of a program the user picked";
+                return new(ApproveFailure.SlotNeeded, slot);
         }
-        _approvals.Save(new RemoteApproval(
-            entry.Id, entry.Hash, _time.GetUtcNow(), entry.ExternalHosts,
-            entry.LaunchSlots.ToDictionary(s => s, s => launchTargets[s])));
+        try
+        {
+            _approvals.Save(new RemoteApproval(
+                entry.Id, entry.Hash, _time.GetUtcNow(), entry.ExternalHosts,
+                entry.LaunchSlots.ToDictionary(s => s, s => launchTargets[s])));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return new(ApproveFailure.SaveFailed, ex.Message);
+        }
         Reload();
-        return null;
+        return new(ApproveFailure.None);
     }
 
     public void Revoke(string remoteId)
     {
-        _approvals.Revoke(remoteId);
+        // If the file cannot be written the approval is still gone for this session (fail closed).
+        try { _approvals.Revoke(remoteId); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         Reload();
     }
 

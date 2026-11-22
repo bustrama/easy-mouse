@@ -79,8 +79,10 @@ identifies the user or the PC: no account, no cookies, no version, no machine na
 
 What the user controls: Settings > Updates has "Check for updates" (default **on**, at most once a day, plus "Check now") and
 "Include pre-releases" (default off). An available update shows in the tray and in Settings. It is downloaded only after the
-user clicks Update and confirms, and Windows then shows its own UAC prompt for the installer. The app itself keeps running
-with normal user rights.
+user clicks Update and confirms. The installer then asks Windows for administrator rights itself (it is started like a double-click,
+with normal rights, and Inno Setup requests the elevation), so Windows shows its own UAC prompt. While the build is unsigned that
+prompt says "Unknown publisher"; the checks below are what vouch for the file until code signing is in place. The app itself
+keeps running with normal user rights, and declining the prompt leaves the running app untouched.
 
 Verification, in this order, each step failing closed with a clear message and nothing run:
 
@@ -90,7 +92,8 @@ Verification, in this order, each step failing closed with a clear message and n
 3. `SHA256SUMS.sig` must be a valid **Ed25519** signature of `SHA256SUMS` under the public key compiled into the app
    (`src/App/Updates/UpdateTrust.cs`). The checksum list is parsed only after its signature is valid.
 4. The SHA-256 of the downloaded installer must equal the signed entry for `EasyMouse-Setup-<version>.exe`. The file is held open
-   read-only from hashing until the installer process exists, so it cannot be swapped in between.
+   read-only from hashing until the installer process has ended (that includes the time the UAC prompt is open), so it cannot be
+   swapped in between hashing and the installer reading itself.
 5. The installer's own file version must equal the release version, and the version must be strictly newer than the running one.
 
 Signing and key handling: the Ed25519 private key exists only as the `UPDATE_SIGNING_KEY` secret of the GitHub Actions

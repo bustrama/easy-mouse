@@ -25,6 +25,8 @@ public static class ActionClassifier
 /// <summary>One sensitive or dangerous action, as shown in the approval prompt and by the lint tool.</summary>
 public sealed record ReviewItem(string Path, ActionClass Class, string Kind, string Summary);
 
+public enum KeyReviewKind { None, Chain, Launcher }
+
 public static class ReviewBuilder
 {
     /// <summary>A launcher chord or a long run of key presses can type a command into a shell, so it needs review.</summary>
@@ -35,10 +37,12 @@ public static class ReviewBuilder
         var list = new List<ReviewItem>();
         foreach (var item in remote.Items)
         {
-            var keys = item.Actions.OfType<KeyPressAction>().ToList();
-            var sequence = keys.Count > MaxSafeKeyPresses
-                ? $"presses {keys.Count} keys in a row (enough to type a command)"
-                : keys.FirstOrDefault(k => IsLauncherChord(k.Chord)) is { } l ? $"presses {l.Keys}, which opens the Start menu or Task Manager" : null;
+            var sequence = KeyReview(item) switch
+            {
+                (KeyReviewKind.Chain, var chain) => $"presses {chain.Count} keys in a row (enough to type a command)",
+                (KeyReviewKind.Launcher, var l) => $"presses {l[0].Keys}, which opens the Start menu or Task Manager",
+                _ => null,
+            };
             if (sequence is not null)
                 list.Add(new ReviewItem($"layout.items[{item.Index}].action", ActionClass.Sensitive, "key", sequence));
 
@@ -51,6 +55,14 @@ public static class ReviewBuilder
             }
         }
         return list;
+    }
+
+    /// <summary>Why an item's key presses need review, and the key actions responsible (all of them for a chain, the launcher chord for a launcher).</summary>
+    public static (KeyReviewKind Kind, IReadOnlyList<KeyPressAction> Keys) KeyReview(RemoteItem item)
+    {
+        var keys = item.Actions.OfType<KeyPressAction>().ToList();
+        if (keys.Count > MaxSafeKeyPresses) return (KeyReviewKind.Chain, keys);
+        return keys.FirstOrDefault(k => IsLauncherChord(k.Chord)) is { } l ? (KeyReviewKind.Launcher, [l]) : (KeyReviewKind.None, []);
     }
 
     /// <summary>Ctrl+Escape opens the Start menu (a search box that runs what is typed) and Ctrl+Shift+Escape opens Task Manager; the Win key itself is already refused by the key parser.</summary>

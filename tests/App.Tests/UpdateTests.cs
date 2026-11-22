@@ -692,7 +692,7 @@ public sealed class UpdateServiceTests : IDisposable
         var started = false;
         svc.InstallerStarted += (_, _) => started = true;
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
 
         Assert.Null(svc.LastError);
         Assert.True(started);
@@ -710,7 +710,7 @@ public sealed class UpdateServiceTests : IDisposable
         Serve(installer: Encoding.ASCII.GetBytes("MZ-evil"));
         var svc = Service();
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.Equal(UpdateErrorKind.HashMismatch, svc.LastError!.Kind);
         Assert.Empty(_launcher.Launched);
         Assert.Empty(Directory.GetDirectories(_work, "EasyMouse-update-*"));
@@ -724,7 +724,7 @@ public sealed class UpdateServiceTests : IDisposable
         Serve(sums: sums, sig: FakeGitHub.Sign(otherPriv, sums));
         var svc = Service();
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.Equal(UpdateErrorKind.SignatureInvalid, svc.LastError!.Kind);
         Assert.Empty(_launcher.Launched);
     }
@@ -735,7 +735,7 @@ public sealed class UpdateServiceTests : IDisposable
         Serve(sig: new byte[10]);
         var svc = Service();
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.Equal(UpdateErrorKind.SignatureInvalid, svc.LastError!.Kind);
         Assert.Empty(_launcher.Launched);
     }
@@ -746,7 +746,7 @@ public sealed class UpdateServiceTests : IDisposable
         Serve();
         var svc = Service(installerVersion: _ => "1.0.0");
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.Equal(UpdateErrorKind.Downgrade, svc.LastError!.Kind);
         Assert.Empty(_launcher.Launched);
     }
@@ -760,7 +760,7 @@ public sealed class UpdateServiceTests : IDisposable
         var started = false;
         svc.InstallerStarted += (_, _) => started = true;
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.Null(svc.LastError);
         Assert.False(started);
         Assert.False(svc.InstallerRunning);
@@ -769,11 +769,17 @@ public sealed class UpdateServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Install_without_a_prior_check_does_nothing()
+    public async Task Install_refuses_a_release_that_is_not_newer_than_the_running_version()
     {
         Serve();
-        var svc = Service();
-        await svc.InstallAsync();
+        var older = Service("1.1.0");
+        await older.CheckAsync(manual: true);
+        var release = older.Available!;
+        _github.Requests.Clear();
+
+        var current = Service("1.2.0");
+        await current.InstallAsync(release);
+        Assert.Equal(UpdateErrorKind.Downgrade, current.LastError!.Kind);
         Assert.Empty(_github.Requests);
         Assert.Empty(_launcher.Launched);
     }
@@ -798,6 +804,81 @@ public sealed class UpdateServiceTests : IDisposable
             () => _settings, change => { _settings = change(_settings); return Task.CompletedTask; }, SemVer.Parse("1.1.0"), _time, _work);
         Assert.Null(svc.Available);
         await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task A_failure_that_is_not_an_update_error_is_recorded_and_does_not_escape_the_check()
+    {
+        Serve();
+        var svc = new UpdateService(new GitHubHttp(_github), new UpdateVerifier(_key.Public), _launcher, new NullUpdateCache(),
+            () => _settings, _ => throw new IOException("settings.json is locked"), SemVer.Parse("1.1.0"), _time, _work, _ => "1.2.0");
+        await svc.CheckAsync(manual: true); // an escaping exception would crash the process from an async-void command
+        Assert.NotNull(svc.LastError);
+        Assert.False(svc.Busy);
+    }
+
+    [Fact]
+    public async Task A_release_string_with_a_lone_surrogate_is_a_clean_result_not_an_exception()
+    {
+        Serve(list: "{\"tag_name\":\"v1.2.0\",\"name\":\"\\ud800\",\"body\":\"\\ud800\",\"draft\":false,\"prerelease\":false,\"assets\":[]}");
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        Assert.False(svc.Busy);
+        Assert.Null(svc.Available); // no usable assets either way
+    }
+
+    [Fact]
+    public async Task The_installer_file_stays_locked_until_the_installer_process_has_ended()
+    {
+        Serve();
+        _launcher.Exit = new TaskCompletionSource<int>();
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        await svc.InstallAsync(svc.Available!);
+        var path = Assert.Single(_launcher.Launched);
+
+        // Launch returned long ago (the UAC prompt may still be open): the file must still not be replaceable.
+        Assert.Throws<IOException>(() => { using var _ = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read); });
+
+        _launcher.Exit.SetResult(0);
+        for (var i = 0; i < 100; i++)
+        {
+            try { using var _ = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read); return; }
+            catch (IOException) { await Task.Delay(20); }
+        }
+        Assert.Fail("the installer file was never released");
+    }
+
+    [Fact]
+    public async Task Install_uses_the_release_the_user_confirmed_even_if_a_later_check_found_another()
+    {
+        Serve();
+        var svc = Service();
+        await svc.CheckAsync(manual: true);
+        var confirmed = svc.Available!;
+
+        // A background check now sees 1.3.0, while the assets of 1.2.0 are still what was confirmed.
+        Serve(list: FakeGitHub.ReleaseJson("v1.3.0"));
+        _github.Respond = Chain(_github.Respond!, _installer);
+        await svc.CheckAsync(manual: true);
+        Assert.Equal("1.3.0", svc.Available!.Version.ToString());
+
+        await svc.InstallAsync(confirmed);
+        Assert.Null(svc.LastError);
+        Assert.Equal("EasyMouse-Setup-1.2.0.exe", Path.GetFileName(Assert.Single(_launcher.Launched)));
+    }
+
+    private Func<HttpRequestMessage, HttpResponseMessage> Chain(Func<HttpRequestMessage, HttpResponseMessage> listServer, byte[] installer)
+    {
+        var sums = Encoding.UTF8.GetBytes($"{Convert.ToHexStringLower(SHA256.HashData(installer))}  EasyMouse-Setup-1.2.0.exe\n");
+        var sig = FakeGitHub.Sign(_key.Private, sums);
+        return r => r.RequestUri!.AbsolutePath switch
+        {
+            var p when p.EndsWith("/SHA256SUMS") => FakeGitHub.Ok(sums),
+            var p when p.EndsWith("/SHA256SUMS.sig") => FakeGitHub.Ok(sig),
+            var p when p.EndsWith(".exe") => FakeGitHub.Ok(installer),
+            _ => listServer(r),
+        };
     }
 
     private sealed class MemCache(byte[]? raw) : IUpdateCache
@@ -828,7 +909,7 @@ public sealed class UpdateServiceTests : IDisposable
         await svc.CheckAsync(manual: true);
         var inner = _github.Respond;
         _github.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/SHA256SUMS") ? new HttpResponseMessage(HttpStatusCode.NotFound) : inner(r);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.NotNull(svc.LastError);
         Assert.Empty(_launcher.Launched);
     }
@@ -840,7 +921,7 @@ public sealed class UpdateServiceTests : IDisposable
         _launcher.Exit = new TaskCompletionSource<int>();
         var svc = Service();
         await svc.CheckAsync(manual: true);
-        await svc.InstallAsync();
+        await svc.InstallAsync(svc.Available!);
         Assert.True(svc.InstallerRunning);
         _launcher.Exit.SetResult(5); // e.g. the user declined the permission prompt late
         await Task.Delay(100);

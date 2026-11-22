@@ -1,4 +1,4 @@
-; Easy Mouse installer (Inno Setup 6). Per-machine, installed as administrator.
+﻿; Easy Mouse installer (Inno Setup 6). Per-machine, installed as administrator.
 ;
 ; Build (from the repository root, after `dotnet publish`, see docs/releasing.md):
 ;   ISCC.exe /DAppVersion=1.2.3 /DSourceDir=publish\win-x64 installer\EasyMouse.iss
@@ -17,8 +17,7 @@
 
 #define AppName "Easy Mouse"
 #define AppExe "EasyMouse.exe"
-; The one fixed port the app listens on by default, and the name of the firewall rule that allows it.
-#define Port "8765"
+; The name of the firewall rule that lets the app accept connections from the local network.
 #define RuleName "Easy Mouse (phone remote)"
 
 [Setup]
@@ -63,7 +62,17 @@ Name: "hebrew"; MessagesFile: "compiler:Languages\Hebrew.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "autostart"; Description: "Start {#AppName} when I sign in to Windows"; GroupDescription: "Startup:"; Flags: unchecked
+Name: "autostart"; Description: "{cm:StartWithWindows}"; GroupDescription: "{cm:StartupGroup}"; Flags: unchecked
+
+[CustomMessages]
+english.StartWithWindows=Start {#AppName} when I sign in to Windows
+english.StartupGroup=Startup:
+english.ConfiguringFirewall=Configuring the firewall...
+english.RemoveDataPrompt=Also remove your paired devices and settings (%1)?%n%nChoose No to keep them, for example if you plan to install Easy Mouse again.
+hebrew.StartWithWindows=להפעיל את {#AppName} בכניסה ל-Windows
+hebrew.StartupGroup=הפעלה:
+hebrew.ConfiguringFirewall=מגדיר את חומת האש...
+hebrew.RemoveDataPrompt=למחוק גם את המכשירים המצומדים וההגדרות (%1)?%n%nבחרו "לא" כדי לשמור אותם, למשל אם אתם מתכננים להתקין את Easy Mouse שוב.
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -76,21 +85,23 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 [Run]
 ; "Start with Windows": the same HKCU Run value the app's own switch writes, set as the user who started setup (not the elevated admin account, which can differ).
 Filename: "{sys}\reg.exe"; Parameters: "add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v EasyMouse /t REG_SZ /d ""\""{app}\{#AppExe}\"" --autostart"" /f"; Flags: runhidden runasoriginaluser; Tasks: autostart
-; Firewall: this program only, TCP {#Port} only, Private profile only, local subnet only. Never a blanket rule.
+; Firewall: this program only, Private profile only, local subnet only. Never a blanket rule. There is no fixed port in it:
+; the port is a setting in the app, and the rule follows the program, so changing the port never needs a new rule.
 ; The old rule is removed first so an update or repair never leaves a duplicate or a stale path behind.
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#RuleName}"""; Flags: runhidden; StatusMsg: "Configuring the firewall..."
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#RuleName}"" dir=in action=allow program=""{app}\{#AppExe}"" protocol=TCP localport={#Port} profile=private remoteip=LocalSubnet enable=yes"; Flags: runhidden; StatusMsg: "Configuring the firewall..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#RuleName}"""; Flags: runhidden; StatusMsg: "{cm:ConfiguringFirewall}"
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""{#RuleName}"" dir=in action=allow program=""{app}\{#AppExe}"" protocol=TCP profile=private remoteip=LocalSubnet enable=yes"; Flags: runhidden; StatusMsg: "{cm:ConfiguringFirewall}"
 ; Start the app: offered at the end of an interactive install; after a silent run only when the updater asked (/RELAUNCH=1).
 ; runasoriginaluser: the app runs with the user's normal rights, not with the installer's admin token.
-Filename: "{app}\{#AppExe}"; Description: "Start {#AppName}"; Flags: nowait postinstall skipifsilent runasoriginaluser
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{#RuleName}"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
 
 [UninstallDelete]
-; Anything the app wrote next to its files. %APPDATA%\EasyMouse (paired devices, settings) is handled in [Code].
-Type: filesandordirs; Name: "{app}"
+; Setup removes exactly the files it installed. The folder itself goes only if it is then empty, so installing into a folder that
+; already holds other files (for example D:\Apps) can never delete them. %APPDATA%\EasyMouse (paired devices, settings) is handled in [Code].
+Type: dirifempty; Name: "{app}"
 
 [Code]
 function RelaunchRequested: Boolean;
@@ -159,8 +170,7 @@ begin
     if ExpandConstant('{param:REMOVEDATA|0}') = '1' then DelTree(Data, True, True, True);
     Exit;
   end;
-  if MsgBox('Also remove your paired devices and settings (' + Data + ')?' + #13#10#13#10 +
-            'Choose No to keep them, for example if you plan to install Easy Mouse again.',
+  if MsgBox(FmtMessage(CustomMessage('RemoveDataPrompt'), [Data]),
             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
     DelTree(Data, True, True, True);
 end;

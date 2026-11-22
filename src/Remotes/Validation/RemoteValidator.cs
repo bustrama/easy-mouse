@@ -44,13 +44,13 @@ public static partial class RemoteValidator
     public static readonly IReadOnlyList<string> ActionKinds =
         ["key", "text", "media", "mouse", "smtc", "volume", "focus", "launch", "openUrl", "http", "delay"];
 
-    [GeneratedRegex("^[a-z0-9][a-z0-9_-]{0,63}$")] private static partial Regex RemoteIdRx();
-    [GeneratedRegex("^[A-Za-z0-9_-]{1,64}$")] private static partial Regex ItemIdRx();
-    [GeneratedRegex("^[A-Za-z0-9._*?-]{1,64}$")] private static partial Regex ProcessRx();
-    [GeneratedRegex("^[a-z][a-z0-9_]{0,31}$")] private static partial Regex SlotRx();
-    [GeneratedRegex("^[A-Za-z0-9-]{1,64}$")] private static partial Regex HeaderNameRx();
+    [GeneratedRegex(@"\A[a-z0-9][a-z0-9_-]{0,63}\z")] private static partial Regex RemoteIdRx();
+    [GeneratedRegex(@"\A[A-Za-z0-9_-]{1,64}\z")] private static partial Regex ItemIdRx();
+    [GeneratedRegex(@"\A[A-Za-z0-9._*?-]{1,64}\z")] private static partial Regex ProcessRx();
+    [GeneratedRegex(@"\A[a-z][a-z0-9_]{0,31}\z")] private static partial Regex SlotRx();
+    [GeneratedRegex(@"\A[A-Za-z0-9-]{1,64}\z")] private static partial Regex HeaderNameRx();
     [GeneratedRegex(@"\$\{([^}]*)\}")] private static partial Regex PlaceholderRx();
-    [GeneratedRegex(@"^secret\.[a-z][a-z0-9_]{0,31}$")] private static partial Regex SecretRefRx();
+    [GeneratedRegex(@"\Asecret\.[a-z][a-z0-9_]{0,31}\z")] private static partial Regex SecretRefRx();
 
     private static readonly Dictionary<string, MediaCmd> MediaMap = new()
     { ["playPause"] = MediaCmd.PlayPause, ["next"] = MediaCmd.Next, ["prev"] = MediaCmd.Prev, ["stop"] = MediaCmd.Stop, ["volUp"] = MediaCmd.VolUp, ["volDown"] = MediaCmd.VolDown, ["mute"] = MediaCmd.Mute };
@@ -150,7 +150,9 @@ public static partial class RemoteValidator
         var icon = o.String("icon", false, 32);
         if (icon is not null && !Icons.Contains(icon)) errors.Add($"{path}.icon", $"\"{icon}\" is not in the built-in icon set");
         var label = o.String("label", false, 40);
+        NoFormat(label, $"{path}.label", errors);
         var text = o.String("text", false, 80);
+        NoFormat(text, $"{path}.text", errors);
         var bind = o.String("bind", false, 32);
         if (bind is not null && !Bindings.Contains(bind)) errors.Add($"{path}.bind", $"unknown binding \"{bind}\" (allowed: {string.Join(", ", Bindings)})");
 
@@ -230,6 +232,7 @@ public static partial class RemoteValidator
             case "text":
             {
                 var t = o.String("text", true, MaxTextBytes);
+                NoFormat(t, $"{path}.text", errors);
                 if (t is not null && Encoding.UTF8.GetByteCount(t) > MaxTextBytes) errors.Add($"{path}.text", $"longer than {MaxTextBytes} UTF-8 bytes");
                 else if (t is not null) result = new TextAction(t);
                 break;
@@ -274,6 +277,7 @@ public static partial class RemoteValidator
                         foreach (var x in av.EnumerateArray())
                         {
                             var s = x.ValueKind == JsonValueKind.String ? x.GetString()! : null;
+                            if (s is not null) NoFormat(s, $"{path}.args", errors);
                             if (s is null || s.Length > 256 || s.Contains('\0')) errors.Add($"{path}.args", "each argument must be a string of at most 256 characters");
                             else if (s.Contains("${")) errors.Add($"{path}.args", "placeholders are not allowed in launch arguments");
                             else args.Add(s);
@@ -341,6 +345,14 @@ public static partial class RemoteValidator
         }
         o.Finish();
         return result;
+    }
+
+    /// <summary>Format characters (bidi overrides such as U+202E, zero-width and invisible marks) can make an approval prompt read differently from what runs, so reviewed fields may not hold them.</summary>
+    internal static bool HasFormatChar(string s) => s.EnumerateRunes().Any(r => Rune.GetUnicodeCategory(r) == UnicodeCategory.Format); // runes: the invisible tag characters U+E0000.. are outside the BMP
+
+    private static void NoFormat(string? s, string path, ErrorList errors)
+    {
+        if (s is not null && HasFormatChar(s)) errors.Add(path, "must not contain invisible or direction-changing (format) characters");
     }
 
     /// <summary>Only <c>${secret.name}</c> placeholders are allowed.</summary>

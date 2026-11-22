@@ -35,6 +35,9 @@ Store the private key:
 
 - Repository **Settings > Environments > New environment `release`**. Add yourself as a *required reviewer*
   (every release then waits for your approval) and restrict *deployment tags* to `v*`.
+  This is the real gate for "only commits on main are released": the workflow file that runs comes from the tagged commit itself,
+  so its own "tag is on main" checks guard against mistakes but cannot stop someone who can push a tag. Also add a tag
+  ruleset so only maintainers can create `v*` tags, and keep the reviewer approval on every run.
 - In that environment add the **environment secret** `UPDATE_SIGNING_KEY` whose value is the whole PEM file
   (including the `-----BEGIN/END PRIVATE KEY-----` lines). Do not use a repository-wide secret: an environment secret is
   only released to the protected `release` job.
@@ -49,7 +52,7 @@ The workflow refuses to release if the secret is missing, and it verifies the fr
 Authenticode signing through [SignPath Foundation](https://signpath.org/) is planned for open-source projects. After the
 project is approved, enable the marked `HOOK` steps in `release.yml` (sign the app files before the installer is built,
 then the installer). Keep the API token in a secret and the organisation id in a variable; never in the file.
-Until then the binaries are unsigned, Windows SmartScreen will warn, and the release notes should say so.
+Until then the binaries are unsigned, Windows SmartScreen will warn, and the release notes should say so. The in-app updater starts the installer like a double-click and Setup requests administrator rights itself, so the UAC prompt also says "Unknown publisher" until signing is in place.
 
 ### 3. Repository settings
 
@@ -95,7 +98,7 @@ gh attestation verify .\EasyMouse-Setup-1.4.0.exe --repo bustrama/easy-mouse
 ```
 
 Test the installer on a clean Windows 11 VM or machine: install, check the firewall rule
-(`netsh advfirewall firewall show rule name="Easy Mouse (phone remote)"`: program, TCP 8765, Private, LocalSubnet), pair a
+(`netsh advfirewall firewall show rule name="Easy Mouse (phone remote)"`: this program only, TCP, Private, LocalSubnet; no fixed port, so changing the port in Settings needs no new rule), pair a
 phone, then run the installer again over it with `/SILENT` (the update path) and confirm the app restarts and the pairing
 survives. Uninstall and confirm the rule and files are gone and `%APPDATA%\EasyMouse` is kept (unless you chose to remove it).
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { toastFor } from './client.ts';
 import { detectLang, translate } from './i18n/strings.ts';
 import { bindValue, formatTime, parseState } from './pcstate.ts';
 import { sanitizeRemote, sanitizeRemotes } from './remotes.ts';
@@ -120,5 +121,19 @@ describe('i18n', () => {
   it('interpolates parameters', () => {
     expect(translate('en', 'offline.title', { pc: 'Office PC' })).toBe('Lost connection to Office PC');
     expect(translate('he', 'tab.media')).toBe('מדיה');
+  });
+});
+
+describe('toastFor', () => {
+  it.each([
+    ['unsupported', 'unsupported'],
+    ['denied', 'denied'],
+    ['locked', 'locked'],
+    ['busy', 'busy'],
+    ['failed', 'failed'],
+    ['something-new', 'failed'],
+    [undefined, 'failed'],
+  ])('maps %s to %s', (err, kind) => {
+    expect(toastFor(err)).toBe(kind);
   });
 });

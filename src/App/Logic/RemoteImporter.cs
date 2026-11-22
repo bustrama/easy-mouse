@@ -4,7 +4,7 @@ using EasyMouse.Remotes.Validation;
 
 namespace EasyMouse.App.Logic;
 
-public enum ImportOutcome { Imported, Replaced, AlreadyImported, Invalid, Rejected, ReadFailed }
+public enum ImportOutcome { Imported, Replaced, AlreadyImported, Invalid, Rejected, ReadFailed, WriteFailed }
 
 /// <param name="Messages">Every validation error (path and reason), or the single reason it was refused.</param>
 public sealed record ImportResult(ImportOutcome Outcome, string? Id, IReadOnlyList<string> Messages, string? OtherFile = null)
@@ -56,10 +56,18 @@ public static class RemoteImporter
         }
 
         var replacing = File.Exists(target);
-        Directory.CreateDirectory(userFolder);
         var tmp = target + ".tmp";
-        File.WriteAllBytes(tmp, bytes);
-        File.Move(tmp, target, overwrite: true);
+        try
+        {
+            Directory.CreateDirectory(userFolder);
+            File.WriteAllBytes(tmp, bytes);
+            File.Move(tmp, target, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            try { File.Delete(tmp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            return new(ImportOutcome.WriteFailed, id, [ex.Message]);
+        }
         catalog.Reload();
         return new(replacing ? ImportOutcome.Replaced : ImportOutcome.Imported, id, []);
     }

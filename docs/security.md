@@ -33,6 +33,7 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 ## Pairing and credentials
 
 - QR secret: 128-bit, single-use, 2-minute expiry, regenerated after use or five failed attempts. Pairing is accepted only while the QR is actually shown: while a phone is connected the app hides the QR, closes pairing and discards the secret until the user clicks "Show connection QR".
+  A pairing request that is already waiting for the user's answer keeps pairing open: a phone that reconnects meanwhile does not deny it; pairing closes when that request is answered. The QR counts as shown only while its window is visible and not minimized.
 - Per-device credential: 256-bit symmetric secret, DPAPI-protected on the PC. A key pair is not used: without `crypto.subtle` (unavailable on plain HTTP) the browser cannot hold a non-extractable key.
 - Rotation: manual re-key per device; devices unused for 90 days expire (configurable). No per-connection rotation, because a lost message would desynchronise both sides.
 - Revocation: per device and "revoke all", effective immediately and closing live sockets.
@@ -43,6 +44,8 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
 - Plain HTTP with app-layer AEAD. Self-signed HTTPS would add nothing against an active attacker because users learn to click through the warning.
 - Listen only on the selected LAN interface address, never `0.0.0.0`. Rebind on network change. No UPnP. IPv6 off in v1.
 - The listener stops when the active network profile is Public. The firewall rule is Private + LocalSubnet, and the server also rejects peers outside the interface subnet.
+- If Windows cannot report the network at all (adapter enumeration fails), the app treats it as "no network": it stops listening, logs the reason and tries again on the next 10-second poll. It never assumes the network is Private. (A network whose profile category cannot be read stays "unknown" and keeps listening, relying on the firewall rule.)
+- The firewall rule is scoped to the program, TCP, Private profile and local subnet, with no fixed port, so changing the port in Settings does not need a new rule.
 
 ## Command safety
 
@@ -55,9 +58,15 @@ Every response carries a strict CSP (`default-src 'self'`, no inline script),
   - Sensitive: `text` macros, `openUrl` (http/https only).
   - Dangerous: `launch`, `http`. They prompt on the PC per remote, pinned to the file hash, so any edit prompts again.
   - There is no `shell` action.
+  - The approval prompt shows every reason a remote needs review: each sensitive or dangerous action, the full text of a macro (nothing cut off, line breaks shown as symbols), launch arguments, the program a `focus` step brings to the front, and key chains or Ctrl+Escape spelled out key by key. Invisible and direction-changing (Unicode format) characters such as U+202E are refused in labels, texts, macro text and launch arguments by the validator, and the prompt escapes them as U+XXXX if one ever appears.
+  - If an approval or a revoke cannot be written to disk, the user is told; an approval that is not saved is not active.
   - Implementation (`src/Remotes`): a remote with any Sensitive or Dangerous action is "needs review" and none of its actions run until the user approves it; the approval is pinned to the SHA-256 of the exact file bytes and the executor re-checks the hash on every invocation. Safe-only remotes run without a prompt. `http` hosts other than loopback and each `launch` program are recorded in the approval; the phone only names an item.
 - `launch` runs only executables the user picked on the PC, with fixed arguments shown in the prompt. `http` allows loopback plus approved hosts, no redirects, with a timeout; secrets stay on the PC and are referenced as `${secret.name}`.
 - Remote labels are rendered as text nodes and icons come from a built-in set, so a remote cannot inject script or load external URLs.
+
+## Diagnostic log
+
+The app writes failures it survives (an update check that threw, a network probe that failed, settings that could not be saved, an unexpected error on the UI thread) to `easymouse.log` in `%APPDATA%asyMouse`. It holds only messages and exception text: no device secrets, QR secrets, remote contents or typed text. It is capped at about 256 KB (the older half is dropped when it grows past that).
 
 ## Elevated windows and UAC (planned, phase 2, not in 0.1)
 
@@ -79,8 +88,10 @@ identifies the user or the PC: no account, no cookies, no version, no machine na
 
 What the user controls: Settings > Updates has "Check for updates" (default **on**, at most once a day, plus "Check now") and
 "Include pre-releases" (default off). An available update shows in the tray and in Settings. It is downloaded only after the
-user clicks Update and confirms, and Windows then shows its own UAC prompt for the installer. The app itself keeps running
-with normal user rights.
+user clicks Update and confirms. The installer then asks Windows for administrator rights itself (it is started like a double-click,
+with normal rights, and Inno Setup requests the elevation), so Windows shows its own UAC prompt. While the build is unsigned that
+prompt says "Unknown publisher"; the checks below are what vouch for the file until code signing is in place. The app itself
+keeps running with normal user rights, and declining the prompt leaves the running app untouched.
 
 Verification, in this order, each step failing closed with a clear message and nothing run:
 
@@ -90,7 +101,8 @@ Verification, in this order, each step failing closed with a clear message and n
 3. `SHA256SUMS.sig` must be a valid **Ed25519** signature of `SHA256SUMS` under the public key compiled into the app
    (`src/App/Updates/UpdateTrust.cs`). The checksum list is parsed only after its signature is valid.
 4. The SHA-256 of the downloaded installer must equal the signed entry for `EasyMouse-Setup-<version>.exe`. The file is held open
-   read-only from hashing until the installer process exists, so it cannot be swapped in between.
+   read-only from hashing until the installer process has ended (that includes the time the UAC prompt is open), so it cannot be
+   swapped in between hashing and the installer reading itself.
 5. The installer's own file version must equal the release version, and the version must be strictly newer than the running one.
 
 Signing and key handling: the Ed25519 private key exists only as the `UPDATE_SIGNING_KEY` secret of the GitHub Actions

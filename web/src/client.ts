@@ -22,6 +22,13 @@ export type Screen = 'scan' | 'pairing' | 'offline' | 'busy' | 'online';
 export type ScanReason = 'none' | 'revoked' | 'denied' | 'expired' | 'failed';
 export type Tab = 'mouse' | 'keyboard' | 'media' | 'remotes';
 
+export type ToastKind = 'unsupported' | 'failed' | 'denied' | 'locked' | 'busy';
+
+/** Maps the short `err` code of a failed remote action (docs/protocol.md) to the message shown; anything unknown is a plain failure. */
+export function toastFor(err: unknown): ToastKind {
+  return err === 'unsupported' || err === 'denied' || err === 'locked' || err === 'busy' ? err : 'failed';
+}
+
 export interface AppState {
   screen: Screen;
   scanReason: ScanReason;
@@ -31,7 +38,7 @@ export interface AppState {
   takeoverAsked: boolean;
   takeoverDenied: boolean;
   /** short-lived message, e.g. an unsupported remote action */
-  toast: 'unsupported' | 'failed' | null;
+  toast: ToastKind | null;
   pcName: string | null;
   code: string;
   pc: PcState;
@@ -252,7 +259,7 @@ class Client {
     if (m['t'] === 'remotes') {
       this.store.set({ remotes: sanitizeRemotes(m) });
     } else if (m['t'] === 'result' && m['ok'] === false) {
-      this.showToast(m['err'] === 'unsupported' ? 'unsupported' : 'failed');
+      this.showToast(toastFor(m['err']));
     }
   }
 
@@ -377,7 +384,7 @@ class Client {
   }
 
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
-  private showToast(toast: 'unsupported' | 'failed'): void {
+  private showToast(toast: ToastKind): void {
     if (this.toastTimer) clearTimeout(this.toastTimer);
     this.store.set({ toast });
     this.toastTimer = setTimeout(() => this.store.set({ toast: null }), 2500);

@@ -131,6 +131,7 @@
   <data name="Toast_Public" xml:space="preserve"><value>הרשת הזו ציבורית</value></data>
   <data name="Toast_PublicBody" xml:space="preserve"><value>Easy Mouse הפסיק להאזין. פתחו את חלון ה-QR כדי לתקן.</value></data>
   <data name="Err_StoreTitle" xml:space="preserve"><value>Easy Mouse לא מצליח לקרוא את רשימת המכשירים</value></data>
+  <data name="Err_Unexpected" xml:space="preserve"><value>משהו בלתי צפוי השתבש. הפרטים נשמרו בקובץ easymouse.log בתיקיית הנתונים של Easy Mouse.</value></data>
   <data name="Err_StoreBody" xml:space="preserve"><value>{0}
 
 Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק מהצמדה כל טלפון בלי שתדעו. העבירו או מחקו את הקובץ כדי להתחיל מחדש.</value></data>
@@ -197,6 +198,15 @@ Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק �
   <data name="Rm_Act_HttpOutside" xml:space="preserve"><value>מכשיר או אתר מחוץ למחשב הזה</value></data>
   <data name="Rm_Act_Secrets" xml:space="preserve"><value>משתמש בסודות ששמרתם: {0}.</value></data>
   <data name="Rm_Act_Other" xml:space="preserve"><value>עושה משהו שדורש בדיקה</value></data>
+  <data name="Rm_Act_KeyChain" xml:space="preserve"><value>לוחץ {0} מקשים ברצף (מספיק כדי להקליד פקודה): {1}</value></data>
+  <data name="Rm_Act_KeyLauncher" xml:space="preserve"><value>לוחץ {0}, שפותח את תפריט התחל או את מנהל המשימות</value></data>
+  <data name="Rm_Act_Focus" xml:space="preserve"><value>קודם מביא לחזית את התוכנה “{0}”</value></data>
+  <data name="Rm_ApproveUnknown" xml:space="preserve"><value>השלט הזה לא מוכר או לא תקין, ולכן אי אפשר לאשר אותו.</value></data>
+  <data name="Rm_ApproveChanged" xml:space="preserve"><value>הקובץ השתנה אחרי שבדקתם אותו. בדקו אותו שוב.</value></data>
+  <data name="Rm_ApproveSlot" xml:space="preserve"><value>בחרו את התוכנה עבור “{0}” לפני האישור.</value></data>
+  <data name="Rm_ApproveSaveFail" xml:space="preserve"><value>את האישור אי אפשר היה לשמור, ולכן השלט נשאר כבוי: {0}</value></data>
+  <data name="Rm_ImportWriteFail" xml:space="preserve"><value>אי אפשר לשמור את השלט בתיקיית השלטים שלכם: {0}</value></data>
+  <data name="Rm_RevokeSaveFail" xml:space="preserve"><value>השלט כבוי כרגע, אבל את השינוי אי אפשר היה לשמור, ולכן הוא עלול לחזור אחרי הפעלה מחדש: {0}</value></data>
   <data name="Rm_Dangerous" xml:space="preserve"><value>יכול להפעיל תוכנות או לפנות למכשירים אחרים</value></data>
   <data name="Rm_Sensitive" xml:space="preserve"><value>רגיש</value></data>
   <data name="Rm_Slot" xml:space="preserve"><value>תוכנה עבור “{0}”</value></data>

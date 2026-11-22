@@ -22,16 +22,26 @@ public partial class QrWindow : AppWindow
         _timer.Tick += (_, _) => _vm.Refresh();
         _app.StateChanged += OnAppStateChanged;
         IsVisibleChanged += OnVisibleChanged;
+        StateChanged += (_, _) => SyncShown();
         Loaded += (_, _) => StartRingAnimation();
     }
 
     public bool AllowClose { get; set; }
 
-    private void OnAppStateChanged(object? sender, EventArgs e) { if (IsVisible) _vm.Refresh(); }
+    /// <summary>Visible AND not minimized: a minimized window is still "visible" to WPF, but the QR is not on any screen.</summary>
+    private bool IsShown => IsVisible && WindowState != WindowState.Minimized;
+    private bool _shown;
 
-    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    private void OnAppStateChanged(object? sender, EventArgs e) { if (_shown) _vm.Refresh(); }
+
+    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) => SyncShown();
+
+    private void SyncShown()
     {
-        if (IsVisible)
+        var shown = IsShown;
+        if (shown == _shown) return;
+        _shown = shown;
+        if (shown)
         {
             _app.SetQrWindowVisible(true);
             _vm.Refresh(force: true);
@@ -40,7 +50,7 @@ public partial class QrWindow : AppWindow
         else
         {
             _timer.Stop();
-            _app.SetQrWindowVisible(false);
+            _app.SetQrWindowVisible(false); // closes pairing and discards the one-time secret
         }
     }
 

@@ -43,10 +43,15 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH[-prerelease] tag"; exit 1
+          # Exactly what the app's SemVer.TryParse accepts (src/App/Updates/SemVer.cs), so CI never signs a release the app would
+          # ignore: no leading zeros, at most 9 digits per number, non-empty pre-release identifiers (numeric ones without leading
+          # zeros), at most 64 characters, no build metadata. A test (ReleaseTagRuleTests) keeps this line and SemVer in step.
+          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$ || ${#tag} -gt 65 ]]; then
+            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH[-prerelease] tag the app accepts"; exit 1
           fi
-          # Only commits that are on main can be released.
+          # Only commits that are on main can be released. (This file comes from the tagged commit, so this check is a guard against
+          # mistakes, not against a malicious tag: the real gate is the `release` environment, see docs/releasing.md. origin/main is there
+          # because the checkout above fetched every branch (fetch-depth 0).)
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::The tagged commit is not on main"; exit 1
           fi
@@ -106,10 +111,9 @@ jobs:
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) {
-            choco install innosetup --version=6.7.1 --no-progress -y
-          }
-          if (-not (Test-Path $iscc)) { throw "Inno Setup 6 is not available on this runner" }
+          # No download fallback: an unpinned, unverified installer fetched at release time would sit in the trust path of every
+          # release. The Windows runner image ships Inno Setup 6; if that ever changes, fail here and decide deliberately.
+          if (-not (Test-Path $iscc)) { throw "Inno Setup 6 is not preinstalled on this runner image" }
           "path=$iscc" >> $env:GITHUB_OUTPUT
 
       - name: Build the installer
@@ -156,7 +160,14 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
+
+      # Repeated here, right before the signing key is used (the build job's check is the first one).
+      - name: The tagged commit must be on main
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::The tagged commit is not on main"; exit 1; }
 
       - name: Download the build
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

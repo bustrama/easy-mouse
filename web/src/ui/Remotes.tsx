@@ -36,7 +36,7 @@ export function Remotes() {
           </button>
         ))}
       </div>
-      {s.toast && <div class="notice" role="status">{t(s.toast === 'unsupported' ? 'remotes.unsupported' : 'remotes.failed')}</div>}
+      {s.toast && <div class="notice" role="status">{t(`remotes.${s.toast}` as const)}</div>}
       {s.pc.media?.title && (
         <div class="card">
           <div class="cardhead">{t('remotes.nowPlaying')}</div>

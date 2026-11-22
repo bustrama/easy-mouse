@@ -234,6 +234,47 @@ public class ControllerAndViewModelTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task A_paired_phone_reconnecting_does_not_close_pairing_while_another_phones_request_waits()
+    {
+        var app = await StartAsync(needsAdapter: true);
+        if (app is null) return;
+        app.SetQrWindowVisible(true);
+
+        // Phone A pairs, then drops: nobody is connected again, so the QR is back.
+        await using var pairingA = await TestClient.ConnectAsync(WsOf(app));
+        var pairedA = pairingA.PairAsync(app.Core.Pairing.CurrentSecret!.Secret, "A");
+        await Eventually(() => app.Approvals.Current is not null);
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.True(app.Approvals.Current!.Allow());
+        var credentialsA = await pairedA;
+        var phoneA = await TestClient.ConnectAsync(WsOf(app));
+        await phoneA.AuthenticateAsync(credentialsA);
+        await Eventually(() => app.ConnectedCount > 0);
+        await phoneA.DisposeAsync();
+        await Eventually(() => app.ConnectedCount == 0 && app.PairingOpen);
+
+        // Phone B scans the QR and waits for the user's answer.
+        await using var pairingB = await TestClient.ConnectAsync(WsOf(app));
+        var pairedB = pairingB.PairAsync(app.Core.Pairing.CurrentSecret!.Secret, "B");
+        await Eventually(() => app.Approvals.Current is { IsDecided: false });
+        var request = app.Approvals.Current!;
+
+        // A reconnects meanwhile. That must not close pairing, which would deny B's waiting request.
+        await using var phoneA2 = await TestClient.ConnectAsync(WsOf(app));
+        await phoneA2.AuthenticateAsync(credentialsA);
+        await Eventually(() => app.ConnectedCount > 0);
+        Assert.True(app.PairingOpen);
+        Assert.False(request.IsDecided);
+
+        _time.Advance(TimeSpan.FromSeconds(2));
+        Assert.True(request.Allow());
+        Assert.NotNull(await pairedB);
+
+        // With the request answered the QR was not asked for and a phone is connected, so pairing closes.
+        await Eventually(() => !app.PairingOpen);
+    }
+
+    [Fact]
     public async Task With_no_phone_connected_the_visible_window_shows_the_qr_and_accepts_pairing()
     {
         var app = await StartAsync(needsAdapter: true);

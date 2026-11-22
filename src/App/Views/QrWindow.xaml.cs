@@ -1,0 +1,75 @@
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using EasyMouse.App.ViewModels;
+
+namespace EasyMouse.App.Views;
+
+/// <summary>The QR window. Closing it hides it (the app stays in the tray) and closes the pairing window.</summary>
+public partial class QrWindow : AppWindow
+{
+    private readonly AppController _app;
+    private readonly QrViewModel _vm;
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+
+    public QrWindow(AppController app, Action openSettings)
+    {
+        InitializeComponent();
+        _app = app;
+        _vm = new QrViewModel(app, openSettings);
+        DataContext = _vm;
+        _timer.Tick += (_, _) => _vm.Refresh();
+        _app.StateChanged += OnAppStateChanged;
+        IsVisibleChanged += OnVisibleChanged;
+        Loaded += (_, _) => StartRingAnimation();
+    }
+
+    public bool AllowClose { get; set; }
+
+    private void OnAppStateChanged(object? sender, EventArgs e) { if (IsVisible) _vm.Refresh(); }
+
+    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
+        {
+            _app.OpenPairing();
+            _vm.Refresh(force: true);
+            _timer.Start();
+        }
+        else
+        {
+            _timer.Stop();
+            _app.ClosePairing();
+        }
+    }
+
+    /// <summary>Brings the window up (from the tray, or from a second launch).</summary>
+    public void ShowAndActivate()
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Show();
+        Activate();
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!AllowClose)
+        {
+            e.Cancel = true;
+            Hide();
+        }
+        base.OnClosing(e);
+    }
+
+    private void StartRingAnimation()
+    {
+        if (!SystemParameters.ClientAreaAnimation) return; // honour "show animations" being off
+        var duration = new Duration(TimeSpan.FromSeconds(2));
+        var scale = new DoubleAnimation(0.9, 1.18, duration) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        var fade = new DoubleAnimation(0.7, 0, duration) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } };
+        RingScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, scale);
+        RingScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleYProperty, scale);
+        Ring.BeginAnimation(OpacityProperty, fade);
+    }
+}

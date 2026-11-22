@@ -62,6 +62,9 @@ public sealed class EasyMouseServer : IAsyncDisposable
 
     public IPEndPoint? EndPoint { get; private set; }
 
+    /// <summary>Raised for every HTTP request that reaches the listener (before any check) with the peer address. The App uses it to tell whether anything from the LAN ever arrived.</summary>
+    public event Action<IPAddress?>? RequestReceived;
+
     public async Task StartAsync()
     {
         var builder = WebApplication.CreateSlimBuilder();
@@ -126,6 +129,7 @@ public sealed class EasyMouseServer : IAsyncDisposable
 
     private async Task Guard(HttpContext ctx, RequestDelegate next)
     {
+        RequestReceived?.Invoke(ctx.Connection.RemoteIpAddress);
         var headers = ctx.Response.Headers;
         var host = ctx.Request.Headers.Host.ToString();
         // The Host header is validated below; only then is it echoed into the CSP.

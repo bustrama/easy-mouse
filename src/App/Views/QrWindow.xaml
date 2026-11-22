@@ -1,0 +1,117 @@
+<views:AppWindow x:Class="EasyMouse.App.Views.QrWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:EasyMouse.App"
+        xmlns:views="clr-namespace:EasyMouse.App.Views"
+        Title="{app:T App_Name}" Width="440" Height="700" ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True">
+    <Grid Margin="36,8,36,24">
+        <!-- Scan panel -->
+        <Grid Visibility="{Binding ShowQr, Converter={StaticResource B2V}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="{app:T Qr_Title}" FontSize="26" FontWeight="ExtraBold" TextAlignment="Center"/>
+                <TextBlock Text="{app:T Qr_Subtitle}" Margin="0,8,0,0" FontSize="15" LineHeight="22" Foreground="{StaticResource TextSoft}" TextAlignment="Center"/>
+
+                <Grid Width="260" Height="260" Margin="0,24,0,0" HorizontalAlignment="Center">
+                    <Border x:Name="Ring" CornerRadius="28" BorderBrush="{StaticResource Accent}" BorderThickness="2" Opacity="0"
+                            RenderTransformOrigin="0.5,0.5" IsHitTestVisible="False">
+                        <Border.RenderTransform><ScaleTransform x:Name="RingScale" ScaleX="0.9" ScaleY="0.9"/></Border.RenderTransform>
+                    </Border>
+                    <Border Background="White" CornerRadius="24" BorderBrush="{StaticResource Border}" BorderThickness="1" Padding="18">
+                        <Grid>
+                            <views:QrControl Matrix="{Binding Matrix}" FlowDirection="LeftToRight"/>
+                            <Border Background="#E6FFFFFF" Visibility="{Binding ShowExpiredOverlay, Converter={StaticResource B2V}}">
+                                <TextBlock Text="{app:T Qr_ExpiredOverlay}" Foreground="#0E1116" FontSize="22" FontWeight="ExtraBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="{Binding NotListeningText}" Foreground="#0E1116" FontSize="14" TextAlignment="Center"
+                                       VerticalAlignment="Center" Visibility="{Binding NoQr, Converter={StaticResource B2V}}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <Border Margin="0,22,0,0" HorizontalAlignment="Center" CornerRadius="999" Padding="16,8" Background="{Binding ChipBackground}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Fill="{Binding ChipDot}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StatusText}" Margin="8,0,0,0" FontSize="14" FontWeight="Bold" Foreground="{Binding ChipForeground}" TextWrapping="NoWrap"/>
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding CountdownText}" Margin="0,14,0,0" FontSize="13" Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding Origin}" Margin="0,6,0,0" FontSize="13" Foreground="{StaticResource Muted}" TextAlignment="Center"
+                           FlowDirection="LeftToRight" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" VerticalAlignment="Bottom">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource SecondaryButton}" Content="{app:T Btn_NewCode}" Command="{Binding NewCodeCommand}"/>
+                    <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="{app:T Btn_Settings}" Command="{Binding SettingsCommand}"/>
+                </Grid>
+                <Button Margin="0,10,0,0" Height="28" Style="{StaticResource SecondaryButton}" BorderThickness="0" Background="Transparent"
+                        FontSize="13" Foreground="{StaticResource Accent}" Content="{app:T Qr_Trouble}" Command="{Binding ShowTroubleCommand}"/>
+                <TextBlock Text="{app:T Qr_Footer}" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource Muted}" TextAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Help panel: "your phone cannot reach this PC" -->
+        <Grid Visibility="{Binding ShowHelp, Converter={StaticResource B2V}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel>
+                <Border Width="48" Height="48" CornerRadius="16" Background="{StaticResource ChipAmberBg}" HorizontalAlignment="Left">
+                    <Path Data="M5,12 A7,7 0 0 1 19,12 M8.5,12 A3.5,3.5 0 0 1 15.5,12 M12,12 L12.01,12 M4,20 L20,4" Stroke="#92400E" StrokeThickness="1.9"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Stretch="Uniform" Width="26" Height="26" FlowDirection="LeftToRight"/>
+                </Border>
+                <TextBlock Text="{app:T Help_Title}" Margin="0,16,0,0" FontSize="24" FontWeight="ExtraBold"/>
+                <TextBlock Text="{Binding HelpIntro}" Margin="0,8,0,0" FontSize="15" LineHeight="22" Foreground="{StaticResource TextSoft}"/>
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="-4,16,-4,12" Padding="4,0,4,0">
+                <ItemsControl ItemsSource="{Binding HelpItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource Card}" Padding="16,14" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Tag}" FontSize="12" FontWeight="Bold" Margin="10,2,0,0" TextWrapping="NoWrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Found}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource Warn}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                    <TextBlock Text="{Binding Body}" Margin="0,4,0,0" FontSize="14" LineHeight="20" Foreground="{StaticResource TextSoft}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <StackPanel Grid.Row="2">
+                <TextBlock Text="{Binding PrivateMessage}" Margin="0,0,0,8" FontSize="13" Foreground="{StaticResource Warn}"
+                           Visibility="{Binding HasPrivateMessage, Converter={StaticResource B2V}}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource SecondaryButton}" Content="{app:T Btn_ShowQr}" Command="{Binding ShowQrAgainCommand}"/>
+                    <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="{app:T Btn_MakePrivate}" Command="{Binding MakePrivateCommand}"
+                            Visibility="{Binding CanMakePrivate, Converter={StaticResource B2V}}"/>
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</views:AppWindow>

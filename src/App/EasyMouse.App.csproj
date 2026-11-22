@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms> <!-- only for the tray NotifyIcon -->
+    <RootNamespace>EasyMouse.App</RootNamespace>
+    <AssemblyName>EasyMouse</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>en;he</SatelliteResourceLanguages>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- WPF and WinForms share type names (Application, Button, ...): keep WPF as the default. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <Using Include="System.IO" />
+    <Using Include="System.Threading" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\EasyMouse.Core.csproj" />
+    <ProjectReference Include="..\Server\EasyMouse.Server.csproj" />
+    <ProjectReference Include="..\Platform.Windows\EasyMouse.Platform.Windows.csproj" />
+    <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="[3.2.1]" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="EasyMouse.App.Tests" />
+  </ItemGroup>
+</Project>

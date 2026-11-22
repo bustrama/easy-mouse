@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Name" xml:space="preserve"><value>Easy Mouse</value></data>
+  <data name="Qr_Title" xml:space="preserve"><value>סרקו כדי לחבר את הטלפון</value></data>
+  <data name="Qr_Subtitle" xml:space="preserve"><value>פתחו את המצלמה בטלפון וכוונו אותה אל הקוד.</value></data>
+  <data name="Qr_Valid" xml:space="preserve"><value>הקוד תקף עוד {0}</value></data>
+  <data name="Qr_Expired" xml:space="preserve"><value>הקוד פג תוקף. לחצו על קוד חדש.</value></data>
+  <data name="Qr_ExpiredOverlay" xml:space="preserve"><value>פג תוקף</value></data>
+  <data name="Qr_Footer" xml:space="preserve"><value>טלפונים שכבר צומדו מתחברים מחדש מעצמם. סגירת החלון משאירה את Easy Mouse במגש המערכת.</value></data>
+  <data name="Qr_Trouble" xml:space="preserve"><value>הטלפון לא מצליח להתחבר?</value></data>
+  <data name="Qr_NotListening" xml:space="preserve"><value>Easy Mouse לא מאזין כרגע, ולכן אין קוד לסריקה.</value></data>
+  <data name="Btn_NewCode" xml:space="preserve"><value>קוד חדש</value></data>
+  <data name="Btn_Settings" xml:space="preserve"><value>הגדרות</value></data>
+  <data name="Status_Waiting" xml:space="preserve"><value>ממתין לטלפון</value></data>
+  <data name="Status_Approve" xml:space="preserve"><value>ממתין לתשובתך</value></data>
+  <data name="Status_Connected" xml:space="preserve"><value>טלפון מחובר</value></data>
+  <data name="Status_Stopped" xml:space="preserve"><value>לא מאזין</value></data>
+  <data name="Net_Listening" xml:space="preserve"><value>מאזין בכתובת {0}</value></data>
+  <data name="Net_Public" xml:space="preserve"><value>עצור: הרשת הזו מוגדרת כציבורית. הגדירו אותה כפרטית כדי להמשיך.</value></data>
+  <data name="Net_NoNetwork" xml:space="preserve"><value>עצור: המחשב אינו מחובר לרשת.</value></data>
+  <data name="Net_Emergency" xml:space="preserve"><value>נעצר בגלל מקש הקיצור לחירום או תפריט המגש. כדי להאזין שוב השתמשו בתפריט המגש.</value></data>
+  <data name="Net_PortBusy" xml:space="preserve"><value>הפורט {0} תפוס על ידי תוכנה אחרת. בחרו פורט אחר בהגדרות.</value></data>
+  <data name="Net_Error" xml:space="preserve"><value>לא ניתן להתחיל להאזין: {0}</value></data>
+  <data name="Help_Title" xml:space="preserve"><value>הטלפון לא מצליח להגיע למחשב הזה</value></data>
+  <data name="Help_Intro" xml:space="preserve"><value>כבר זמן מה שום דבר לא התחבר. זה בדרך כלל אחד מאלה:</value></data>
+  <data name="Help_IntroPublic" xml:space="preserve"><value>המחשב הפסיק להאזין בגלל זה:</value></data>
+  <data name="Tag_Found" xml:space="preserve"><value>נמצא</value></data>
+  <data name="Tag_Possible" xml:space="preserve"><value>ייתכן</value></data>
+  <data name="Hint_Public_Title" xml:space="preserve"><value>הרשת הזו מוגדרת כציבורית</value></data>
+  <data name="Hint_Public_Body" xml:space="preserve"><value>Windows חוסם מכשירים אחרים ברשתות ציבוריות. הגדרת הרשת כפרטית פותרת את זה.</value></data>
+  <data name="Hint_Guest_Title" xml:space="preserve"><value>רשת Wi-Fi לאורחים או מבודדת</value></data>
+  <data name="Hint_Guest_Body" xml:space="preserve"><value>בחלק מרשתות ה-Wi-Fi המכשירים מופרדים בכוונה, למשל רשתות אורחים ורשתות של מלונות ומשרדים. נסו את הרשת הראשית.</value></data>
+  <data name="Hint_Mobile_Title" xml:space="preserve"><value>הטלפון משתמש בנתונים סלולריים</value></data>
+  <data name="Hint_Mobile_Body" xml:space="preserve"><value>ודאו שהטלפון מחובר לאותה רשת Wi-Fi כמו המחשב.</value></data>
+  <data name="Hint_Vpn_Title" xml:space="preserve"><value>VPN פועל במחשב הזה</value></data>
+  <data name="Hint_Vpn_Body" xml:space="preserve"><value>VPN עלול להסתיר את המחשב מהטלפון. השהו אותו, או בחרו את כרטיס ה-Wi-Fi או הרשת בהגדרות.</value></data>
+  <data name="Hint_Cards_Title" xml:space="preserve"><value>במחשב הזה יש יותר מכרטיס רשת אחד</value></data>
+  <data name="Hint_Cards_Body" xml:space="preserve"><value>Easy Mouse משתמש ב-{0}. אם הטלפון ברשת אחרת, בחרו את הכרטיס הנכון בהגדרות.</value></data>
+  <data name="Hint_NoNet_Title" xml:space="preserve"><value>המחשב לא מחובר לרשת</value></data>
+  <data name="Hint_NoNet_Body" xml:space="preserve"><value>התחברו ל-Wi-Fi או חברו כבל, ואז נסו שוב.</value></data>
+  <data name="Btn_ShowQr" xml:space="preserve"><value>הצג שוב את הקוד</value></data>
+  <data name="Btn_MakePrivate" xml:space="preserve"><value>הגדר את הרשת כפרטית</value></data>
+  <data name="Help_PrivateFailed" xml:space="preserve"><value>הרשת לא שונתה. Windows צריך את אישורך לשינוי הזה.</value></data>
+  <data name="Ap_Title" xml:space="preserve"><value>לאפשר לטלפון הזה?</value></data>
+  <data name="Ap_Body" xml:space="preserve"><value>טלפון מבקש לשלוט במחשב הזה. אשרו רק אם התחלתם את זה הרגע.</value></data>
+  <data name="Ap_Sub" xml:space="preserve"><value>ברשת שלכם</value></data>
+  <data name="Ap_CodeLabel" xml:space="preserve"><value>הקוד בטלפון</value></data>
+  <data name="Ap_Foot" xml:space="preserve"><value>הקודים חייבים להיות זהים. אפשר להסיר את הטלפון הזה בהמשך במסך המכשירים.</value></data>
+  <data name="Ap_TakeTitle" xml:space="preserve"><value>להעביר את השליטה לטלפון אחר?</value></data>
+  <data name="Ap_TakeBody" xml:space="preserve"><value>הטלפון הזה מבקש להשתלט. הטלפון ששולט עכשיו במחשב ינותק.</value></data>
+  <data name="Ap_TakeFoot" xml:space="preserve"><value>רק טלפון אחד שולט במחשב בכל רגע.</value></data>
+  <data name="Btn_Allow" xml:space="preserve"><value>אפשר</value></data>
+  <data name="Btn_Deny" xml:space="preserve"><value>דחה</value></data>
+  <data name="Nav_General" xml:space="preserve"><value>כללי</value></data>
+  <data name="Nav_Network" xml:space="preserve"><value>רשת</value></data>
+  <data name="Nav_Security" xml:space="preserve"><value>אבטחה</value></data>
+  <data name="Nav_Devices" xml:space="preserve"><value>מכשירים</value></data>
+  <data name="Nav_About" xml:space="preserve"><value>אודות</value></data>
+  <data name="Win_Settings" xml:space="preserve"><value>Easy Mouse · הגדרות</value></data>
+  <data name="Win_Devices" xml:space="preserve"><value>Easy Mouse · מכשירים</value></data>
+  <data name="Grp_Startup" xml:space="preserve"><value>הפעלה</value></data>
+  <data name="Grp_Language" xml:space="preserve"><value>שפה</value></data>
+  <data name="Grp_Network" xml:space="preserve"><value>רשת</value></data>
+  <data name="Grp_Security" xml:space="preserve"><value>אבטחה</value></data>
+  <data name="Set_StartWindows" xml:space="preserve"><value>הפעלה עם Windows</value></data>
+  <data name="Set_StartWindowsDesc" xml:space="preserve"><value>Easy Mouse נפתח במגש המערכת כשנכנסים ל-Windows.</value></data>
+  <data name="Set_StartMin" xml:space="preserve"><value>התחלה ממוזערת למגש</value></data>
+  <data name="Set_StartMinDesc" xml:space="preserve"><value>אין חלון עד שצריך את קוד ה-QR.</value></data>
+  <data name="Set_Language" xml:space="preserve"><value>שפה</value></data>
+  <data name="Set_LanguageDesc" xml:space="preserve"><value>בעברית כל החלון מתהפך לכיוון מימין לשמאל.</value></data>
+  <data name="Lang_Auto" xml:space="preserve"><value>אוטומטי (לפי Windows)</value></data>
+  <data name="Set_Port" xml:space="preserve"><value>פורט</value></data>
+  <data name="Set_PortDesc" xml:space="preserve"><value>קבוע, כדי שטלפונים מחוברים ימשיכו לעבוד.</value></data>
+  <data name="Set_PortInvalid" xml:space="preserve"><value>השתמשו במספר בין 1024 ל-65535.</value></data>
+  <data name="Set_Card" xml:space="preserve"><value>כרטיס רשת</value></data>
+  <data name="Set_CardDesc" xml:space="preserve"><value>כרטיס ה-Wi-Fi או הרשת שדרכו הטלפונים מתחברים.</value></data>
+  <data name="Set_CardAuto" xml:space="preserve"><value>אוטומטי ({0})</value></data>
+  <data name="Set_CardNone" xml:space="preserve"><value>אוטומטי (לא נמצאה רשת)</value></data>
+  <data name="Set_CardCategory" xml:space="preserve"><value>{0} ({1})</value></data>
+  <data name="Cat_Public" xml:space="preserve"><value>ציבורית</value></data>
+  <data name="Cat_Private" xml:space="preserve"><value>פרטית</value></data>
+  <data name="Cat_Domain" xml:space="preserve"><value>דומיין</value></data>
+  <data name="Cat_Unknown" xml:space="preserve"><value>פרופיל לא ידוע</value></data>
+  <data name="Set_Status" xml:space="preserve"><value>מצב</value></data>
+  <data name="Set_Admin" xml:space="preserve"><value>שליטה בחלונות מנהל ובהודעת UAC</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>טלפון מחובר יוכל לאשר הודעות UAC. בפועל הוא מנהל מערכת במחשב הזה.</value></data>
+  <data name="Set_AdminPending" xml:space="preserve"><value>נשמר, אבל עדיין אינו פועל: הוא דורש רכיב נפרד שאינו חלק מהגרסה הזו.</value></data>
+  <data name="Set_Hotkey" xml:space="preserve"><value>מקש קיצור לניתוק חירום</value></data>
+  <data name="Set_HotkeyDesc" xml:space="preserve"><value>סוגר את כל החיבורים ועוצר את ההאזנה עד שמפעילים אותה שוב מתפריט המגש.</value></data>
+  <data name="Set_HotkeyPress" xml:space="preserve"><value>הקישו את המקשים החדשים</value></data>
+  <data name="Set_HotkeyInUse" xml:space="preserve"><value>תוכנה אחרת כבר משתמשת בצירוף הזה.</value></data>
+  <data name="Set_HotkeyNeed" xml:space="preserve"><value>כללו Ctrl, Alt או Win יחד עם מקש.</value></data>
+  <data name="Dev_Paired" xml:space="preserve"><value>טלפונים מצומדים</value></data>
+  <data name="Dev_DisconnectAll" xml:space="preserve"><value>נתק הכול</value></data>
+  <data name="Dev_Remove" xml:space="preserve"><value>הסר</value></data>
+  <data name="Dev_Connected" xml:space="preserve"><value>מחובר</value></data>
+  <data name="Dev_Offline" xml:space="preserve"><value>לא מחובר</value></data>
+  <data name="Dev_Empty" xml:space="preserve"><value>עדיין אין טלפונים מחוברים. הציגו את קוד ה-QR כדי להוסיף.</value></data>
+  <data name="Dev_MetaConnected" xml:space="preserve"><value>צומד {0} · יפוג אחרי {1} ימים ללא שימוש</value></data>
+  <data name="Dev_MetaSeen" xml:space="preserve"><value>נראה לאחרונה {0} · יפוג בעוד {1} ימים</value></data>
+  <data name="Dev_MetaSoon" xml:space="preserve"><value>לא בשימוש {0} ימים, יפוג בעוד {1} ימים</value></data>
+  <data name="Dev_Today" xml:space="preserve"><value>היום</value></data>
+  <data name="Dev_Yesterday" xml:space="preserve"><value>אתמול</value></data>
+  <data name="Dev_DaysAgo" xml:space="preserve"><value>לפני {0} ימים</value></data>
+  <data name="Dev_ConfirmRemove" xml:space="preserve"><value>להסיר את "{0}"? יהיה צורך לבצע צימוד מחדש.</value></data>
+  <data name="About_Line1" xml:space="preserve"><value>גרסה {0}</value></data>
+  <data name="About_Line2" xml:space="preserve"><value>חופשי ובקוד פתוח (רישיון MIT).</value></data>
+  <data name="About_Line3" xml:space="preserve"><value>הטלפונים שולטים במחשב הזה דרך הרשת שלכם בלבד. שום דבר לא עובר דרך האינטרנט.</value></data>
+  <data name="Tray_ShowQr" xml:space="preserve"><value>הצג קוד QR</value></data>
+  <data name="Tray_Settings" xml:space="preserve"><value>הגדרות</value></data>
+  <data name="Tray_Devices" xml:space="preserve"><value>מכשירים</value></data>
+  <data name="Tray_DisconnectAll" xml:space="preserve"><value>נתק הכול</value></data>
+  <data name="Tray_Resume" xml:space="preserve"><value>חזור להאזין</value></data>
+  <data name="Tray_Quit" xml:space="preserve"><value>יציאה</value></data>
+  <data name="Tray_Tip" xml:space="preserve"><value>Easy Mouse</value></data>
+  <data name="Tray_TipConnected" xml:space="preserve"><value>Easy Mouse · טלפון מחובר</value></data>
+  <data name="Tray_TipStopped" xml:space="preserve"><value>Easy Mouse · לא מאזין</value></data>
+  <data name="Toast_Connected" xml:space="preserve"><value>{0} התחבר</value></data>
+  <data name="Toast_ConnectedBody" xml:space="preserve"><value>הוא יכול כעת לשלוט במחשב. כדי לעצור אותו השתמשו ב"נתק הכול" במגש.</value></data>
+  <data name="Toast_Emergency" xml:space="preserve"><value>כל הטלפונים נותקו</value></data>
+  <data name="Toast_EmergencyBody" xml:space="preserve"><value>Easy Mouse הפסיק להאזין. כדי להתחיל שוב השתמשו בתפריט המגש.</value></data>
+  <data name="Toast_Public" xml:space="preserve"><value>הרשת הזו ציבורית</value></data>
+  <data name="Toast_PublicBody" xml:space="preserve"><value>Easy Mouse הפסיק להאזין. פתחו את חלון ה-QR כדי לתקן.</value></data>
+  <data name="Err_StoreTitle" xml:space="preserve"><value>Easy Mouse לא מצליח לקרוא את רשימת המכשירים</value></data>
+  <data name="Err_StoreBody" xml:space="preserve"><value>{0}
+
+Easy Mouse לא מתחיל עם רשימה ריקה, כי זה היה מנתק מהצמדה כל טלפון בלי שתדעו. העבירו או מחקו את הקובץ כדי להתחיל מחדש.</value></data>
+  <data name="Err_HotkeyTitle" xml:space="preserve"><value>מקש החירום אינו פעיל</value></data>
+</root>

@@ -7,7 +7,7 @@ import { AddToHome } from './AddToHome.tsx';
 import { Icon } from './icons.tsx';
 import { Keyboard } from './Keyboard.tsx';
 import { Media } from './Media.tsx';
-import { Busy, Offline, PairScreen, Scan } from './Screens.tsx';
+import { Busy, InApp, Offline, PairScreen, Scan } from './Screens.tsx';
 import { Remotes } from './Remotes.tsx';
 import { Settings } from './Settings.tsx';
 import { Touchpad } from './Touchpad.tsx';
@@ -19,6 +19,7 @@ const TABS: Tab[] = REMOTES_ENABLED ? ['mouse', 'keyboard', 'media', 'remotes'] 
 export function App() {
   const s = useStore(client.store);
   if (s.screen === 'scan') return <Scan />;
+  if (s.screen === 'inapp') return <InApp />;
   if (s.screen === 'pairing') return <PairScreen />;
   if (s.screen === 'offline') return <Offline />;
   if (s.screen === 'busy') return <Busy />;

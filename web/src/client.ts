@@ -1,4 +1,6 @@
 import { detectLang, type Lang, type LangPref } from './i18n/strings.ts';
+import { isInAppBrowser } from './inapp.ts';
+import { b64encode } from './protocol/b64.ts';
 import { takePairingSecret } from './protocol/fragment.ts';
 import {
   encButton,
@@ -19,7 +21,7 @@ import { REMOTES_ENABLED } from './features.ts';
 import { clearCredentials, loadCredentials, saveCredentials, storageGet, storageSet } from './storage.ts';
 import { createStore } from './store.ts';
 
-export type Screen = 'scan' | 'pairing' | 'offline' | 'busy' | 'online';
+export type Screen = 'scan' | 'inapp' | 'pairing' | 'offline' | 'busy' | 'online';
 export type ScanReason = 'none' | 'revoked' | 'denied' | 'expired' | 'failed';
 export type Tab = 'mouse' | 'keyboard' | 'media' | 'remotes';
 
@@ -52,6 +54,9 @@ export interface AppState {
   sensitivity: number;
   /** the device was paired during this page load (drives the one-time home-screen suggestion) */
   justPaired: boolean;
+  /** the QR link (with its one-time secret) shown on the "open in your browser" screen */
+  inappLink: string;
+  inappCopied: boolean;
 }
 
 const SENS_KEY = 'em.sens';
@@ -109,11 +114,15 @@ class Client {
     lang: resolveLang(loadLangPref()),
     sensitivity: loadSensitivity(),
     justPaired: false,
+    inappLink: '',
+    inappCopied: false,
   });
 
   private session: Session | null = null;
   private creds: Credentials | null = null;
   private pairActive = false;
+  /** the QR secret kept while the "open in your browser" screen is shown */
+  private pendingK: Uint8Array | null = null;
   private attempts = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private offlineTimer: ReturnType<typeof setTimeout> | null = null;
@@ -130,7 +139,11 @@ class Client {
     window.addEventListener('pagehide', () => this.releaseInputs());
     window.addEventListener('blur', () => this.releaseInputs());
     void this.fetchInfo();
-    if (k) {
+    if (k && isInAppBrowser(navigator.userAgent)) {
+      // Pairing here would be lost with the in-app browser: ask for the real browser first.
+      this.pendingK = k;
+      this.store.set({ screen: 'inapp', inappLink: `${location.origin}${location.pathname}${location.search}#k=${b64encode(k)}`, connecting: false });
+    } else if (k) {
       this.startPair(k);
     } else if (this.creds) {
       this.connect();
@@ -165,6 +178,44 @@ class Client {
   }
 
   // ---- pairing and connecting ----
+
+  /** "Continue here anyway" on the in-app browser screen. */
+  pairInThisBrowser(): void {
+    const k = this.pendingK;
+    this.pendingK = null;
+    if (k) this.startPair(k);
+  }
+
+  /** Copies the QR link so it can be pasted into Safari or Chrome. The page is plain HTTP, so the Clipboard API may be missing. */
+  copyPairLink(): void {
+    const link = this.store.get().inappLink;
+    const done = () => {
+      this.store.set({ inappCopied: true });
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(link).then(done, () => this.legacyCopy(link) && done());
+    } else if (this.legacyCopy(link)) {
+      done();
+    }
+  }
+
+  private legacyCopy(text: string): boolean {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    el.setSelectionRange(0, text.length);
+    try {
+      return document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      el.remove();
+    }
+  }
 
   private startPair(k: Uint8Array): void {
     this.pairActive = true;

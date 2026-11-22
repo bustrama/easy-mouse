@@ -17,6 +17,8 @@ public sealed class CoreServices
     public required HostStatus Status { get; init; }
     public required SessionLimits Limits { get; init; }
     public required TimeProvider Time { get; init; }
+    /// <summary>Receives failures that are handled by closing a socket but must not go unnoticed (the host logs them).</summary>
+    public Action<string, Exception>? OnError { get; set; }
 
     public static CoreServices Create(
         IDeviceStore store,

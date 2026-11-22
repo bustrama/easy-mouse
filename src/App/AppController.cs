@@ -95,6 +95,7 @@ public sealed class AppController : IAsyncDisposable
             // NoRemoteActions: invoke -> {ok:false, err:"unsupported"}; NoRemoteLayouts: nothing is pushed.
             Core = CoreServices.Create(store, input, media, time: _env.Time);
         }
+        Core.OnError = AppLog.Error;
         hostStatus = Core.Status;
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();

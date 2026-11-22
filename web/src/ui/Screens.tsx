@@ -75,6 +75,31 @@ export function Scan() {
   );
 }
 
+export function InApp() {
+  const s = useStore(client.store);
+  const t = useT();
+  return (
+    <div class="full center">
+      <div class="badge">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#5B8CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+        </svg>
+      </div>
+      <h1>{t('inapp.title')}</h1>
+      <p class="lead">{t('inapp.body')}</p>
+      <div class="grow" />
+      <button class="btn primary" onClick={() => client.copyPairLink()}>
+        {s.inappCopied ? t('inapp.copied') : t('inapp.copy')}
+      </button>
+      <button class="btn ghost" onClick={() => client.pairInThisBrowser()}>
+        {t('inapp.here')}
+      </button>
+      <LangSwitch />
+    </div>
+  );
+}
+
 export function Offline() {
   const s = useStore(client.store);
   const t = useT();

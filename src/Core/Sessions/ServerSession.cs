@@ -226,9 +226,13 @@ public sealed class ServerSession
                 await CloseAsync(CloseCode.Normal, "denied").ConfigureAwait(false);
             }
         }
-        catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
+        catch (Exception ex)
         {
-            await CloseAsync(CloseCode.InternalError, "send failed").ConfigureAwait(false);
+            // Includes a failed device-store write after the user approved: report it and release the phone
+            // instead of leaving it waiting on a task nobody observes.
+            if (ex is not (WebSocketException or ObjectDisposedException or OperationCanceledException))
+                _svc.OnError?.Invoke("pairing failed after approval", ex);
+            await CloseAsync(CloseCode.InternalError, "pairing failed").ConfigureAwait(false);
         }
     }
 

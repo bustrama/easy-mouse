@@ -1,7 +1,7 @@
 # Easy Mouse
 
 Turn your phone's browser into a mouse, keyboard and media remote for your Windows PC.
-Nothing to install on the phone, and nothing leaves your local network (apart from an optional,
+Nothing to install on the phone, and nothing leaves your local network (apart from an optional
 once-a-day update check, see [Privacy](#privacy)).
 
 > **Early release (0.1).** It works, but it is young. Please read [Limitations](#limitations).
@@ -56,7 +56,7 @@ If the phone cannot connect, the QR window shows the address it is listening on
 Releases are not code-signed yet. Before running a file:
 
 - Download it only from this repository's Releases page.
-- Compare its SHA-256 with SHA256SUMS on the release page, which is signed (SHA256SUMS.sig, Ed25519, see [docs/releasing.md](docs/releasing.md#verifying-a-release-you-or-a-user-who-wants-to)):
+- Compare its SHA-256 with `SHA256SUMS` on the release page, which is signed (`SHA256SUMS.sig`, Ed25519, see [docs/releasing.md](docs/releasing.md#verifying-a-release-you-or-a-user-who-wants-to)):
 
   ```powershell
   Get-FileHash .\<downloaded file> -Algorithm SHA256

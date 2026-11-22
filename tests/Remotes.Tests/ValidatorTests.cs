@@ -178,7 +178,7 @@ public class ValidatorTests
     {
         var ts = File.ReadAllText(Path.Combine(Repo.Root, "web", "src", "ui", "iconPaths.ts"));
         var block = ts[ts.IndexOf("ICON_PATHS", StringComparison.Ordinal)..ts.IndexOf("};", StringComparison.Ordinal)];
-        var names = Regex.Matches(block, @"^\s{2}(\w+):", RegexOptions.Multiline).Select(m => m.Groups[1].Value).ToHashSet();
+        var names = Regex.Matches(block, @"^\s{2}(?:'([\w-]+)'|(\w+)):", RegexOptions.Multiline).Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value).ToHashSet();
         Assert.NotEmpty(names);
         Assert.True(names.SetEquals(RemoteValidator.Icons), $"web: {string.Join(",", names.Except(RemoteValidator.Icons))} / validator: {string.Join(",", RemoteValidator.Icons.Except(names))}");
     }

@@ -1,4 +1,5 @@
 using System.Net;
+using EasyMouse.Core.Abstractions;
 using EasyMouse.Core.Devices;
 using EasyMouse.Core.Fakes;
 using EasyMouse.Core.Pairing;
@@ -31,13 +32,15 @@ public sealed class TestHost : IAsyncDisposable
         SessionLimits? limits = null,
         IDeviceStore? store = null,
         TimeSpan? expiry = null,
-        StaticAssets? assets = null)
+        StaticAssets? assets = null,
+        IRemoteLayoutSource? layouts = null)
     {
         var time = new ManualTimeProvider();
         var input = new RecordingInputSink();
         var media = new RecordingMediaController();
         var services = CoreServices.Create(
             store ?? new InMemoryDeviceStore(), input, media,
+            layouts: layouts,
             time: time,
             pairingOptions: pairing ?? new PairingOptions { AllowDelay = TimeSpan.Zero },
             limits: limits,

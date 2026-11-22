@@ -76,9 +76,10 @@ Windows does not let a normal app send input to an administrator window or to th
 secure desktop). Doing it needs a SYSTEM component. Easy Mouse has one, off by default, behind **Settings > Security > Control admin
 windows and the UAC prompt**. Read the consequence first:
 
-> **With this on, a paired phone can approve UAC prompts, which makes it effectively an administrator on the PC.** Anyone holding a
-> paired phone could install software or change system settings. It is a per-PC choice the user makes on the PC; the phone can neither
-> switch it on nor off.
+> **With this on, UAC prompts can be approved without the user, and that is not limited to paired phones: any program running
+> under the signed-in Windows account can get administrator rights silently, with no prompt.** A paired phone gets it too. It is as if
+> the user were always an administrator. The setting is machine-wide and applies to whoever is signed in at the console. It is a choice
+> the user makes on the PC; the phone can neither switch it on nor off.
 
 ### What exists
 
@@ -107,21 +108,25 @@ what the user had chosen. Settings shows the real state (see "No pretending" bel
 | Another local user, or a process of another session | Connects to the pipe | The pipe's access list grants only SYSTEM and the signed-in console user (read/write, not "create instance"); the network is explicitly denied. The agent also checks the caller's session |
 | A process of the same user that is not Easy Mouse | Connects and types | The agent resolves the caller's process id and accepts only the image `EasyMouse.exe` in the broker's own folder (full path, case-insensitive), run by the console user, in the console session. Everything else is disconnected before one byte is read |
 | A local user who runs `EasyMouse.Broker.exe --agent` or `--service` by hand | Gets a SYSTEM-level helper | The agent refuses unless its token is SYSTEM; both modes refuse to run from outside Program Files |
-| A local user who creates the pipe name first (to read what the phone types) | Squats `EasyMouse.Broker` | The agent creates it as the first instance and exits if it cannot. The App checks the **owner** of the pipe it connected to: only SYSTEM or the Administrators group can have created an object they own, so a user's pipe is refused before anything is sent |
-| A user who can write to the install folder | Replaces the SYSTEM binary | The broker only runs, and `--enable` only runs, from under Program Files (administrators only). The installer registers the service only in such a folder. For a copy elsewhere the switch says the helper is not installed |
+| A local user who creates the pipe name first (to read what the phone types) | Squats `EasyMouse.Broker` | The agent creates it as the first instance and exits if it cannot. The App checks the **owner** of the pipe it connected to: only SYSTEM or the Administrators group can have created an object they own, so a user's pipe is refused before anything is sent. What remains is a **denial of service** only: while the name is taken the broker cannot start its pipe and Settings shows it as faulted (the agent keeps retrying) |
+| A user who can write to the install folder | Replaces the SYSTEM binary | A folder name proves nothing, so the broker (service, agent and `--enable`) checks the real thing at start: the path is under Program Files (`..` resolved) **and** the access list of the executable and its folder lets nobody but SYSTEM, Administrators and TrustedInstaller write, delete or re-permission it, and none of them is owned by anyone else. The installer sets that access list explicitly (no inheritance; SYSTEM and Administrators full control, Users read and execute) and registers the service only if that worked. Otherwise the switch says the helper is not installed |
 | A compromised or buggy App | Sends garbage or floods | The wire format is six fixed operations (move, button, wheel, key, text, release-all) with exact lengths: text is capped at 1024 bytes of valid UTF-8 without NUL, key codes 1..254, buttons 0..2. A malformed command is answered `Invalid` and the connection is closed. A token bucket limits it to about 1000 commands per second (text costs 25). There is no command that runs a program, reads data or changes a setting |
-| Anything | Uses the broker at the lock screen | The agent asks Terminal Services whether the session is locked before every injection and treats "unknown" as locked. It never unlocks, never stores or types a Windows password, and the App also drops input while locked |
+| Anything | Uses the broker at the lock screen | The agent asks Terminal Services whether the session is locked before every injection (never cached: the lock screen and the UAC prompt share the Winlogon desktop) and treats "unknown" as locked. It never unlocks, never stores or types a Windows password, and the App also drops input while locked |
 
 ### Residual risk (what is not defended)
 
-- **Same-user malware.** The caller check proves the connection comes from the installed `EasyMouse.exe`, not that the code inside it is
-  honest. Any process running as the signed-in user can inject code into a same-user process (or start `EasyMouse.exe` suspended and
-  patch it) and so pass the path, user and session checks. While the feature is on, such malware can drive the UAC prompt and is
-  effectively an administrator **without** a prompt of its own. This is the real price of the feature. The defences are that it is off by
+- **Any program running as the signed-in user (the biggest one).** The caller check proves the connection comes from the installed
+  `EasyMouse.exe`, not that the code inside it is honest. Any process of the same user can inject code into a same-user process, start
+  `EasyMouse.exe` suspended and patch it, or duplicate a handle of its open pipe, and so pass the path, user and session checks. While
+  the feature is on, such a program can drive the UAC prompt and is effectively an administrator **without** a prompt of its own.
+  Mitigations that only raise the bar: the App is built without startup-hook support (`DOTNET_STARTUP_HOOKS` is ignored), and it keeps
+  the pipe open only while input is flowing (it reconnects, and re-checks the pipe owner, for every burst after a short pause), which
+  shrinks the window for handle duplication but does not close it. The in-app warning says all of this in plain words. This is the real price of the feature. The defences are that it is off by
   default, that turning it on needs a deliberate administrator approval, and that it can be turned off again. Code signing would let the
   broker also verify the caller's signature, which raises the bar but does not remove injection; it is not in place yet.
 - **A paired phone is as powerful as an administrator.** With the feature on, a paired phone can approve UAC. Pairing, revoke and
   "Disconnect all" are the controls, as for everything else in this document.
+- **Machine-wide.** The service and its switch belong to the PC, not to a Windows account. It serves whoever is signed in at the console.
 - **The in-app warning is a warning, not a gate.** It is a normal dialog; the gate is Windows' consent prompt, which only an
   administrator can accept.
 - **The agent runs with the full SYSTEM token.** It could drop privileges after opening the desktops; it does not, to keep it small.

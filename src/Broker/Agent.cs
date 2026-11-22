@@ -15,7 +15,6 @@ namespace EasyMouse.Broker;
 /// </summary>
 internal static unsafe class Agent
 {
-    private static readonly TimeSpan LockCache = TimeSpan.FromMilliseconds(200);
 
     public static int Run(uint session)
     {
@@ -52,9 +51,9 @@ internal static unsafe class Agent
             using var sink = new SendInputSink();
             while (true)
             {
-                server.WaitForConnection();
                 try
                 {
+                    server.WaitForConnection();
                     if (PeerAllowed(server, session, user, expectedApp)) Serve(server, sink, desktop, session);
                 }
                 catch (IOException) { /* the client went away */ }
@@ -152,17 +151,9 @@ internal static unsafe class Agent
     /// </summary>
     private sealed class LockState(uint session)
     {
-        private long? _checkedAt;
-        private bool _locked = true;
-
-        public bool IsLockedOrUnknown()
-        {
-            var now = Environment.TickCount64;
-            if (_checkedAt is { } at && now - at < LockCache.TotalMilliseconds) return _locked;
-            _checkedAt = now;
-            _locked = Query();
-            return _locked;
-        }
+        // Asked on every command, never cached: the lock screen and the UAC prompt are both on the Winlogon desktop, so a remembered
+        // "unlocked" must not outlive the moment the PC locks.
+        public bool IsLockedOrUnknown() => Query();
 
         private bool Query()
         {

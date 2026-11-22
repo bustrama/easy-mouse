@@ -47,11 +47,14 @@ public sealed class BrokerAdminControl : IAdminControl
     private long? _readAt;
     private BrokerFailure? _health;
     private long? _probedAt;
+    private bool _probing;
+    private readonly Action<Action> _schedule;
 
-    public BrokerAdminControl() : this(BrokerService.Query, RunElevatedAsync, () => Environment.TickCount64, BrokerInputSink.Probe) { }
+    public BrokerAdminControl() : this(BrokerService.Query, RunElevatedAsync, () => Environment.TickCount64, BrokerInputSink.Probe) => _ = State; // starts the first probe now
 
-    internal BrokerAdminControl(Func<BrokerServiceState> query, Func<bool, Task<AdminSwitchResult>> run, Func<long> nowMilliseconds, Func<BrokerFailure?> probe)
+    internal BrokerAdminControl(Func<BrokerServiceState> query, Func<bool, Task<AdminSwitchResult>> run, Func<long> nowMilliseconds, Func<BrokerFailure?> probe, Action<Action>? schedule = null)
     {
+        _schedule = schedule ?? (work => Task.Run(work));
         _query = query;
         _run = run;
         _now = nowMilliseconds;
@@ -93,10 +96,18 @@ public sealed class BrokerAdminControl : IAdminControl
             var now = _now();
             lock (this)
             {
-                if (_probedAt is not { } at || now - at >= ProbeMilliseconds)
+                // The probe talks to the pipe (up to a few hundred ms), so it never runs on the caller's thread (the UI's): the answer shown
+                // is the last one, refreshed in the background. Until the first answer arrives (it is started when the App starts) it reads as On.
+                if (!_probing && (_probedAt is not { } at || now - at >= ProbeMilliseconds))
                 {
-                    _health = _probe();
-                    _probedAt = now;
+                    _probing = true;
+                    _schedule(() =>
+                    {
+                        BrokerFailure? result;
+                        try { result = _probe(); }
+                        catch (Exception) { result = BrokerFailure.NotRunning; }
+                        lock (this) { _health = result; _probedAt = _now(); _probing = false; }
+                    });
                 }
                 return _health is null ? state : BrokerServiceState.Faulted;
             }
@@ -118,7 +129,7 @@ public sealed class BrokerAdminControl : IAdminControl
     {
         var exe = Path.Combine(AppContext.BaseDirectory, "EasyMouse.Broker.exe");
         // Only a copy under Program Files may be started as administrator: anywhere else a normal user could replace the file.
-        if (!File.Exists(exe) || !BrokerTrust.IsProtectedInstallPath(exe, [Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)]))
+        if (!File.Exists(exe) || !BrokerTrust.IsInstallLocationSafe(exe, [Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)]))
             return AdminSwitchResult.NotInstalled;
         try
         {

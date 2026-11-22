@@ -10,6 +10,7 @@
     <RootNamespace>EasyMouse.Broker</RootNamespace>
     <AssemblyName>EasyMouse.Broker</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <StartupHookSupport>false</StartupHookSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>../../assets/icon/icon.ico</ApplicationIcon>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

@@ -502,14 +502,64 @@ public class BrokerInputSinkTests
     }
 
     [Fact]
-    public async Task The_probe_reports_healthy_when_the_owner_is_trusted()
+    public async Task The_probe_reports_healthy_only_when_the_agent_accepts_the_caller_and_answers()
     {
         var name = NewPipe();
         using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        // The probe hangs up at once, so the server may see the connection end while still accepting ("pipe is being closed"): either way a client connected.
-        var accepted = Task.Run(() => { try { server.WaitForConnection(); } catch (IOException) { } });
+        var (done, seen) = Serve(server, _ => BrokerReply.Ok);
         Assert.Null(BrokerInputSink.Probe(name, _ => true));
-        await accepted.WaitAsync(TimeSpan.FromSeconds(2));
+        await done.WaitAsync(TimeSpan.FromSeconds(2));
+        lock (seen) Assert.Equal([new BrokerCommand(BrokerOp.ReleaseAll)], seen); // a harmless question, nothing that moves or types
+    }
+
+    [Fact]
+    public void The_probe_does_not_call_a_broker_healthy_that_hangs_up_on_us()
+    {
+        // What the agent does with a caller it does not accept (a portable or dev copy of the App): accepts the connection, then closes it.
+        var name = NewPipe();
+        using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        _ = Task.Run(() => { try { server.WaitForConnection(); server.Disconnect(); } catch (Exception ex) when (ex is IOException or InvalidOperationException) { } });
+        Assert.NotNull(BrokerInputSink.Probe(name, _ => true));
+    }
+
+    [Fact]
+    public async Task The_connection_is_closed_after_a_pause_and_reopened_for_the_next_burst_but_never_while_something_is_held()
+    {
+        var name = NewPipe();
+        long now = 0;
+        var connections = 0;
+        using var cts = new CancellationTokenSource();
+        var acceptor = Task.Run(() =>
+        {
+            while (!cts.IsCancellationRequested)
+            {
+                using var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                try
+                {
+                    server.WaitForConnection();
+                    Interlocked.Increment(ref connections);
+                    while (BrokerProtocol.Read(server, out _) == BrokerReply.Ok) { server.WriteByte((byte)BrokerReply.Ok); }
+                }
+                catch (Exception ex) when (ex is EndOfStreamException or IOException) { }
+            }
+        });
+        using var client = new BrokerInputSink(name, () => now, _ => true, TimeSpan.FromSeconds(2));
+        client.MoveRelative(1, 1);
+        now += 100;
+        client.MoveRelative(1, 1);                 // same burst: same connection
+        Assert.Equal(1, Volatile.Read(ref connections));
+        now += 1000;
+        client.MoveRelative(1, 1);                 // after a pause: a new connection, checked afresh
+        await Task.Delay(100);
+        Assert.Equal(2, Volatile.Read(ref connections));
+
+        client.Button(MouseButton.Left, true);     // a drag in progress
+        now += 5000;
+        client.MoveRelative(1, 1);                 // held: the connection must stay (closing would lift the button)
+        await Task.Delay(100);
+        Assert.Equal(2, Volatile.Read(ref connections));
+        client.Button(MouseButton.Left, false);
+        cts.Cancel();
     }
 
     [Fact]
@@ -596,5 +646,73 @@ public class BrokerPipeSetupTests
         Assert.Equal(new BrokerCommand(BrokerOp.Move, 3, 4), command);
         server.WriteByte((byte)BrokerReply.Ok);
         await send.WaitAsync(TimeSpan.FromSeconds(2));
+    }
+}
+
+public class BrokerFileAclTests
+{
+    private static FileSystemSecurity Acl(SecurityIdentifier owner, params (SecurityIdentifier Who, FileSystemRights Rights, AccessControlType Type, PropagationFlags Propagation)[] rules)
+    {
+        var security = new DirectorySecurity();
+        security.SetOwner(owner);
+        foreach (var (who, rights, type, propagation) in rules)
+            security.AddAccessRule(new FileSystemAccessRule(who, rights, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, propagation, type));
+        return security;
+    }
+
+    private static SecurityIdentifier Sid(WellKnownSidType t) => new(t, null);
+    private static readonly SecurityIdentifier Admins = Sid(WellKnownSidType.BuiltinAdministratorsSid);
+    private static readonly SecurityIdentifier System = Sid(WellKnownSidType.LocalSystemSid);
+    private static readonly SecurityIdentifier Users = Sid(WellKnownSidType.BuiltinUsersSid);
+
+    [Fact]
+    public void The_default_program_files_shape_is_safe()
+        => Assert.False(BrokerTrust.IsWritableByOthers(Acl(Admins,
+            (System, FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.None),
+            (Admins, FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.None),
+            (Users, FileSystemRights.ReadAndExecute, AccessControlType.Allow, PropagationFlags.None))));
+
+    [Theory]
+    [InlineData(FileSystemRights.Modify)]
+    [InlineData(FileSystemRights.WriteData)]
+    [InlineData(FileSystemRights.AppendData)]
+    [InlineData(FileSystemRights.Delete)]
+    [InlineData(FileSystemRights.ChangePermissions)]
+    [InlineData(FileSystemRights.TakeOwnership)]
+    [InlineData(FileSystemRights.FullControl)]
+    public void Any_write_style_right_for_ordinary_users_makes_it_unsafe(FileSystemRights rights)
+        => Assert.True(BrokerTrust.IsWritableByOthers(Acl(Admins,
+            (Admins, FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.None),
+            (Sid(WellKnownSidType.AuthenticatedUserSid), rights, AccessControlType.Allow, PropagationFlags.None))));
+
+    [Fact]
+    public void A_user_owner_is_unsafe_because_an_owner_can_rewrite_the_access_list()
+        => Assert.True(BrokerTrust.IsWritableByOthers(Acl(new SecurityIdentifier("S-1-5-21-1-2-3-1001"),
+            (Admins, FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.None))));
+
+    [Fact]
+    public void An_inherit_only_entry_does_not_apply_to_the_folder_itself()
+        => Assert.False(BrokerTrust.IsWritableByOthers(Acl(Admins,
+            (Admins, FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.None),
+            (Sid(WellKnownSidType.CreatorOwnerSid), FileSystemRights.FullControl, AccessControlType.Allow, PropagationFlags.InheritOnly))));
+
+    [Fact]
+    public void A_deny_entry_is_not_trusted_to_cancel_an_allow()
+        => Assert.True(BrokerTrust.IsWritableByOthers(Acl(Admins,
+            (Users, FileSystemRights.Modify, AccessControlType.Allow, PropagationFlags.None),
+            (Users, FileSystemRights.Delete, AccessControlType.Deny, PropagationFlags.None))));
+
+    [Fact]
+    public void A_real_user_writable_folder_is_not_a_safe_install_location_even_under_a_matching_root()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "em-acl-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var exe = Path.Combine(dir, "EasyMouse.Broker.exe");
+            File.WriteAllText(exe, "x");
+            Assert.False(BrokerTrust.IsInstallLocationSafe(exe, [Path.GetTempPath()])); // by path it would pass; the access list says no
+        }
+        finally { Directory.Delete(dir, true); }
     }
 }

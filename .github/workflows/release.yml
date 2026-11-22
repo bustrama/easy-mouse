@@ -105,7 +105,7 @@ jobs:
       # ---------------------------------------------------------------------------------------------------------
       # HOOK: code signing with SignPath Foundation (not enabled; needs an approved SignPath project first).
       # When it is approved, sign here, BEFORE the installer is built, the files that go into it:
-      #   publish/win-x64/EasyMouse.exe and the EasyMouse*.dll files.
+      #   publish/win-x64/EasyMouse.exe, publish/win-x64/EasyMouse.Broker.exe (it runs as SYSTEM: sign it too) and the EasyMouse*.dll files.
       # Typical shape (pin the action by full commit SHA when you add it, and keep every value out of this file):
       #   - uses: signpath/github-action-submit-signing-request@<full-commit-sha>
       #     with:

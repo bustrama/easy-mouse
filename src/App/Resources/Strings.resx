@@ -92,17 +92,17 @@
   <data name="Cat_Unknown" xml:space="preserve"><value>unknown profile</value></data>
   <data name="Set_Status" xml:space="preserve"><value>Status</value></data>
   <data name="Set_Admin" xml:space="preserve"><value>Control admin windows and the UAC prompt</value></data>
-  <data name="Set_AdminDesc" xml:space="preserve"><value>Lets a paired phone type and click in administrator windows and answer the Windows UAC prompt. Needs the Easy Mouse Broker service and your confirmation on this PC.</value></data>
+  <data name="Set_AdminDesc" xml:space="preserve"><value>Lets a paired phone, and any program running as you, use administrator windows and answer the Windows UAC prompt. Needs the Easy Mouse Broker service and your confirmation on this PC.</value></data>
   <data name="Admin_ConfirmBody" xml:space="preserve"><value>Turn on control of administrator windows and the UAC prompt?
 
-With this on, a paired phone can approve Windows UAC prompts. That makes it effectively an administrator on this PC: anyone holding a paired phone could install software or change system settings.
+With this on, Windows UAC prompts can be approved without you touching the PC, and that power is NOT limited to your paired phones: any program running under your Windows account while this is on can get administrator rights silently, with no prompt at all. A paired phone gets it too. It is as if you were always signed in as an administrator.
 
-Only turn this on if you trust every paired phone, and turn it off when you do not need it. The lock screen is still never controlled.
+This applies to the whole PC, for whoever is signed in at the screen. Turn it on only if you accept that, and turn it off when you do not need it. The lock screen is still never controlled.
 
 Windows will ask for your permission next.</value></data>
   <data name="Admin_NotInstalled" xml:space="preserve"><value>Not available: the Easy Mouse Broker service is not installed. Install Easy Mouse with the installer (the portable zip does not include it).</value></data>
   <data name="Admin_Off" xml:space="preserve"><value>Off. Nothing privileged is running.</value></data>
-  <data name="Admin_On" xml:space="preserve"><value>On. A paired phone can use administrator windows and answer UAC prompts. Switch it off when you do not need it.</value></data>
+  <data name="Admin_On" xml:space="preserve"><value>On. A paired phone, and any program running as you, can use administrator windows and answer UAC prompts. Switch it off when you do not need it.</value></data>
   <data name="Admin_Faulted" xml:space="preserve"><value>Turned on, but the Easy Mouse Broker service is not running, so administrator windows are still out of reach. Try switching it off and on again, or restart the PC.</value></data>
   <data name="Admin_Unknown" xml:space="preserve"><value>Cannot read the state of the Easy Mouse Broker service.</value></data>
   <data name="Admin_Cancelled" xml:space="preserve"><value>Windows permission was not given. Nothing was changed.</value></data>

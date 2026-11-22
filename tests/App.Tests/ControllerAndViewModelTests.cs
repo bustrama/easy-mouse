@@ -529,7 +529,7 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         await accepted.SetAdminAsync(true);
         Assert.Equal([true], fake.Requests);
         Assert.True(accepted.AdminChecked);
-        Assert.Contains("paired phone can use administrator windows", accepted.AdminStatusText);
+        Assert.Contains("any program running as you", accepted.AdminStatusText);
     }
 
     [Fact]
@@ -609,7 +609,7 @@ public class ControllerAndViewModelTests : IAsyncDisposable
     {
         long now = 0;
         BrokerFailure? probe = BrokerFailure.NotRunning;
-        var control = new BrokerAdminControl(() => BrokerServiceState.On, _ => Task.FromResult(AdminSwitchResult.Done), () => now, () => probe);
+        var control = new BrokerAdminControl(() => BrokerServiceState.On, _ => Task.FromResult(AdminSwitchResult.Done), () => now, () => probe, a => a());
         Assert.Equal(BrokerServiceState.Faulted, control.State);
         Assert.True(control.Wanted); // the user still wants it: input is tried, and fails visibly, rather than silently using the normal path
         probe = null;
@@ -624,7 +624,7 @@ public class ControllerAndViewModelTests : IAsyncDisposable
     public void A_service_that_is_off_is_never_probed()
     {
         var probes = 0;
-        var control = new BrokerAdminControl(() => BrokerServiceState.Off, _ => Task.FromResult(AdminSwitchResult.Done), () => 0, () => { probes++; return null; });
+        var control = new BrokerAdminControl(() => BrokerServiceState.Off, _ => Task.FromResult(AdminSwitchResult.Done), () => 0, () => { probes++; return null; }, a => a());
         Assert.Equal(BrokerServiceState.Off, control.State);
         Assert.Equal(0, probes);
     }

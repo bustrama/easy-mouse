@@ -42,6 +42,50 @@ public static class BrokerTrust
         return false;
     }
 
+    private static readonly SecurityIdentifier TrustedInstaller = new("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
+
+    private const FileSystemRights WriteRights = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete
+        | FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+
+    private static bool IsPrivileged(SecurityIdentifier sid)
+        => sid.IsWellKnown(WellKnownSidType.LocalSystemSid) || sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid) || sid.Equals(TrustedInstaller);
+
+    /// <summary>
+    /// True when anyone but SYSTEM, Administrators and TrustedInstaller could write, delete or re-permission this file or folder, or owns it.
+    /// A folder name is no proof of safety (an administrator can install anywhere, a user can be granted write under Program Files), so
+    /// the real access list is what counts. Inherit-only entries do not apply to the object itself and are skipped.
+    /// </summary>
+    public static bool IsWritableByOthers(FileSystemSecurity security)
+    {
+        if (security.GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner || !IsPrivileged(owner)) return true;
+        foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+        {
+            if (rule.AccessControlType != AccessControlType.Allow) continue;
+            if (rule.PropagationFlags.HasFlag(PropagationFlags.InheritOnly)) continue;
+            if ((rule.FileSystemRights & WriteRights) == 0) continue;
+            if (rule.IdentityReference is not SecurityIdentifier sid || !IsPrivileged(sid)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The broker is allowed to run (as SYSTEM) only from a location that is both under Program Files by path AND not writable by ordinary
+    /// users by access list: the executable and its folder. Any failure to find out counts as not safe.
+    /// </summary>
+    public static bool IsInstallLocationSafe(string? exePath, IEnumerable<string> protectedRoots)
+    {
+        if (!IsProtectedInstallPath(exePath, protectedRoots)) return false;
+        try
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(exePath!))!);
+            return !IsWritableByOthers(dir.GetAccessControl()) && !IsWritableByOthers(new FileInfo(exePath!).GetAccessControl());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// The App checks the owner of the pipe it connected to: only SYSTEM or the Administrators group can have created an object they
     /// own, so a pipe a normal user squatted under the same name (to read what is typed) is refused.

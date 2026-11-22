@@ -27,6 +27,13 @@ internal sealed unsafe class AgentSupervisor : IDisposable
             throw new InvalidOperationException("Cannot configure the job object.");
     }
 
+    /// <summary>A session change is news: forget the pause after earlier failures so the agent for the new session starts at once.</summary>
+    public void ResetBackoff()
+    {
+        _quickFailures = 0;
+        _nextSpawn = 0;
+    }
+
     public void Tick()
     {
         var console = Native.WTSGetActiveConsoleSessionId();

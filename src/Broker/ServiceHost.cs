@@ -20,6 +20,8 @@ internal static unsafe class ServiceHost
     private static readonly ManualResetEventSlim s_stop = new(false);
     private static readonly AutoResetEvent s_wake = new(false);
     private static uint s_state = START_PENDING;
+    private static volatile bool s_resetBackoff;
+    private const uint ERROR_SERVICE_SPECIFIC_ERROR = 1066;
 
     public static int Run()
     {
@@ -36,16 +38,18 @@ internal static unsafe class ServiceHost
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvStdcall)])]
     private static void ServiceMain(uint argc, char** argv)
     {
+        var failed = false;
         try
         {
             fixed (char* name = BrokerProtocol.ServiceName)
                 s_handle = Native.RegisterServiceCtrlHandlerEx(name, &Control, 0);
-            if (s_handle == 0) return;
+            if (s_handle == 0) { failed = true; return; }
             Report(START_PENDING, waitHint: 5000);
             using var supervisor = new AgentSupervisor(Environment.ProcessPath!);
             Report(RUNNING);
             while (!s_stop.IsSet)
             {
+                if (s_resetBackoff) { s_resetBackoff = false; supervisor.ResetBackoff(); }
                 supervisor.Tick();
                 s_wake.WaitOne(2000);
             }
@@ -53,11 +57,12 @@ internal static unsafe class ServiceHost
         }
         catch (Exception)
         {
-            // A service that throws would take the process down without a word; stopping cleanly lets the manager's recovery decide.
+            // Stop, but with a failure code: a service that ends on its own with "success" is not restarted by the recovery actions.
+            failed = true;
         }
         finally
         {
-            if (s_handle != 0) Report(STOPPED);
+            if (s_handle != 0) Report(STOPPED, exitCode: failed ? 1u : 0);
         }
     }
 
@@ -71,7 +76,8 @@ internal static unsafe class ServiceHost
                 s_stop.Set();
                 s_wake.Set();
                 return 0;
-            case SERVICE_CONTROL_SESSIONCHANGE: // logon, logoff, console connect/disconnect: look again now
+            case SERVICE_CONTROL_SESSIONCHANGE: // logon, logoff, console connect/disconnect: look again now, and do not wait out an old backoff
+                s_resetBackoff = true;
                 s_wake.Set();
                 return 0;
             case SERVICE_CONTROL_INTERROGATE:
@@ -81,7 +87,7 @@ internal static unsafe class ServiceHost
         }
     }
 
-    private static void Report(uint state, uint waitHint = 0)
+    private static void Report(uint state, uint waitHint = 0, uint exitCode = 0)
     {
         s_state = state;
         var status = new SERVICE_STATUS
@@ -89,6 +95,8 @@ internal static unsafe class ServiceHost
             dwServiceType = SERVICE_WIN32_OWN_PROCESS,
             dwCurrentState = state,
             dwControlsAccepted = state == RUNNING ? SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN | SERVICE_ACCEPT_SESSIONCHANGE : 0,
+            dwWin32ExitCode = exitCode == 0 ? 0 : ERROR_SERVICE_SPECIFIC_ERROR,
+            dwServiceSpecificExitCode = exitCode,
             dwWaitHint = waitHint,
             dwCheckPoint = state is START_PENDING or STOP_PENDING ? 1u : 0,
         };

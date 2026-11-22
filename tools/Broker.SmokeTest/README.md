@@ -1,3 +1,51 @@
+# בדיקה ידנית של Broker (עברית, צעד אחר צעד)
+
+הבדיקה הזו נועדה לבדוק שהאפשרות "שליטה בחלונות מנהל ובהודעת UAC" באמת עובדת. אי אפשר לבדוק אותה אוטומטית, כי היא צריכה
+את שולחן העבודה האמיתי ואישור מנהל. תצטרכו טלפון מחובר. הכול הפיך: בסוף מסירים.
+
+## מה צריך
+- מתקין שנבנה מהענף (`EasyMouse-Setup-<גרסה>.exe`).
+- טלפון שכבר מצומד ל-Easy Mouse (או שתצמדו אותו בצעד 2).
+
+## 1. התקנה ובדיקת השירות
+1. הריצו את המתקין והתקינו בתיקייה שהוא מציע (`C:\Program Files\Easy Mouse`). אל תשנו תיקייה.
+2. פתחו PowerShell והריצו: `Get-Service EasyMouseBroker`
+   **צפוי:** `Status = Stopped` ובדקו גם `(Get-Service EasyMouseBroker).StartType` שהוא `Manual`. כלומר השירות קיים אבל כבוי.
+3. פתחו את Easy Mouse > הגדרות > אבטחה. המתג "שליטה בחלונות מנהל ובהודעת UAC" כבוי, והשורה מתחתיו אומרת שכבוי.
+
+## 2. הפעלה
+1. לחצו על המתג. **צפוי:** חלון אזהרה בעברית שאומר שכל תוכנה שלכם יכולה לקבל הרשאות מנהל בלי בקשה. לחצו "ביטול".
+   **צפוי:** המתג נשאר כבוי ושום דבר לא השתנה.
+2. לחצו שוב, אשרו את האזהרה, ואז אשרו את החלון של Windows ("האם לאפשר ל-Easy Mouse Broker...").
+   **צפוי:** המתג דלוק, השורה אומרת "מופעל". בדקו `Get-Service EasyMouseBroker`: `Running` ו-`Automatic`.
+
+## 3. הקלדה לחלון מנהל
+1. התחילו > Notepad (פנקס רשימות) > לחיצה ימנית > **הפעל כמנהל מערכת**. אשרו.
+2. מהטלפון: הזיזו את העכבר ולחצו בתוך החלון, והקלידו טקסט.
+   **צפוי:** הטקסט מופיע ב-Notepad. (בלי האפשרות הזו הוא לא היה מופיע.)
+3. כבו את המתג (Windows יבקש אישור), נסו להקליד שוב מהטלפון. **צפוי:** שום דבר לא מופיע, והטלפון נשאר מחובר.
+   הפעילו שוב לפני הצעד הבא.
+
+## 4. הודעת UAC
+1. מהטלפון: מקש Windows, הקלידו `cmd`, ואז Ctrl+Shift+Enter. תופיע הודעת UAC והמסך ייעמם.
+2. מהטלפון לחצו חץ שמאלה ואז Enter (או Alt+Y). **צפוי:** ההודעה מאושרת ונפתח חלון Command Prompt של מנהל.
+
+## 5. מסך נעילה (צריך להיכשל)
+1. לחצו Win+L כדי לנעול. מהטלפון נסו להקליד וללחוץ.
+2. **צפוי:** שום דבר לא קורה במסך הנעילה. פתחו את הנעילה רגיל במקלדת.
+
+## 6. שדרוג
+1. השאירו את המתג דלוק. התקינו מעל אותו מתקין שוב (או גרסה חדשה יותר).
+2. **צפוי:** בסוף ההתקנה המתג עדיין דלוק והשירות `Running`. אם הוא כבוי היה, הוא נשאר כבוי.
+
+## 7. הסרה וניקוי
+1. כבו את המתג (אישור Windows).
+2. הסירו את Easy Mouse מ"הוספה או הסרה של תוכניות".
+3. בדקו: `Get-Service EasyMouseBroker` צריך להגיד שאין שירות כזה, והתיקייה `C:\Program Files\Easy Mouse` נעלמה.
+
+אם משהו שונה ממה שכתוב כאן: רשמו איזה צעד, מה ראיתם, ושלחו.
+
+---
 # Broker smoke test
 
 CI cannot switch desktops, so the SYSTEM broker (`src/Broker`) is checked by hand on a real Windows PC. Two ways. Neither leaves
@@ -56,7 +104,8 @@ To check the locked reading: `Start-Sleep 8; & ...\EasyMouse.exe --wts` and pres
 | Check | Status |
 |---|---|
 | Unit tests (protocol, validation, trust, ACL, routing, client, settings) | Pass in CI |
-| Installer compiles with the service steps (Inno Setup 6.7) | Compiled; not run |
+| Installer compiles with the service steps and the folder lock-down (Inno Setup 6.7) | Compiled; not run |
+| Install-location check on real files (`EasyMouse.exe --acl PATH`): the installed 0.1.0 under Program Files passes; System32 and a Temp folder do not | Checked |
 | Broker exe starts, refuses to run outside Program Files (exit 13), `--enable` needs an administrator | Checked on a dev machine, not elevated |
 | `WTSSessionInfoEx.SessionFlags` reads 1 in an unlocked session | Checked |
 | Service install, switch on/off, input into an elevated window, UAC prompt, lock screen, upgrade/uninstall of the service | **Not yet run on a real machine** (needs administrator approval on the PC; the session that wrote this could not obtain it) |

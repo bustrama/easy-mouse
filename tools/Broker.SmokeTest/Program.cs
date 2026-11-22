@@ -30,6 +30,13 @@ void Check(string name, bool ok, string detail = "")
     if (!ok) failures++;
 }
 
+if (Option("--acl") is { } aclPath)
+{
+    // Would the broker run from this file? (Under Program Files by path, and not writable by ordinary users by access list.)
+    Console.WriteLine($"{aclPath}: safe to run as SYSTEM = {BrokerTrust.IsInstallLocationSafe(aclPath, [Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)])}");
+    return 0;
+}
+
 Console.WriteLine($"service: {BrokerService.Query()}");
 Console.WriteLine($"foreground blocks normal input: {HostStatusMonitor.IsForegroundBlocked(selfElevated: false)}");
 if (Flag("--wts"))

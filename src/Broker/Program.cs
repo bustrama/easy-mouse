@@ -17,7 +17,7 @@ internal static class Program
     {
         if (args is ["--service"] or ["--agent", ..] && !RunsFromProtectedFolder())
         {
-            Console.Error.WriteLine("The broker runs as SYSTEM and only from under Program Files.");
+            Console.Error.WriteLine("The broker runs as SYSTEM and only from under Program Files, in a folder only administrators can write to.");
             return 13;
         }
         try
@@ -40,7 +40,7 @@ internal static class Program
     }
 
     private static bool RunsFromProtectedFolder()
-        => BrokerTrust.IsProtectedInstallPath(Environment.ProcessPath, [Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)]);
+        => BrokerTrust.IsInstallLocationSafe(Environment.ProcessPath, [Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)]);
 
     private static int Switch(bool enable)
     {

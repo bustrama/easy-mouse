@@ -29,6 +29,10 @@ public sealed class BrokerInputSink : IInputSink, IDisposable
     private readonly Func<long> _now;
     private NamedPipeClientStream? _pipe;
     private long _nextAttempt;
+    private long _lastUse;
+    private readonly HashSet<int> _held = []; // buttons and keys this client pressed and has not lifted
+    /// <summary>Idle time after which the pipe is closed (when nothing is held), so the connection exists per burst of input rather than for the life of the App.</summary>
+    private const long IdleMilliseconds = 300;
     private BrokerException? _lastFailure;
     private bool _disposed;
 
@@ -51,9 +55,22 @@ public sealed class BrokerInputSink : IInputSink, IDisposable
     internal static BrokerFailure? Probe(string pipeName, Func<SecurityIdentifier?, bool> trustedOwner)
     {
         using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification);
-        try { pipe.Connect(timeout: 200); }
-        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException) { return BrokerFailure.NotRunning; }
-        return trustedOwner(OwnerOf(pipe)) ? null : BrokerFailure.Untrusted;
+        try
+        {
+            pipe.Connect(timeout: 200);
+            if (!trustedOwner(OwnerOf(pipe))) return BrokerFailure.Untrusted;
+            // The agent checks WHO connected only after it accepts, and hangs up on a caller it does not accept (a portable or dev copy of
+            // the App). A harmless release-all tells those apart from a working broker. Ok, Locked and Blocked all mean "it accepted us".
+            Span<byte> frame = stackalloc byte[BrokerProtocol.MaxCommandBytes];
+            var length = BrokerProtocol.Write(new BrokerCommand(BrokerOp.ReleaseAll), frame);
+            using var cts = new CancellationTokenSource(500);
+            pipe.WriteAsync(frame[..length].ToArray(), cts.Token).AsTask().GetAwaiter().GetResult();
+            var reply = new byte[1];
+            if (pipe.ReadAsync(reply, cts.Token).AsTask().GetAwaiter().GetResult() != 1) return BrokerFailure.Refused;
+            return reply[0] is (byte)BrokerReply.Ok or (byte)BrokerReply.Locked or (byte)BrokerReply.Blocked ? null : BrokerFailure.Refused;
+        }
+        catch (OperationCanceledException) { return BrokerFailure.Timeout; }
+        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException or ObjectDisposedException) { return BrokerFailure.NotRunning; }
     }
 
     public bool IsConnected { get { lock (_gate) return _pipe is { IsConnected: true }; } }
@@ -108,7 +125,7 @@ public sealed class BrokerInputSink : IInputSink, IDisposable
                 pipe.WriteAsync(frame[..length].ToArray(), cts.Token).AsTask().GetAwaiter().GetResult();
                 var reply = new byte[1];
                 if (pipe.ReadAsync(reply, cts.Token).AsTask().GetAwaiter().GetResult() != 1) throw new EndOfStreamException();
-                if (reply[0] == (byte)BrokerReply.Ok) return;
+                if (reply[0] == (byte)BrokerReply.Ok) { Track(command); return; }
                 if (reply[0] == (byte)BrokerReply.Invalid) Drop();
                 throw new BrokerException(BrokerFailure.Refused, $"The broker refused the input ({(BrokerReply)reply[0]}).");
             }
@@ -120,9 +137,24 @@ public sealed class BrokerInputSink : IInputSink, IDisposable
         }
     }
 
+    private void Track(in BrokerCommand c)
+    {
+        _lastUse = _now();
+        switch (c.Op)
+        {
+            case BrokerOp.Button: if (c.B == 1) _held.Add(0x100 + c.A); else _held.Remove(0x100 + c.A); break;
+            case BrokerOp.Key: if (c.B == 1) _held.Add(c.A); else if (c.B == 2) _held.Remove(c.A); break;
+            case BrokerOp.ReleaseAll: _held.Clear(); break;
+        }
+    }
+
     private NamedPipeClientStream Connected()
     {
-        if (_pipe is { IsConnected: true }) return _pipe;
+        // A handle that stays open for the whole session is a handle another process of this user could duplicate (docs/security.md),
+        // so after a pause the connection is closed and the next burst connects, and is checked, afresh. Never while something is
+        // held down: closing would make the broker lift it.
+        if (_pipe is { IsConnected: true } && (_held.Count > 0 || _now() - _lastUse <= IdleMilliseconds)) return _pipe;
+        if (_pipe is { IsConnected: true }) Drop();
         Drop();
         // After a failure do not hammer the pipe for every mouse move: answer from the last failure for a second.
         if (_lastFailure is not null && _now() < _nextAttempt) throw _lastFailure;
@@ -131,6 +163,7 @@ public sealed class BrokerInputSink : IInputSink, IDisposable
         try
         {
             pipe.Connect(timeout: 200);
+            _lastUse = _now();
             if (!_trustedOwner(OwnerOf(pipe)))
                 throw Failed(BrokerFailure.Untrusted, "Something other than the Easy Mouse broker owns the broker pipe.");
         }

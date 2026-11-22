@@ -19,9 +19,14 @@ public partial class SettingsWindow : AppWindow
         _app = app;
         _vm = new SettingsViewModel(app, row => MessageBox.Show(this, Loc.Format("Dev_ConfirmRemove", row.Name), Loc.Instance["App_Name"],
             MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK,
-            text => MessageBox.Show(this, text, Loc.Instance["App_Name"], MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK);
+            text => MessageBox.Show(this, text, Loc.Instance["App_Name"], MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel) == MessageBoxResult.OK,
+            () => MessageBox.Show(this, Loc.Instance["Admin_ConfirmBody"], Loc.Instance["Set_Admin"], MessageBoxButton.OKCancel, MessageBoxImage.Warning, MessageBoxResult.Cancel) == MessageBoxResult.OK);
         DataContext = _vm;
         app.StateChanged += (_, _) => { if (IsVisible) _vm.Refresh(); };
+        // The broker service can stop or start without the app being told: look again while the window is open.
+        var poll = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        poll.Tick += (_, _) => { if (IsVisible) _vm.Refresh(); };
+        poll.Start();
     }
 
     public bool AllowClose { get; set; }
@@ -43,6 +48,14 @@ public partial class SettingsWindow : AppWindow
             Hide();
         }
         base.OnClosing(e);
+    }
+
+    private async void OnAdminToggled(object sender, RoutedEventArgs e)
+    {
+        var wanted = AdminToggle.IsChecked == true;
+        await _vm.SetAdminAsync(wanted);
+        // A click flips the box by itself and so detaches it from the view model: put it back to what is really the case.
+        AdminToggle.GetBindingExpression(System.Windows.Controls.Primitives.ToggleButton.IsCheckedProperty)?.UpdateTarget();
     }
 
     // ---- combo boxes: act only on a choice the user made, not on the view model re-selecting its own value

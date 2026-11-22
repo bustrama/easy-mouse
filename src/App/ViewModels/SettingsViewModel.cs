@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Windows.Input;
 using System.Windows.Media;
 using EasyMouse.App.Logic;
+using EasyMouse.App.Platform;
+using EasyMouse.Platform.Windows.Broker;
 
 namespace EasyMouse.App.ViewModels;
 
@@ -71,9 +73,12 @@ public sealed class SettingsViewModel : ViewModelBase
     private string _hotkeyMessage = "";
     private bool _capturing;
     private string _signature = "";
+    private string _adminMessage = "";
+    private readonly Func<bool> _confirmAdmin;
 
-    public SettingsViewModel(AppController app, Func<DeviceRowViewModel, bool>? confirmRemove = null, Func<string, bool>? confirmUpdate = null)
+    public SettingsViewModel(AppController app, Func<DeviceRowViewModel, bool>? confirmRemove = null, Func<string, bool>? confirmUpdate = null, Func<bool>? confirmAdmin = null)
     {
+        _confirmAdmin = confirmAdmin ?? (() => true);
         _app = app;
         Updates = new UpdatesViewModel(app, confirmUpdate ?? (_ => true));
         _confirmRemove = confirmRemove ?? (_ => true);
@@ -162,11 +167,43 @@ public sealed class SettingsViewModel : ViewModelBase
     }
 
     // ---- Security
+    // The switch is the broker service itself (see <see cref="IAdminControl"/>): reading it needs no rights, changing it goes through Windows' consent prompt.
+    public bool AdminChecked => _app.Admin.State is BrokerServiceState.On or BrokerServiceState.Faulted;
+    /// <summary>Whether the switch can be used at all: the service must be installed and readable.</summary>
+    public bool AdminAvailable => _app.Admin.State is BrokerServiceState.Off or BrokerServiceState.On or BrokerServiceState.Faulted;
+    public bool AdminStatusIsProblem => _app.Admin.State is BrokerServiceState.NotInstalled or BrokerServiceState.Faulted or BrokerServiceState.Unknown;
+    public string AdminStatusText => Loc.Instance[_app.Admin.State switch
+    {
+        BrokerServiceState.NotInstalled => "Admin_NotInstalled",
+        BrokerServiceState.On => "Admin_On",
+        BrokerServiceState.Faulted => "Admin_Faulted",
+        BrokerServiceState.Unknown => "Admin_Unknown",
+        _ => "Admin_Off",
+    }];
+    public string AdminMessage { get => _adminMessage; private set { if (Set(ref _adminMessage, value)) Raise(nameof(HasAdminMessage)); } }
+    public bool HasAdminMessage => _adminMessage.Length > 0;
+
     /// <summary>
-    /// Admin windows and the UAC prompt need a SYSTEM broker that does not exist in this version, so the setting is shown
-    /// disabled and never reads or writes <see cref="AppSettings.ControlAdminWindows"/> (the field stays only for the future).
+    /// The user flipped the switch. Turning it on first shows the plain-language warning on this PC (the confirmAdmin callback); only
+    /// a yes goes on to Windows' own prompt. The phone has no way to reach this: no message of the phone protocol touches settings.
     /// </summary>
-    public bool ControlAdminAvailable => false;
+    public async Task SetAdminAsync(bool enable)
+    {
+        AdminMessage = "";
+        if (enable && !_confirmAdmin())
+        {
+            Refresh();
+            return;
+        }
+        var result = await _app.SetAdminControlAsync(enable);
+        AdminMessage = result switch
+        {
+            AdminSwitchResult.Cancelled => Loc.Instance["Admin_Cancelled"],
+            AdminSwitchResult.Failed => Loc.Instance["Admin_Failed"],
+            _ => "",
+        };
+        Refresh();
+    }
 
     public string HotkeyText { get => _capturing ? Loc.Instance["Set_HotkeyPress"] : _hotkeyText; private set => Set(ref _hotkeyText, value); }
     public string HotkeyMessage { get => _hotkeyMessage; private set { if (Set(ref _hotkeyMessage, value)) Raise(nameof(HasHotkeyMessage)); } }
@@ -200,6 +237,7 @@ public sealed class SettingsViewModel : ViewModelBase
         Raise(nameof(StatusText));
         Raise(nameof(StatusIsProblem));
         Raise(nameof(VersionLine));
+        Raise(nameof(AdminChecked)); Raise(nameof(AdminAvailable)); Raise(nameof(AdminStatusText)); Raise(nameof(AdminStatusIsProblem));
         Raise(nameof(HotkeyText));
         Updates.Refresh();
 

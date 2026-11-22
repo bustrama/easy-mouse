@@ -10,6 +10,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en;he</SatelliteResourceLanguages>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- No DOTNET_STARTUP_HOOKS: with admin control on, code another process of the user could load into this one would be able to use the broker (docs/security.md). -->
+    <StartupHookSupport>false</StartupHookSupport>
   </PropertyGroup>
   <ItemGroup>
     <!-- WPF and WinForms share type names (Application, Button, ...): keep WPF as the default. -->

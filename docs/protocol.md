@@ -242,7 +242,7 @@ snapshot, so the client replaces its copy.
       "required": ["locked", "elevated"],
       "properties": {
         "locked": { "type": "boolean", "description": "PC is locked: input is being dropped" },
-        "elevated": { "type": "boolean", "description": "foreground window is elevated: input may not reach it" }
+        "elevated": { "type": "boolean", "description": "foreground window is elevated: input may not reach it (it does when the PC has admin control on)" }
       }
     }
   }

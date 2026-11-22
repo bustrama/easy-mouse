@@ -69,10 +69,14 @@ SmartScreen shows "Windows protected your PC" for unsigned apps. Only choose
 
 ## Limitations
 
-- **Admin windows, the UAC prompt and the lock screen cannot be controlled.** Windows blocks
-  input from a normal app there. The Settings option "Control admin windows and the UAC
-  prompt" is shown disabled ("Not available in this version"); it is planned, not built.
-  Easy Mouse never unlocks the PC and never stores your Windows password.
+- **The lock screen cannot be controlled.** Easy Mouse never unlocks the PC and never stores your
+  Windows password.
+- **Admin windows and the UAC prompt are off by default.** Windows blocks input from a normal app
+  there. Settings > Security > "Control admin windows and the UAC prompt" turns on a small helper
+  service (installed by the installer, not by the portable zip) that does only that. With it on, a
+  paired phone can approve UAC prompts and is effectively an administrator on the PC. Turning it on
+  or off asks Windows for permission on the PC; the phone cannot. Read the
+  [security notes](docs/security.md#elevated-windows-and-uac-the-system-broker) before using it.
 - **Windows 10 is untested.** It may work; nobody has checked.
 - **No custom remotes.** The Remotes feature (JSON remotes for Plex, Stremio, VLC, browser video) is
   disabled in 0.1 and scheduled for removal or a redo, see [docs/remotes.md](docs/remotes.md). The phone

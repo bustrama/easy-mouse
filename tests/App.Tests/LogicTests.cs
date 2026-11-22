@@ -106,14 +106,13 @@ public class SettingsTests : IDisposable
         Assert.Equal("Ctrl+Alt+Shift+K", s.Hotkey);
         Assert.True(s.StartMinimised);
         Assert.False(s.StartWithWindows);
-        Assert.False(s.ControlAdminWindows);
     }
 
     [Fact]
     public void Round_trips()
     {
         var store = new SettingsStore(Path.Combine(_dir, "settings.json"));
-        var saved = new AppSettings { Port = 9000, Language = "he", NetworkAdapterId = "{ABC}", ControlAdminWindows = true, Hotkey = "Ctrl+Alt+F9", StartWithWindows = true };
+        var saved = new AppSettings { Port = 9000, Language = "he", NetworkAdapterId = "{ABC}", Hotkey = "Ctrl+Alt+F9", StartWithWindows = true };
         store.Save(saved);
         Assert.Equal(saved, store.Load());
     }

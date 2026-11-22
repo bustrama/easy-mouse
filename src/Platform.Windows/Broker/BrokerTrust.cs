@@ -1,0 +1,109 @@
+using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
+
+namespace EasyMouse.Platform.Windows.Broker;
+
+/// <summary>
+/// Who may talk to whom, as pure functions (unit tested). The broker accepts only the installed Easy Mouse App run by the user who
+/// is signed in at the console; the App talks only to a pipe that SYSTEM or an administrator created.
+/// </summary>
+public static class BrokerTrust
+{
+    /// <summary>The App image, given the broker image: they are installed side by side, so EasyMouse.Broker.exe belongs to the EasyMouse.exe in the same folder.</summary>
+    public static string? ExpectedAppImage(string brokerImagePath)
+    {
+        var dir = Path.GetDirectoryName(Path.GetFullPath(brokerImagePath));
+        return dir is null ? null : Path.Combine(dir, "EasyMouse.exe");
+    }
+
+    /// <summary>True when the connecting process runs exactly the expected image (full path, case-insensitive).</summary>
+    public static bool IsExpectedImage(string? peerImagePath, string? expectedImagePath)
+    {
+        if (string.IsNullOrWhiteSpace(peerImagePath) || string.IsNullOrWhiteSpace(expectedImagePath)) return false;
+        if (!Path.IsPathFullyQualified(peerImagePath) || !Path.IsPathFullyQualified(expectedImagePath)) return false;
+        return string.Equals(Path.GetFullPath(peerImagePath), Path.GetFullPath(expectedImagePath), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The broker runs files as SYSTEM, so it must live where only administrators can write: under Program Files. A copy somewhere a
+    /// normal user can write to (D:Apps, a Downloads folder) would let that user replace the binary and become SYSTEM.
+    /// </summary>
+    public static bool IsProtectedInstallPath(string? path, IEnumerable<string> protectedRoots)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path)) return false;
+        var full = Path.GetFullPath(path);
+        foreach (var root in protectedRoots)
+        {
+            if (string.IsNullOrWhiteSpace(root) || !Path.IsPathFullyQualified(root)) continue;
+            var prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
+            if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
+    private static readonly SecurityIdentifier TrustedInstaller = new("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464");
+
+    private const FileSystemRights WriteRights = FileSystemRights.WriteData | FileSystemRights.AppendData | FileSystemRights.Delete
+        | FileSystemRights.DeleteSubdirectoriesAndFiles | FileSystemRights.ChangePermissions | FileSystemRights.TakeOwnership;
+
+    private static bool IsPrivileged(SecurityIdentifier sid)
+        => sid.IsWellKnown(WellKnownSidType.LocalSystemSid) || sid.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid) || sid.Equals(TrustedInstaller);
+
+    /// <summary>
+    /// True when anyone but SYSTEM, Administrators and TrustedInstaller could write, delete or re-permission this file or folder, or owns it.
+    /// A folder name is no proof of safety (an administrator can install anywhere, a user can be granted write under Program Files), so
+    /// the real access list is what counts. Inherit-only entries do not apply to the object itself and are skipped.
+    /// </summary>
+    public static bool IsWritableByOthers(FileSystemSecurity security)
+    {
+        if (security.GetOwner(typeof(SecurityIdentifier)) is not SecurityIdentifier owner || !IsPrivileged(owner)) return true;
+        foreach (FileSystemAccessRule rule in security.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+        {
+            if (rule.AccessControlType != AccessControlType.Allow) continue;
+            if (rule.PropagationFlags.HasFlag(PropagationFlags.InheritOnly)) continue;
+            if ((rule.FileSystemRights & WriteRights) == 0) continue;
+            if (rule.IdentityReference is not SecurityIdentifier sid || !IsPrivileged(sid)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The broker is allowed to run (as SYSTEM) only from a location that is both under Program Files by path AND not writable by ordinary
+    /// users by access list: the executable and its folder. Any failure to find out counts as not safe.
+    /// </summary>
+    public static bool IsInstallLocationSafe(string? exePath, IEnumerable<string> protectedRoots)
+    {
+        if (!IsProtectedInstallPath(exePath, protectedRoots)) return false;
+        try
+        {
+            var dir = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(exePath!))!);
+            return !IsWritableByOthers(dir.GetAccessControl()) && !IsWritableByOthers(new FileInfo(exePath!).GetAccessControl());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The App checks the owner of the pipe it connected to: only SYSTEM or the Administrators group can have created an object they
+    /// own, so a pipe a normal user squatted under the same name (to read what is typed) is refused.
+    /// </summary>
+    public static bool IsTrustedPipeOwner(SecurityIdentifier? owner)
+        => owner is not null && (owner.IsWellKnown(WellKnownSidType.LocalSystemSid) || owner.IsWellKnown(WellKnownSidType.BuiltinAdministratorsSid));
+
+    /// <summary>
+    /// The pipe's access list: SYSTEM full control, the signed-in user read and write (not "create instance"), the network denied,
+    /// and nobody else. Inheritance is off so nothing else can be added by a parent.
+    /// </summary>
+    public static PipeSecurity BuildPipeSecurity(SecurityIdentifier user)
+    {
+        var security = new PipeSecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.NetworkSid, null), PipeAccessRights.FullControl, AccessControlType.Deny));
+        security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
+        security.AddAccessRule(new PipeAccessRule(user, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+        return security;
+    }
+}

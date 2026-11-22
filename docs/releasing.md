@@ -109,6 +109,7 @@ Needs [Inno Setup 6](https://jrsoftware.org/isinfo.php) and the .NET SDK from `g
 ```powershell
 npm --prefix web ci --ignore-scripts; npm --prefix web run build
 dotnet publish src/App -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:Version=1.4.0 -o publish/win-x64
+dotnet publish src/Broker -c Release -r win-x64 --self-contained true -p:RestoreLockedMode=true -p:Version=1.4.0 -o publish/win-x64   # same folder: the SYSTEM broker
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=1.4.0 /DSourceDir=publish\win-x64 installer\EasyMouse.iss
 ```
 

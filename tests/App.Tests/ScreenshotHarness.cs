@@ -41,7 +41,7 @@ public class ScreenshotHarness
         var real = NetworkProbe_Collect().FirstOrDefault(a => NetworkAnalyzer.Candidates([a]).Count == 1) ?? throw new InvalidOperationException("no LAN adapter to bind");
         var temp = Path.Combine(Path.GetTempPath(), "em-shots-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temp);
-        new SettingsStore(Path.Combine(temp, "settings.json")).Save(new AppSettings { Port = 18765, StartWithWindows = true, ControlAdminWindows = true });
+        new SettingsStore(Path.Combine(temp, "settings.json")).Save(new AppSettings { Port = 18765, StartWithWindows = true });
         // User remotes for the Remotes window: one that needs review (text, link, program, lamp), one invalid.
         Directory.CreateDirectory(Path.Combine(temp, "remotes"));
         File.WriteAllText(Path.Combine(temp, "remotes", "living-room.json"), """

@@ -29,7 +29,7 @@ local network only. No cloud, no relay, no accounts, no telemetry.
 | Installer | Inno Setup, per-machine, installed as administrator; adds the firewall rule |
 | Updates | Opt-in check against GitHub Releases, verified (Ed25519 + SHA-256) and confirmed by the user; see "Updates" below |
 | Autostart | Setting (and installer checkbox). Starts minimised to tray |
-| Elevated windows and UAC | **Not in 0.1.** Planned for phase 2: a separate small SYSTEM broker service behind a setting with a clear warning. Settings shows the option disabled ("Not available in this version") |
+| Elevated windows and UAC | Optional, off by default: a small SYSTEM broker service (`src/Broker`) that does only input injection, switched on in Settings behind a warning and Windows' own consent prompt. See [security.md](security.md#elevated-windows-and-uac-the-system-broker) |
 | Controllers | One controlling device at a time |
 | Languages | Hebrew and English in every UI, with RTL support |
 | Platforms | Windows 11 supported. Windows 10 is untested and documented as such |
@@ -51,13 +51,19 @@ Phone browser (Preact)                    Windows PC
                                                            | named pipe, ACL'd
                                         +------------------v-------------------+
                                         | Easy Mouse.Broker (SYSTEM service)   |
-                                        |  PLANNED (phase 2, not in 0.1):      |
+                                        |  OPTIONAL, off by default:           |
                                         |  admin windows, UAC. No network.     |
                                         +--------------------------------------+
 ```
 
-The network-facing process never runs elevated. The broker is not built in 0.1; when it exists, only it will run elevated, it
-listens on no socket, and it accepts only the App over an ACL-protected pipe.
+The network-facing process never runs elevated. Only the broker does: it listens on no socket and accepts only the App over an
+ACL-protected pipe. The service itself (session 0) does nothing but start an agent as SYSTEM in the signed-in user's session; the
+agent owns the pipe, switches its thread to the desktop that receives input (the UAC prompt included) and injects. The App routes an
+action to it only when the setting is on and normal input would be blocked (`BrokerRoute`, `RoutingInputSink` in
+`src/Platform.Windows/Broker`); the wire format is `BrokerProtocol`. The switch is the service itself (start type and running),
+changed through Windows' consent prompt, so no setting the App or a phone can write turns it on. Threat model and residual risk:
+[security.md](security.md#elevated-windows-and-uac-the-system-broker).
+
 
 ## Pairing and reconnect
 
@@ -127,7 +133,8 @@ Some players publish junk as the SMTC title. Stremio's desktop app sends a torre
 
 ## Windows limits
 
-- Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. This is a limitation of 0.1: a planned phase 2 broker would cover elevated windows and UAC; the lock screen is out of scope.
+- Input cannot reach elevated windows, the UAC secure desktop or the lock screen from the normal App. The optional SYSTEM broker covers elevated windows and the UAC prompt when the user turns it on; the lock screen is out of scope (never unlocked, no password handling) and refused by the broker. The broker needs the installer (a service under Program Files); the portable zip does not register it.
+- Windows drops `SendInput` to an elevated window without an error (UIPI), so the App cannot learn it from the return value: `BrokerRoute` looks at the foreground window (keys), the window under the pointer (mouse) and the input desktop.
 - The App runs in the user session, never as a service.
 - Firewall rule (installer): program + TCP port, Private profile, LocalSubnet. New Wi-Fi defaults to Public; the app detects it and tells the user.
 - Detecting "the foreground window is elevated": a non-elevated process cannot open the token of an elevated or SYSTEM process (`OpenProcessToken` returns access denied; verified for winlogon and services), so access denied is treated as "more privileged than us", which is what UIPI cares about. Per the Win32 docs `SendInput` returns fewer events than asked when blocked (not exercised here: no elevated window available); `SendInputSink` throws `InputInjectionException` rather than hiding it.
@@ -150,7 +157,7 @@ Some players publish junk as the SMTC title. Stremio's desktop app sends a torre
 src/App/          WPF exe: window, tray, Kestrel host, Input, Media
 src/Core/         protocol, pairing, remote schema, action runner (no Win32)
 src/Remotes/      remote schema validator, catalog, approvals, action handler (no Win32)
-src/Broker/       SYSTEM service (phase 2)
+src/Broker/       SYSTEM service + per-session agent (admin windows, UAC); off by default
 tests/Core.Tests/
 web/              Vite + Preact client
 remotes/          built-in JSON remotes + schema
@@ -162,7 +169,7 @@ docs/             architecture.md, security.md, protocol.md, remotes.md
 ## Roadmap
 
 1. **Phase 1:** installer, autostart, QR window and tray, pair/approve/revoke, touchpad, keyboard, media keys and volume, reconnect, network hints, Hebrew/English.
-2. **Phase 2:** SMTC now-playing, ~~remote engine, built-in Plex/Stremio/browser remotes~~ (Remotes is disabled for 0.1 and scheduled for removal, docs/remotes.md), SYSTEM broker for admin windows and UAC (not in 0.1; the Settings option is shown disabled).
+2. **Phase 2:** SMTC now-playing, ~~remote engine, built-in Plex/Stremio/browser remotes~~ (Remotes is disabled for 0.1 and scheduled for removal, docs/remotes.md), SYSTEM broker for admin windows and UAC (optional, off by default).
 3. **Phase 3:** signing, winget, landing page polish.
 4. **Phase 4, on demand:** provider processes for deep integrations, opt-in secure mode.
 

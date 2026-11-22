@@ -1,4 +1,4 @@
-﻿; Easy Mouse installer (Inno Setup 6). Per-machine, installed as administrator.
+; Easy Mouse installer (Inno Setup 6). Per-machine, installed as administrator.
 ;
 ; Build (from the repository root, after `dotnet publish`, see docs/releasing.md):
 ;   ISCC.exe /DAppVersion=1.2.3 /DSourceDir=publish\win-x64 installer\EasyMouse.iss
@@ -17,6 +17,7 @@
 
 #define AppName "Easy Mouse"
 #define AppExe "EasyMouse.exe"
+#define BrokerExe "EasyMouse.Broker.exe"
 ; The name of the firewall rule that lets the app accept connections from the local network.
 #define RuleName "Easy Mouse (phone remote)"
 
@@ -136,9 +137,140 @@ begin
   end;
 end;
 
+
+{ ---- The Easy Mouse Broker service (admin windows and the UAC prompt, docs/security.md). ----
+  The service is registered but left OFF (start type "manual", not running): turning the feature on is the user's act, in the app's
+  Settings, behind Windows' own consent prompt. An update keeps whatever the user had chosen. It is only registered when the app
+  is installed under Program Files, because it runs files from the app folder as SYSTEM and a folder an ordinary user can write to would let
+  that user replace them. In another folder the app works as before and the Settings switch says the helper is not installed. }
+
+const
+  BrokerService = 'EasyMouseBroker';
+
+var
+  PreviousBrokerStart: Cardinal;
+  BrokerSetupFailed: Boolean;
+
+function InProtectedFolder: Boolean;
+var
+  App: String;
+begin
+  App := Lowercase(ExpandConstant('{app}')) + '\';
+  Result := (Pos(Lowercase(ExpandConstant('{commonpf64}')) + '\', App) = 1) or (Pos(Lowercase(ExpandConstant('{commonpf32}')) + '\', App) = 1);
+end;
+
+function BrokerProcessRunning: Boolean;
+var
+  Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{cmd}'), '/C tasklist /FI "IMAGENAME eq {#BrokerExe}" /NH | find /I "{#BrokerExe}"',
+    '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+end;
+
+{ Stops the service and waits until its process (and the agent it started) has ended, so the files can be replaced or removed. }
+procedure StopBrokerService;
+var
+  Code, Waited: Integer;
+begin
+  Exec(ExpandConstant('{sys}\sc.exe'), 'stop ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Waited := 0;
+  while BrokerProcessRunning and (Waited < 15000) do
+  begin
+    Sleep(500);
+    Waited := Waited + 500;
+  end;
+end;
+
+{ Runs sc.exe and says whether it succeeded. A failure is logged, and shown unless the install is silent (a silent update must not block). }
+function RunSc(const Params: String): Boolean;
+var
+  Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{sys}\sc.exe'), Params, '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  if not Result then
+  begin
+    Log('sc.exe ' + Params + ' failed with code ' + IntToStr(Code));
+    BrokerSetupFailed := True;
+  end;
+end;
+
+{ The folder the broker runs from must be writable only by SYSTEM and Administrators: set it explicitly and without inheritance
+  (Users read and run only), instead of trusting that the folder name implies it. If this fails the service is not registered. }
+function LockDownAppFolder: Boolean;
+var
+  Code: Integer;
+  Dir: String;
+begin
+  Dir := ExpandConstant('{app}');
+  { 1. The folder itself: no inheritance, SYSTEM and Administrators full, Users read and run, all passed on to what is created inside.
+    (Not with /T: an entry meant for folders, put on a file, does not apply to the file and would lock everybody out of it.) }
+  Result := Exec(ExpandConstant('{sys}\icacls.exe'),
+    '"' + Dir + '" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-32-545:(OI)(CI)RX" /C /Q',
+    '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  { 2. Everything already inside: back to "inherit from the folder", which is exactly that list. }
+  if Result then
+    Result := Exec(ExpandConstant('{sys}\icacls.exe'), '"' + Dir + '\*" /reset /T /C /Q', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  { 3. Owned by Administrators, not by whichever account ran Setup. }
+  if Result then
+    Result := Exec(ExpandConstant('{sys}\icacls.exe'), '"' + Dir + '" /setowner "*S-1-5-32-544" /T /C /Q', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  if not Result then Log('icacls on the app folder failed with code ' + IntToStr(Code));
+end;
+procedure RegisterBrokerService;
+var
+  Start: Cardinal;
+  Exists: Boolean;
+  BinPath: String;
+begin
+  if not InProtectedFolder then Exit;
+  if not LockDownAppFolder then
+  begin
+    BrokerSetupFailed := True;
+    Exit;
+  end;
+  Exists := RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', Start);
+  BinPath := 'binPath= "\"' + ExpandConstant('{app}\{#BrokerExe}') + '\" --service"';
+  if not Exists then
+    RunSc('create ' + BrokerService + ' ' + BinPath + ' start= demand DisplayName= "Easy Mouse Broker"')
+  else
+    RunSc('config ' + BrokerService + ' ' + BinPath); { also covers an app folder that moved }
+  RunSc('description ' + BrokerService + ' "Lets the Easy Mouse phone remote control administrator windows and the UAC prompt, only when you turn that on in Easy Mouse Settings. Does nothing otherwise."');
+  RunSc('failure ' + BrokerService + ' reset= 86400 actions= restart/5000');
+  { An update of an installation where the user had switched it on: start it again (the new files are in place). }
+  if Exists and (PreviousBrokerStart = 2) then RunSc('start ' + BrokerService);
+end;
+
+{ Whatever happened, a broker the user had switched on is started again at the end (a failed or cancelled update must not leave it stopped). }
+procedure DeinitializeSetup;
+var
+  Code: Integer;
+  Start: Cardinal;
+begin
+  if (PreviousBrokerStart = 2) and RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', Start) then
+    Exec(ExpandConstant('{sys}\sc.exe'), 'start ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+  if BrokerSetupFailed and (not WizardSilent) then
+    MsgBox('The Easy Mouse Broker service could not be set up. Easy Mouse works as before; control of administrator windows stays unavailable until you reinstall.', mbInformation, MB_OK);
+end;
+procedure RemoveBrokerService;
+var
+  Code: Integer;
+  Start: Cardinal;
+begin
+  if not RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', Start) then Exit;
+  StopBrokerService;
+  Exec(ExpandConstant('{sys}\sc.exe'), 'delete ' + BrokerService, '', SW_HIDE, ewWaitUntilTerminated, Code);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then RegisterBrokerService;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   QuitRunningApp;
+  { Remember whether the user had turned the broker on, then stop it so its files can be replaced. }
+  if not RegQueryDWordValue(HKLM, 'SYSTEM\CurrentControlSet\Services\' + BrokerService, 'Start', PreviousBrokerStart) then PreviousBrokerStart := 0;
+  StopBrokerService;
   Result := '';
 end;
 
@@ -160,7 +292,11 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Data: String;
 begin
-  if CurUninstallStep = usUninstall then RemoveAutostartValue;
+  if CurUninstallStep = usUninstall then
+  begin
+    RemoveAutostartValue;
+    RemoveBrokerService; { before the files go: stop it, wait for its process to end, delete the service }
+  end;
   if CurUninstallStep <> usPostUninstall then Exit;
   Data := ExpandConstant('{userappdata}\EasyMouse');
   if not DirExists(Data) then Exit;

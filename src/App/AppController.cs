@@ -31,6 +31,8 @@ public sealed record AppEnvironment
     public SemVer? CurrentVersion { get; init; }
     /// <summary>DEPRECATED (docs/remotes.md): follows <see cref="FeatureFlags.Remotes"/>; tests of the disabled remote engine turn it on.</summary>
     public bool RemotesEnabled { get; init; } = FeatureFlags.Remotes;
+    /// <summary>Tests replace the broker switch; null means the real one (or none when not running for real).</summary>
+    public IAdminControl? Admin { get; init; }
 }
 
 public enum HotkeyResult { Ok, Invalid, InUse }
@@ -67,7 +69,9 @@ public sealed class AppController : IAsyncDisposable
         if (_env.SystemIntegration) AppLog.Initialize(Path.Combine(paths.Root, "easymouse.log"));
 
         var store = new FileDeviceStore(paths.Devices, _env.Protector);
-        var (input, media) = PlatformFactory.Create(_env.SystemIntegration);
+        Admin = _env.Admin ?? (_env.SystemIntegration ? new BrokerAdminControl() : new NoAdminControl());
+        EasyMouse.Core.Abstractions.HostStatus? hostStatus = null; // the core services (which own it) are created below, from this very sink
+        var (input, media) = PlatformFactory.Create(_env.SystemIntegration, Admin, () => hostStatus);
 
         // DEPRECATED: disabled for 0.1, scheduled for removal (docs/remotes.md). With FeatureFlags.Remotes off nothing is read from
         // the built-in or user remotes folders, no folder is created, the phone gets no layouts and every invoke is refused.
@@ -91,6 +95,7 @@ public sealed class AppController : IAsyncDisposable
             // NoRemoteActions: invoke -> {ok:false, err:"unsupported"}; NoRemoteLayouts: nothing is pushed.
             Core = CoreServices.Create(store, input, media, time: _env.Time);
         }
+        hostStatus = Core.Status;
         Listener = new ListenerController(Core, _env.MachineName);
         Approvals = new ApprovalCoordinator();
         Help = new HelpAdvisor(_env.Time);
@@ -126,6 +131,8 @@ public sealed class AppController : IAsyncDisposable
     public ApprovalCoordinator Approvals { get; }
     public HelpAdvisor Help { get; }
     public UpdateService Updates { get; }
+    /// <summary>Control of admin windows and the UAC prompt: the broker service and Windows' consent prompt for switching it.</summary>
+    public IAdminControl Admin { get; }
     public string MachineName => _env.MachineName;
 
     public NetworkSnapshot Network { get; private set; } = NetworkSnapshot.Empty;
@@ -394,6 +401,14 @@ public sealed class AppController : IAsyncDisposable
         SyncPairing();
         await RefreshNetworkAsync().ConfigureAwait(false);
         RaiseStateChanged();
+    }
+
+    /// <summary>Turns the broker on or off through Windows' consent prompt. The caller has already shown the warning (on).</summary>
+    public async Task<AdminSwitchResult> SetAdminControlAsync(bool enabled)
+    {
+        var result = await Admin.SetEnabledAsync(enabled).ConfigureAwait(false);
+        RaiseStateChanged();
+        return result;
     }
 
     public Task DisconnectAllAsync() => Listener.DisconnectAllAsync();

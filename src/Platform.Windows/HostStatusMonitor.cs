@@ -142,6 +142,21 @@ public sealed class HostStatusMonitor : IDisposable
         return ElevationOfProcess(pid);
     }
 
+    private static readonly Lazy<bool> s_selfElevated = new(() => QueryElevation(Win32.GetCurrentProcess()) != ProcessElevation.NotElevated);
+
+    /// <summary>True when a click or wheel turn would land on a window of a process we cannot inject input into (UIPI drops it silently).</summary>
+    internal static bool IsCursorWindowBlocked() => ElevationPolicy.BlocksInput(s_selfElevated.Value, CursorWindowElevation());
+
+    /// <summary>Elevation of the process that owns the window under the mouse pointer. Mouse clicks and wheel turns land there, not on the foreground window.</summary>
+    internal static ProcessElevation CursorWindowElevation()
+    {
+        if (!Win32.GetCursorPos(out var point)) return ProcessElevation.NotElevated;
+        var hwnd = Win32.WindowFromPoint(point);
+        if (hwnd == 0) return ProcessElevation.NotElevated;
+        if (Win32.GetWindowThreadProcessId(hwnd, out var pid) == 0 || pid == 0) return ProcessElevation.NotElevated;
+        return ElevationOfProcess(pid);
+    }
+
     internal static ProcessElevation ElevationOfProcess(uint pid)
     {
         var process = Win32.OpenProcess(Win32.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);

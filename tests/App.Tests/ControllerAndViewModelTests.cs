@@ -5,6 +5,7 @@ using EasyMouse.App.Logic;
 using EasyMouse.App.Platform;
 using EasyMouse.App.ViewModels;
 using EasyMouse.Core.Devices;
+using EasyMouse.Platform.Windows.Broker;
 using EasyMouse.Core.Tests.Support;
 
 namespace EasyMouse.App.Tests;
@@ -95,7 +96,7 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         return ((IPEndPoint)l.LocalEndpoint).Port is var p && p >= 1024 ? p : 20000;
     }
 
-    private async Task<AppController?> StartAsync(bool needsAdapter, AppSettings? settings = null)
+    private async Task<AppController?> StartAsync(bool needsAdapter, AppSettings? settings = null, IAdminControl? admin = null)
     {
         _adapter = RealLocalAdapter();
         if (_adapter is null && needsAdapter) return null;
@@ -108,6 +109,7 @@ public class ControllerAndViewModelTests : IAsyncDisposable
             MachineName = "OFFICE-PC",
             Time = _time,
             Protector = new NoopProtector(),
+            Admin = admin,
             Probe = () => new NetworkSnapshot([_adapter], new Dictionary<string, NetCategory> { [_adapter.Id] = _category }),
         });
         _controllers.Add(controller);
@@ -484,13 +486,158 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         Assert.False(settings.HasHotkeyMessage);
     }
 
-    [Fact]
-    public async Task Admin_setting_is_unavailable_but_the_persisted_field_is_kept()
+    private sealed class FakeAdminControl(BrokerServiceState state) : IAdminControl
     {
-        var app = await StartAsync(needsAdapter: false, new AppSettings { ControlAdminWindows = true });
+        public BrokerServiceState State { get; set; } = state;
+        public bool Wanted => State is BrokerServiceState.On or BrokerServiceState.Faulted;
+        public AdminSwitchResult Result { get; set; } = AdminSwitchResult.Done;
+        public List<bool> Requests { get; } = [];
+        public Task<AdminSwitchResult> SetEnabledAsync(bool enabled)
+        {
+            Requests.Add(enabled);
+            if (Result == AdminSwitchResult.Done) State = enabled ? BrokerServiceState.On : BrokerServiceState.Off;
+            return Task.FromResult(Result);
+        }
+    }
+
+    [Fact]
+    public async Task Admin_setting_without_the_broker_installed_is_off_unavailable_and_says_why()
+    {
+        var app = await StartAsync(needsAdapter: false); // tests run without system integration: the feature reads as not installed
         var settings = new SettingsViewModel(app!);
-        Assert.False(settings.ControlAdminAvailable);
-        Assert.True(app!.Settings.ControlAdminWindows); // kept for the future, nothing acts on it
+        Assert.False(settings.AdminAvailable);
+        Assert.False(settings.AdminChecked);
+        Assert.True(settings.AdminStatusIsProblem);
+        Assert.Contains("not installed", settings.AdminStatusText);
+        Assert.DoesNotContain("Not available in this version", settings.AdminStatusText);
+    }
+
+    [Fact]
+    public async Task Turning_admin_control_on_needs_the_warning_confirmed_on_the_pc_first()
+    {
+        var fake = new FakeAdminControl(BrokerServiceState.Off);
+        var app = await StartAsync(needsAdapter: false, admin: fake);
+        var declined = new SettingsViewModel(app!, confirmAdmin: () => false);
+        Assert.True(declined.AdminAvailable);
+        Assert.False(declined.AdminChecked);
+
+        await declined.SetAdminAsync(true);
+        Assert.Empty(fake.Requests); // no warning accepted: Windows is not even asked
+        Assert.False(declined.AdminChecked);
+
+        var accepted = new SettingsViewModel(app!, confirmAdmin: () => true);
+        await accepted.SetAdminAsync(true);
+        Assert.Equal([true], fake.Requests);
+        Assert.True(accepted.AdminChecked);
+        Assert.Contains("any program running as you", accepted.AdminStatusText);
+    }
+
+    [Fact]
+    public async Task Turning_it_off_needs_no_warning()
+    {
+        var fake = new FakeAdminControl(BrokerServiceState.On);
+        var app = await StartAsync(needsAdapter: false, admin: fake);
+        var asked = false;
+        var settings = new SettingsViewModel(app!, confirmAdmin: () => { asked = true; return false; });
+        Assert.True(settings.AdminChecked);
+        await settings.SetAdminAsync(false);
+        Assert.False(asked);
+        Assert.Equal([false], fake.Requests);
+        Assert.False(settings.AdminChecked);
+    }
+
+    [Fact]
+    public async Task Declining_the_windows_prompt_changes_nothing_and_says_so()
+    {
+        var fake = new FakeAdminControl(BrokerServiceState.Off) { Result = AdminSwitchResult.Cancelled };
+        var app = await StartAsync(needsAdapter: false, admin: fake);
+        var settings = new SettingsViewModel(app!);
+        await settings.SetAdminAsync(true);
+        Assert.False(settings.AdminChecked);
+        Assert.True(settings.HasAdminMessage);
+        Assert.Equal(Loc.Instance["Admin_Cancelled"], settings.AdminMessage);
+    }
+
+    [Fact]
+    public async Task A_broker_that_is_on_but_not_running_is_shown_as_a_problem_not_as_working()
+    {
+        var fake = new FakeAdminControl(BrokerServiceState.Faulted);
+        var app = await StartAsync(needsAdapter: false, admin: fake);
+        var settings = new SettingsViewModel(app!);
+        Assert.True(settings.AdminChecked);
+        Assert.True(settings.AdminStatusIsProblem);
+        Assert.Equal(Loc.Instance["Admin_Faulted"], settings.AdminStatusText);
+    }
+
+    [Fact]
+    public async Task Every_admin_string_exists_in_hebrew_and_english()
+    {
+        var app = await StartAsync(needsAdapter: false);
+        foreach (var language in new[] { "en", "he" })
+        {
+            await app!.UpdateSettingsAsync(s => s with { Language = language });
+            foreach (var key in new[] { "Set_AdminDesc", "Admin_ConfirmBody", "Admin_NotInstalled", "Admin_Off", "Admin_On", "Admin_Faulted", "Admin_Unknown", "Admin_Cancelled", "Admin_Failed" })
+            {
+                var text = Loc.Instance[key];
+                Assert.False(text.StartsWith('['), $"{key} is missing in {language}");
+                Assert.DoesNotContain("Not available in this version", text);
+            }
+        }
+        Assert.Contains("UAC", Loc.Instance["Admin_ConfirmBody"]);
+    }
+
+    [Fact]
+    public async Task The_broker_switch_reads_its_state_from_the_service_and_never_from_a_settings_file()
+    {
+        var states = new Queue<BrokerServiceState>([BrokerServiceState.Off, BrokerServiceState.On]);
+        long now = 0;
+        var runs = new List<bool>();
+        var control = new BrokerAdminControl(() => states.Count > 1 ? states.Dequeue() : states.Peek(), e => { runs.Add(e); return Task.FromResult(AdminSwitchResult.Done); }, () => now, () => null);
+
+        Assert.Equal(BrokerServiceState.Off, control.State);
+        Assert.Equal(BrokerServiceState.Off, control.State); // cached for a second
+        Assert.False(control.Wanted);
+        Assert.Equal(AdminSwitchResult.Done, await control.SetEnabledAsync(true));
+        Assert.Equal([true], runs);
+        Assert.Equal(BrokerServiceState.On, control.State); // re-read right after a change
+        Assert.True(control.Wanted);
+    }
+
+
+    [Fact]
+    public void A_running_service_whose_pipe_does_not_answer_is_shown_as_faulted_not_on()
+    {
+        long now = 0;
+        BrokerFailure? probe = BrokerFailure.NotRunning;
+        var control = new BrokerAdminControl(() => BrokerServiceState.On, _ => Task.FromResult(AdminSwitchResult.Done), () => now, () => probe, a => a());
+        Assert.Equal(BrokerServiceState.Faulted, control.State);
+        Assert.True(control.Wanted); // the user still wants it: input is tried, and fails visibly, rather than silently using the normal path
+        probe = null;
+        now += 3000;
+        Assert.Equal(BrokerServiceState.On, control.State);
+        probe = BrokerFailure.Untrusted; // a pipe that something else owns
+        now += 3000;
+        Assert.Equal(BrokerServiceState.Faulted, control.State);
+    }
+
+    [Fact]
+    public void A_service_that_is_off_is_never_probed()
+    {
+        var probes = 0;
+        var control = new BrokerAdminControl(() => BrokerServiceState.Off, _ => Task.FromResult(AdminSwitchResult.Done), () => 0, () => { probes++; return null; }, a => a());
+        Assert.Equal(BrokerServiceState.Off, control.State);
+        Assert.Equal(0, probes);
+    }
+
+
+    [Fact]
+    public async Task Nothing_is_run_elevated_when_the_service_is_not_installed()
+    {
+        var runs = 0;
+        var control = new BrokerAdminControl(() => BrokerServiceState.NotInstalled, _ => { runs++; return Task.FromResult(AdminSwitchResult.Done); }, () => 0, () => null);
+        Assert.Equal(AdminSwitchResult.NotInstalled, await control.SetEnabledAsync(true));
+        Assert.Equal(0, runs);
+        Assert.False(control.Wanted);
     }
 
     [Fact]

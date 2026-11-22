@@ -13,5 +13,7 @@
     <ProjectReference Include="..\Remotes\EasyMouse.Remotes.csproj" />
     <InternalsVisibleTo Include="EasyMouse.Platform.Windows.Tests" />
     <InternalsVisibleTo Include="EasyMouse.Platform.SmokeTest" />
+    <InternalsVisibleTo Include="EasyMouse.Broker" />
+    <InternalsVisibleTo Include="EasyMouse.Broker.SmokeTest" />
   </ItemGroup>
 </Project>

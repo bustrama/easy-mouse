@@ -11,6 +11,8 @@ const ascii = (s: string) => enc.encode(s);
 export const NONCE_LEN = 16;
 export const SECRET_LEN = 32;
 export const MAX_FRAME = 4096;
+/** The only frame longer than MAX_FRAME is 0x12 art: up to 128 KiB of image + 34 bytes of header + 25 bytes of frame overhead. */
+export const MAX_ART_FRAME = 128 * 1024 + 34 + 25;
 
 export const randomBytes = (n: number): Uint8Array => crypto.getRandomValues(new Uint8Array(n));
 
@@ -95,7 +97,7 @@ export class FrameError extends Error {}
 
 /** Opens a frame; the caller owns the replay window. Throws FrameError on malformed or forged input. */
 export function openFrame(key: Uint8Array, dir: number, frame: Uint8Array): { counter: number; plaintext: Uint8Array } {
-  if (frame.length < 8 + 16 + 1 || frame.length > MAX_FRAME + 64) throw new FrameError('bad frame length');
+  if (frame.length < 8 + 16 + 1 || frame.length > MAX_ART_FRAME) throw new FrameError('bad frame length');
   const ctrBytes = frame.subarray(0, 8);
   const big = new DataView(frame.buffer, frame.byteOffset, 8).getBigUint64(0, false);
   if (big > BigInt(Number.MAX_SAFE_INTEGER)) throw new FrameError('counter out of range');

@@ -107,13 +107,15 @@ error and closes the socket with 4400 (nothing is executed).
 | 0x06 | media | `u8 cmd (0 playpause, 1 next, 2 prev, 3 stop, 4 volup, 5 voldown, 6 mute)` | C->S |
 | 0x10 | json | UTF-8 JSON control message (below) | both |
 | 0x11 | state | UTF-8 JSON, a full snapshot (below) | S->C |
+| 0x12 | art | `u8 idLen (1-32), id (a-z0-9), u8 type (0 jpeg, 1 png), image bytes` (below) | S->C |
 | 0x7F | ping | empty | both |
 
 A client `ping` is answered with a server `ping`.
 
 ### Limits enforced by the server
 
-- A WebSocket message larger than 4096 bytes closes the socket (4400).
+- A WebSocket message larger than 4096 bytes closes the socket (4400). This is for frames the phone sends; the
+  server's own frames are larger only for 0x12 art (below).
 - Text (0x04): at most 1024 bytes of UTF-8 (so fewer characters for Hebrew).
 - Rate: a token bucket of 200 frames per second sustained with a burst of 200, counted over every
   frame received on the socket. Exceeding it closes the socket (4429).
@@ -163,6 +165,29 @@ remote engine is wired in (`RemoteActionHandler`, `src/Remotes`) every invocatio
 `{ok:false, err:"unsupported"}`. A slider sends `value` (0-100, clamped by the PC); a button sends none.
 Each remote also has its own rate limit (default 20 per second, burst 40), answered with `busy`.
 
+### 0x12 art (album art)
+
+S->C only. A phone that sends 0x12 closes the socket (4400, unknown op). The picture is a separate frame
+because it is far larger than a state frame and rarely changes.
+
+```
+0x12 | u8 idLen | id (idLen ASCII bytes, a-z and 0-9) | u8 type | image bytes
+```
+
+- `idLen` is 1 to 32. `type` is 0 (JPEG) or 1 (PNG); anything else is invalid. The image is 1 byte to
+  **128 KiB** (131072 bytes). The Windows host sends a JPEG of at most 256x256 and normally under 64 KB.
+- This is the only S->C frame allowed to exceed 4096 bytes: up to 131072 + 34 bytes of payload plus the 25
+  bytes of frame overhead. Every other op keeps its limits, and a client must still reject a frame that is
+  not 0x12 and is larger than 4096 + 64 bytes.
+- `id` is the same string as `artId` in the state frame (the host uses a content hash, so it changes exactly
+  when the image does). The host sends the state frame first and then, **once per id**, the art frame: right
+  after `ready`, and again whenever the id changes. It is not repeated on every state tick, and nothing is
+  sent when there is no art (`artId` is null) or the image would exceed the limit (the host then reports
+  `artId: null`).
+- The art frame follows the normal frame rules: next counter, same cipher and replay protection; a forged
+  frame does not advance the counter. A client shows the latest image while `artId` matches its id; if
+  `artId` names an image it has not received yet, it shows its placeholder until the frame arrives.
+
 ### 0x11 state
 
 Sent right after the device becomes the controller and again whenever any part changes. Always a full
@@ -189,6 +214,10 @@ snapshot, so the client replaces its copy.
           }
         }
       ]
+    },
+    "artId": {
+      "type": ["string", "null"],
+      "description": "id of the current album art (see 0x12 art); null when there is none. Changes exactly when the image changes."
     },
     "volume": {
       "oneOf": [
@@ -235,7 +264,7 @@ S->C: `{ "t":"remotes", "remotes":[ <layout>, ... ] }` where each `<layout>` is
   ids are unique within a remote (the validator enforces it, so an explicit id cannot collide with a
   position).
 - **One message.** The phone replaces its whole list on every `remotes` message, and the web client rejects
-  a frame longer than 4096 + 64 bytes (`web/src/protocol/crypto.ts`; the Core itself sets no cap on what it
+  a non-art frame longer than 4096 + 64 bytes (`web/src/protocol/session.ts`; the Core itself sets no cap on what it
   sends). A frame adds 25 bytes (8 header, 1 op, 16 tag), so the JSON can be at most 4135 bytes and the
   server budgets 4000 (Hebrew is sent as UTF-8, not `\u` escapes). "32 remotes, 64 items each" are upper
   bounds, not a promise that they fit: about four ordinary remotes do. Remotes that do not fit are left out

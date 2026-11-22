@@ -14,7 +14,7 @@ import {
   sessionKeys,
   wrapSecret,
 } from './crypto.ts';
-import { decodeOp, encMove, encPing, encState } from './ops.ts';
+import { decodeOp, encArt, encMove, encPing, encState, MAX_ART_BYTES } from './ops.ts';
 import { type Credentials, Session, type WsLike } from './session.ts';
 
 /** A scripted server end implementing docs/protocol.md; frames pass through the real crypto. */
@@ -82,6 +82,26 @@ describe('connect handshake', () => {
     expect(srv.received).toEqual([{ op: 'move', dx: 3, dy: 4 }]);
     sock.deliver(srv.tx!.seal(encState({ volume: 40 })));
     expect(states).toEqual([{ volume: 40 }]);
+  });
+
+  it('delivers art frames up to 128 KiB but drops any other oversized frame', () => {
+    const sock = new FakeSocket();
+    const srv = connectServer(sock, creds.secret);
+    const arts: { id: string; type: string; size: number }[] = [];
+    const states: unknown[] = [];
+    new Session(sock, { creds, handlers: { onState: (x) => states.push(x), onArt: (id, type, d) => arts.push({ id, type, size: d.length }) } });
+    sock.onopen?.({});
+    sock.deliver(srv.tx!.seal(encArt('cover1', 'jpeg', new Uint8Array(MAX_ART_BYTES).fill(7))));
+    expect(arts).toEqual([{ id: 'cover1', type: 'jpeg', size: MAX_ART_BYTES }]);
+    // a state frame padded past the 4096 + 64 limit is not accepted
+    sock.deliver(srv.tx!.seal(encState({ pad: 'x'.repeat(5000) })));
+    expect(states).toEqual([]);
+    // too large even for art (frame level): dropped
+    sock.deliver(srv.tx!.seal(encArt('cover2', 'jpeg', new Uint8Array(MAX_ART_BYTES + 100))));
+    expect(arts).toHaveLength(1);
+    // the connection still works afterwards
+    sock.deliver(srv.tx!.seal(encState({ ok: 1 })));
+    expect(states).toEqual([{ ok: 1 }]);
   });
 
   it('drops replayed server frames', () => {

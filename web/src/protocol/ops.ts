@@ -10,6 +10,7 @@ export const OP = {
   media: 0x06,
   json: 0x10,
   state: 0x11,
+  art: 0x12,
   ping: 0x7f,
 } as const;
 
@@ -18,6 +19,7 @@ export const MEDIA = { playpause: 0, next: 1, prev: 2, stop: 3, volup: 4, voldow
 export const KEYFLAG = { down: 1, up: 2, press: 3 } as const;
 
 export const MAX_TEXT_BYTES = 1024;
+export const MAX_ART_BYTES = 128 * 1024;
 
 const enc = new TextEncoder();
 const dec = new TextDecoder('utf-8', { fatal: true });
@@ -88,6 +90,7 @@ export type Decoded =
   | { op: 'media'; cmd: number }
   | { op: 'json'; value: unknown }
   | { op: 'state'; value: unknown }
+  | { op: 'art'; id: string; type: 'jpeg' | 'png'; data: Uint8Array }
   | { op: 'ping' };
 
 export function decodeOp(p: Uint8Array): Decoded | null {
@@ -111,6 +114,17 @@ export function decodeOp(p: Uint8Array): Decoded | null {
         return { op: 'json', value: JSON.parse(dec.decode(p.subarray(1))) };
       case OP.state:
         return { op: 'state', value: JSON.parse(dec.decode(p.subarray(1))) };
+      case OP.art: {
+        // 0x12 | u8 idLen (1..32) | id (a-z0-9) | u8 type (0 jpeg, 1 png) | image (1..128 KiB)
+        const idLen = p[1] ?? 0;
+        if (idLen < 1 || idLen > 32 || p.length < 2 + idLen + 2) return null;
+        const id = String.fromCharCode(...p.subarray(2, 2 + idLen));
+        if (!/^[a-z0-9]+$/.test(id)) return null;
+        const type = p[2 + idLen];
+        if (type !== 0 && type !== 1) return null;
+        const data = p.subarray(3 + idLen);
+        return data.length <= MAX_ART_BYTES ? { op: 'art', id, type: type === 0 ? 'jpeg' : 'png', data } : null;
+      }
       case OP.ping:
         return p.length === 1 ? { op: 'ping' } : null;
       default:
@@ -119,6 +133,17 @@ export function decodeOp(p: Uint8Array): Decoded | null {
   } catch {
     return null;
   }
+}
+
+export function encArt(id: string, type: 'jpeg' | 'png', data: Uint8Array): Uint8Array {
+  const idb = enc.encode(id);
+  const out = new Uint8Array(3 + idb.length + data.length);
+  out[0] = OP.art;
+  out[1] = idb.length;
+  out.set(idb, 2);
+  out[2 + idb.length] = type === 'jpeg' ? 0 : 1;
+  out.set(data, 3 + idb.length);
+  return out;
 }
 
 export const encState = (obj: unknown): Uint8Array => withOp(OP.state, enc.encode(JSON.stringify(obj)));

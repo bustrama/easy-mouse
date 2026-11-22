@@ -13,13 +13,15 @@ export interface MediaInfo {
 
 export interface PcState {
   media: MediaInfo | null;
+  /** id of the current album art (see the art frame); null when there is none */
+  artId: string | null;
   /** null when the volume is unknown */
   volume: { level: number; muted: boolean } | null;
   locked: boolean;
   elevated: boolean;
 }
 
-export const EMPTY_STATE: PcState = { media: null, volume: null, locked: false, elevated: false };
+export const EMPTY_STATE: PcState = { media: null, artId: null, volume: null, locked: false, elevated: false };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const int = (v: unknown, lo: number, hi: number): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.trunc(v))) : 0);
@@ -44,7 +46,9 @@ export function parseState(v: unknown): PcState {
   const vol = v['volume'];
   if (isObj(vol)) volume = { level: int(vol['level'], 0, 100), muted: vol['muted'] === true };
   const host = isObj(v['host']) ? v['host'] : {};
-  return { media, volume, locked: host['locked'] === true, elevated: host['elevated'] === true };
+  const a = v['artId'];
+  const artId = typeof a === 'string' && /^[a-z0-9]{1,32}$/.test(a) ? a : null;
+  return { media, artId, volume, locked: host['locked'] === true, elevated: host['elevated'] === true };
 }
 
 /** Values a remote's `bind` can show: now-playing text and the master volume. */

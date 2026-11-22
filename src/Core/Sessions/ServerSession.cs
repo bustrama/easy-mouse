@@ -39,6 +39,7 @@ public sealed class ServerSession
     private bool _takeoverRequested;
     private int _invalidFrames;
     private EventHandler? _mediaHandler;
+    private string? _sentArtId; // guarded by _gate: the artwork id this device already has
     private EventHandler? _statusHandler;
 
     public ServerSession(CoreServices services, ISessionTransport transport)
@@ -356,7 +357,17 @@ public sealed class ServerSession
         try
         {
             if (IsClosed || !_svc.Hub.IsController(this)) return;
-            await SendFrameAsync(new StateMessage(BuildStateJson(_svc.Media.GetSnapshot(), _svc.Status))).ConfigureAwait(false);
+            var snapshot = _svc.Media.GetSnapshot();
+            await SendFrameAsync(new StateMessage(BuildStateJson(snapshot, _svc.Status))).ConfigureAwait(false);
+            // Artwork is sent once per id (after ready and when the image changes), never on every state tick.
+            var art = snapshot.Artwork;
+            bool sendArt;
+            lock (_gate)
+            {
+                sendArt = art is not null && art.Id != _sentArtId && art.Data.Length is > 0 and <= FrameCodec.MaxArtworkBytes;
+                _sentArtId = art?.Id;
+            }
+            if (sendArt) await SendFrameAsync(new ArtMessage(art!.Id, art.Type, art.Data)).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is WebSocketException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
         {
@@ -383,6 +394,8 @@ public sealed class ServerSession
                 w.WriteEndObject();
             }
             else w.WriteNull("media");
+            if (media.Artwork is { } art && art.Data.Length is > 0 and <= FrameCodec.MaxArtworkBytes) w.WriteString("artId", art.Id);
+            else w.WriteNull("artId");
             if (media.Volume is { } v)
             {
                 w.WriteStartObject("volume");

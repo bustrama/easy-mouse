@@ -55,7 +55,7 @@ public sealed class TestClient : IAsyncDisposable
     public async Task<Received> ReceiveAsync()
     {
         using var cts = new CancellationTokenSource(Timeout);
-        var buffer = new byte[16 * 1024];
+        var buffer = new byte[192 * 1024]; // art frames are up to 128 KiB
         int total = 0;
         while (true)
         {

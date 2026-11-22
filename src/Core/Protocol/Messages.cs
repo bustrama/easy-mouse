@@ -13,4 +13,6 @@ public sealed record MediaMessage(MediaCommand Command) : Message(Op.Media);
 public sealed record JsonMessage(string Json) : Message(Op.Json);
 /// <summary>0x11: UTF-8 JSON state, server to client only.</summary>
 public sealed record StateMessage(string Json) : Message(Op.State);
+/// <summary>0x12: cover art of the current track, server to client only. Sent after the device becomes controller and whenever the id changes.</summary>
+public sealed record ArtMessage(string Id, ArtworkType Type, byte[] Data) : Message(Op.Art);
 public sealed record PingMessage() : Message(Op.Ping);

@@ -116,6 +116,13 @@
       "counter": 2,
       "plaintext": "7f",
       "frame": "0000000000000002988c7ebcf12236cff0c7dece19031b8b7f"
+    },
+    {
+      "description": "art id a1b2c3 (jpeg, 4 bytes)",
+      "dir": "s2c",
+      "counter": 3,
+      "plaintext": "120661316232633300ffd8ffd9",
+      "frame": "00000000000000030997d3d313ad9ab7d67227d27de31eae99c143439f179f2b15d4c3ec6c"
     }
   ],
   "receiveSequenceC2S": [

@@ -88,6 +88,7 @@ public class VectorsTests
             Frame("c2s", 7, c2s, FrameCodec.Encode(new PingMessage()), "ping"),
             Frame("s2c", 1, s2c, FrameCodec.Encode(new StateMessage("{\"t\":\"state\",\"media\":null,\"volume\":{\"level\":40,\"muted\":false},\"host\":{\"locked\":false,\"elevated\":false}}")), "state"),
             Frame("s2c", 2, s2c, FrameCodec.Encode(new PingMessage()), "ping reply"),
+            Frame("s2c", 3, s2c, FrameCodec.Encode(new ArtMessage("a1b2c3", ArtworkType.Jpeg, [0xFF, 0xD8, 0xFF, 0xD9])), "art id a1b2c3 (jpeg, 4 bytes)"),
         };
 
         // Receiver side checks (receiver = server, key c2s). Counter must be strictly increasing; a frame that

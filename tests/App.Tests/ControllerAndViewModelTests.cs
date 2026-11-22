@@ -145,8 +145,8 @@ public class ControllerAndViewModelTests : IAsyncDisposable
         Assert.True(app.IsListening);
         Assert.NotNull(vm.Matrix);
         Assert.False(vm.ShowHelp);
-        Assert.Equal($"http://office-pc.local:{app.Settings.Port}", vm.Origin);
-        Assert.StartsWith($"http://office-pc.local:{app.Settings.Port}/#k=", app.QrUrl());
+        Assert.Equal($"http://{app.Listener.EndPoint!.Address}:{app.Settings.Port}", vm.Origin);
+        Assert.StartsWith($"http://{app.Listener.EndPoint!.Address}:{app.Settings.Port}/#k=", app.QrUrl());
         Assert.Equal("Code is valid for 2:00", vm.CountdownText);
         Assert.Equal(QrStatusKind.Waiting, vm.StatusKind);
 

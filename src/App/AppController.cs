@@ -117,12 +117,12 @@ public sealed class AppController : IAsyncDisposable
         _ => Loc.Format("Net_Error", Listener.ErrorDetail ?? ""),
     };
 
-    /// <summary>The origin phones open, e.g. <c>http://office-pc.local:8765</c>; the .local name when usable, else the IP.</summary>
+    /// <summary>The origin phones open, e.g. <c>http://192.168.1.20:8765</c>. Always the IP: a .local name often does not resolve on phones (and may resolve to IPv6 on the PC), while the IP always works.</summary>
     public string Origin()
     {
         var ep = Listener.EndPoint;
         if (ep is null) return "";
-        return OriginSelector.Origin(OriginSelector.PreferredHost(_env.MachineName, ep.Address.ToString()), ep.Port);
+        return OriginSelector.Origin(ep.Address.ToString(), ep.Port);
     }
 
     /// <summary>The QR content, or null when nothing listens or no code is active.</summary>
@@ -131,7 +131,7 @@ public sealed class AppController : IAsyncDisposable
         var ep = Listener.EndPoint;
         var secret = Core.Pairing.CurrentSecret;
         if (ep is null || secret is null) return null;
-        return OriginSelector.QrUrl(OriginSelector.PreferredHost(_env.MachineName, ep.Address.ToString()), ep.Port, secret.Fragment);
+        return OriginSelector.QrUrl(ep.Address.ToString(), ep.Port, secret.Fragment);
     }
 
     // ------------------------------------------------------------------ lifecycle

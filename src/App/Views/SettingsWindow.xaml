@@ -192,7 +192,7 @@
                                                     <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                                     <TextBlock Text="{Binding Meta}" Margin="0,2,0,0" FontSize="13" Foreground="{StaticResource Muted}"/>
                                                 </StackPanel>
-                                                <Border Grid.Column="2" CornerRadius="999" Padding="10,4" Background="{Binding Background}" VerticalAlignment="Center">
+                                                <Border Grid.Column="2" CornerRadius="6" Padding="10,4" Background="{Binding Background}" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Status}" FontSize="12" FontWeight="Bold" Foreground="{Binding Foreground}" TextWrapping="NoWrap"/>
                                                 </Border>
                                                 <Button Grid.Column="3" Style="{StaticResource SmallButton}" Margin="14,0,0,0" Content="{app:T Dev_Remove}"

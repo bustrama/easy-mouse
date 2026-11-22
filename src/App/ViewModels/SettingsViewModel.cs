@@ -29,8 +29,8 @@ public sealed class DeviceRowViewModel
         Status = Loc.Instance[info.Connected ? "Dev_Connected" : "Dev_Offline"];
         (Background, Foreground) = info.Kind switch
         {
-            DeviceRowKind.Connected => (Frozen("#DCFCE7"), Frozen("#14532D")),
-            DeviceRowKind.ExpiresSoon => (Frozen("#FEF3C7"), Frozen("#78350F")),
+            DeviceRowKind.Connected => (Frozen("#12261A"), Frozen("#86EFAC")),
+            DeviceRowKind.ExpiresSoon => (Frozen("#2A2112"), Frozen("#FCD34D")),
             _ => (Frozen("#2A323E"), Frozen("#C9D1DC")),
         };
         RemoveCommand = remove;
